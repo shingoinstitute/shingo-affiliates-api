@@ -4,10 +4,8 @@ import { Controller,
         Param, Query, Headers, Body, Session
     } from '@nestjs/common';
 import { Client, ClientProxy, Transport} from '@nestjs/microservices';
-import { WorkshopAddedEvent } from '../events/implementation/workshop-added.event';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
-import { Events } from '../events/emitter';
 
 /**
  * @desc :: Used for an in-memory cache (stdTTL = 30min, check for cleanup every 15min)
@@ -16,13 +14,6 @@ const cache = new NodeCache({ stdTTL: 1800, checkperiod: 900 })
 
 @Controller('workshops')
 export class WorkshopsController {
-
-    private eventEmitter;
-
-    constructor(){
-        let events = new Events();
-        this.eventEmitter = Events.emitter;
-    }
 
     /**
      * RPC client to interact with the shingo-sf-api using Redis
@@ -144,7 +135,6 @@ export class WorkshopsController {
                         .subscribe(r => {
                             res.status(HttpStatus.CREATED)
                                 .json({ Id: result['id'] });                            
-                            this.eventEmitter.emit('workshop-added', new WorkshopAddedEvent(result['id'], body.Organizing_Affiliate__c));                
                         });
                 } else if(result.hasOwnProperty('errorCode')){
                     console.error('Error in WorkshopsController.create(): ', result);

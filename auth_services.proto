@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.shingo.auth.services";
+option java_outer_classname = "AuthMicroservices";
+option objc_class_prefix = "AUTH";
+
+package authservices;
+
+service AuthServices {
+
+    rpc Login(Credentials) returns (User) {}
+
+    rpc IsValid(SimpleString) returns (SimpleBoolean) {}
+
+    rpc CreateUser(Credentials) returns (User) {}
+
+    rpc GetUser(SimpleString) returns (User) {}
+
+    rpc UpdateUser(User) returns (SimpleBoolean) {}
+    
+    rpc CanAccess(AccessRequest) returns (SimpleBoolean) {}
+
+    rpc CreatePermission(Permission) returns (Permission) {}
+
+    rpc GrantPermission(GrantRequest) returns (PermissionSet) {}
+
+    rpc CreateRole(Role) returns (Role) {}
+
+    rpc GetRole(SimpleString) returns (Role) {}
+
+    rpc GetRoles(FilterOptions) returns (stream Role) {}
+
+}
+
+message Credentials {
+    string username = 1;
+    string password = 2;
+}
+
+message User {
+    int32 id = 1;
+    Auth auth = 2;
+    string jwt = 3;
+    repeated Permission permissions = 4;
+    Role role = 5;
+}
+
+message Auth {
+    string email = 1;
+    bool isEnabled = 2;
+}
+
+message SimpleString {
+    string value = 1;
+}
+
+message SimpleBoolean {
+    bool value = 1;
+}
+
+message AccessRequest {
+    string resource = 1;
+    int32 level = 2;
+    string jwt = 3;
+}
+
+message Role {
+    int32 id = 1;
+    string name = 2;
+    repeated Permission permissions = 3;
+}
+
+message Permission {
+    int32 id = 1;
+    string resource = 2;
+    int32 level = 3;
+}
+
+message GrantRequest {
+    int32 permissionid = 1;
+    string resource = 2;
+    int32 level = 3;
+    int32 userId = 4;
+    int32 roleId = 5;
+}
+
+message PermissionSet {
+    int32 permissionid = 1;
+    int32 accessorId = 2;
+}
+
+message FilterOptions {
+    string clause = 1;
+}
