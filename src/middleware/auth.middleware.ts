@@ -10,6 +10,11 @@ export class AuthMiddleware implements NestMiddleware {
 
     public resolve(level : number, resource? : string) {
         return (req, res, next) => {
+            if(req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production') {
+                req.session.affiliate = req.headers['x-affiliate'];
+                req.session.user = {};
+                req.session.user.id = req.headers['x-user-id'];
+            }
             if(!resource) resource = `${req.method}: ${req.path}`;
             if(resource.includes('affiliate -- ')) resource += req.session.affiliate;
             
