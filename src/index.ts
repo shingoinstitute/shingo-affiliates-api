@@ -11,9 +11,8 @@ server.use(bodyParser.json())
 server.use(bodyParser.urlencoded({extended: false}))
 server.use(session({
     secret: process.env.SESSION_SECRET || 'ilikedogz',
-    resave: false,
+    resave: true,
     saveUninitialized: true,
-    cookie: { secure: true },
     proxy: true
 }))
 

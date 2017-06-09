@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.shingo.sf.services";
+option java_outer_classname = "SalesforceMicroservices";
+option objc_class_prefix = "SF";
+
+package sfservices;
+
+service SalesforceMicroservices {
+
+    rpc Query(QueryRequest) returns (JSONObject) {}
+
+    rpc Retrieve(IdRequest) returns (JSONObject) {}
+
+    rpc Create(RecordsRequest) returns (JSONObject) {}
+
+    rpc Update(RecordsRequest) returns (JSONObject) {}
+
+    rpc Delete(IdRequest) returns (JSONObject) {}
+
+    rpc Upsert(RecordsRequest) returns (JSONObject) {}
+
+    rpc Describe(DescribeRequest) returns (JSONObject) {}
+
+    rpc Search(SearchRequest) returns (JSONObject) {}
+
+}
+
+message JSONObject {
+    string contents = 1;
+}
+
+message QueryRequest {
+    string action = 1;
+    repeated string fields = 2;
+    string table = 3;
+    string clauses = 4;
+}
+
+message IdRequest {
+    string object = 1;
+    repeated string ids = 2;
+}
+
+message RecordsRequest {
+    string object = 1;
+    repeated JSONObject records = 2;
+}
+
+message DescribeRequest {
+    string object = 1;
+}
+
+message SearchRequest {
+    string search = 1;
+    string retrieve = 2;
+}

@@ -17,6 +17,8 @@ service AuthServices {
 
     rpc GetUser(SimpleString) returns (User) {}
 
+    rpc GetUserByEmail(SimpleString) returns (User) {}
+
     rpc UpdateUser(User) returns (SimpleBoolean) {}
     
     rpc CanAccess(AccessRequest) returns (SimpleBoolean) {}
@@ -24,6 +26,8 @@ service AuthServices {
     rpc CreatePermission(Permission) returns (Permission) {}
 
     rpc GrantPermission(GrantRequest) returns (PermissionSet) {}
+
+    rpc RemovePermission(Permission) returns (Permission) {}
 
     rpc CreateRole(Role) returns (Role) {}
 
@@ -36,6 +40,7 @@ service AuthServices {
 message Credentials {
     string username = 1;
     string password = 2;
+    string services = 3;
 }
 
 message User {
@@ -44,11 +49,13 @@ message User {
     string jwt = 3;
     repeated Permission permissions = 4;
     Role role = 5;
+    string services = 6;
 }
 
 message Auth {
     string email = 1;
     bool isEnabled = 2;
+    int32 id = 3;
 }
 
 message SimpleString {
@@ -69,12 +76,16 @@ message Role {
     int32 id = 1;
     string name = 2;
     repeated Permission permissions = 3;
+    string service = 4;
+    repeated User users = 5;
 }
 
 message Permission {
     int32 id = 1;
     string resource = 2;
     int32 level = 3;
+    repeated Role roles = 4;
+    repeated User users = 5;
 }
 
 message GrantRequest {
@@ -86,7 +97,7 @@ message GrantRequest {
 }
 
 message PermissionSet {
-    int32 permissionid = 1;
+    int32 permissionId = 1;
     int32 accessorId = 2;
 }
 

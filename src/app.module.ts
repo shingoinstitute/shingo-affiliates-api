@@ -1,12 +1,13 @@
 import { Module, MiddlewaresConsumer, RequestMethod, OnModuleInit } from '@nestjs/common';
 import { WorkshopsController, AuthController } from './controllers';
 import { AuthMiddleware } from './middleware'
+import { WorkshopEmitter } from './events';
 
 @Module({
     controllers: [ WorkshopsController, AuthController ],
     components: [ AuthMiddleware ]
 })
-export class ApplicationModule {
+export class ApplicationModule implements OnModuleInit {
 
     private eventsEmitter;
 
@@ -21,6 +22,10 @@ export class ApplicationModule {
         .forRoutes({
             path: '/workshops/a*', method: RequestMethod.ALL
         })
+    }
+
+    onModuleInit() {
+        WorkshopEmitter.init();
     }
 }
 

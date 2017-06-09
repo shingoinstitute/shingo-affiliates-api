@@ -12,4 +12,4 @@ ENV REDIS_URL="redis://shingo-redis:6379"
 
 EXPOSE 80
 
-ENTRYPOINT npm start
+ENTRYPOINT npm install && npm start
