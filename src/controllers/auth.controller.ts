@@ -54,7 +54,7 @@ export class AuthController {
                 let sfResult = JSON.parse(response.contents);
 
                 if(sfResult.totalSize !== 1){
-                    let sfError;
+                    let sfError = { code: '', details: '' };
                     sfError.code = (sfResult.totalSize > 1 ? 'DUPLICATE_EMAIL' : 'INVALID_LOGIN');
                     sfError.details = (sfResult.totalSize > 1 ? `${body.username} has returned ${sfResult.totalSize} contacts in Salesforce!` : 'A Salesforce affiliate instructor could not be found for ' + body.username)
                     console.error('Error in AuthController.login(): ', { sfError });
@@ -62,6 +62,7 @@ export class AuthController {
                 }
 
                 let sfContact = sfResult.records[0];
+                console.log('User has logged in: ', user);
                 req.session.user = user;
                 req.session.user.contact=sfContact;
                 req.session.affiliate=sfContact.AccountId;
@@ -70,6 +71,12 @@ export class AuthController {
             });
 
         });
+    }
+
+    @Post('logout')
+    public async logout(@Request() req, @Response() res, @Body() body){
+        req.session.user = null;
+        res.status(HttpStatus.OK).json({message: "LOGOUT_SUCCESS"});
     }
 
 }

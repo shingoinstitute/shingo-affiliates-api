@@ -3,7 +3,7 @@ import { Controller,
         HttpStatus, Request, Response, Next,
         Param, Query, Headers, Body, Session
     } from '@nestjs/common';
-import { WorkshopEmitter, WorkshopAddedEvent, WorkshopDeletedEvent } from '../events';
+import { WorkshopEmitter, WorkshopAddedEvent, WorkshopDeletedEvent, WorkshopUpdatedEvent } from '../events';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
 import * as grpc from 'grpc';
@@ -24,19 +24,50 @@ export class WorkshopsController {
     public async readAll(@Request() req, @Response() res, @Next() next, @Session() session){
         if(!session.user) return next({error: "Session Expired!"});
         let ids = [];
+        console.log('User permissions: ', session.user.permissions);
         session.user.permissions.forEach(p => {
-            if(p.resource.includes('/workshops/')) ids.push(p.resource.replace('/workshops/', ''))
+            if(p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
         });
+        console.log('Role permissions: ', session.user.role.permissions);
         session.user.role.permissions.forEach(p => {
-            if(p.resource.includes('/workshops/')) ids.push(p.resource.replace('/workshops/', ''))
+            if(p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
         });
 
         // get array of unique ids
         ids = [...new Set(ids)];
 
-        client.retrieve({object: 'Workshop__c', ids }, (error, response) => {
+        if(ids.length === 0) return res.status(HttpStatus.OK).json({records: [], totalSize: 0, done: true});
+
+        const ids_for_query = ids.join();
+
+        console.log('Ids for query: ', ids_for_query);
+        const query = {
+            action: "SELECT",
+            fields: [
+                "Id",
+                "Name",
+                "Start_Date__c",
+                "End_Date__c",
+                "Course_Manager__c",
+                "Billing_Contact__c",
+                "Event_City__c",
+                "Event_Country__c",
+                "Organizing_Affiliate__c",
+                "Public__c",
+                "Registration_Website__c",
+                "Status__c",
+                "Host_Site__c",
+                "Workshop_Type__c",
+                "Language__c"
+            ],
+            table: "Workshop__c",
+            clauses: `Id IN (${ids_for_query}) ORDER BY Start_Date__c`
+        }
+
+        client.query(query, (error, response) => {
             if(error){
                 console.error('Error in WorkshopsController.readAll(): ', JSON.parse(error.metadata.get('error-bin').toString()))
+                console.log('raw error: ', error);
                 return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .json({ 
                         error: JSON.parse(error.metadata.get('error-bin').toString())
@@ -50,7 +81,7 @@ export class WorkshopsController {
     }
 
     @Get('/public')
-    public async readPublic(@Request() req, @Response() res, @Next() next){
+    public async readPublic(@Request() req, @Response() res, @Next() next, @Headers('x-force-refresh') refresh = 'false'){
         let query = {
             action: "SELECT",
             fields: [
@@ -74,7 +105,7 @@ export class WorkshopsController {
 
         const cachedResult = cache.get(key);
 
-        if(cachedResult === undefined){
+        if(cachedResult === undefined || refresh === 'true'){
             client.query(query, (error, response) => {
                 if(error){
                     console.error('Error in WorkshopsController.readPublic(): ', error)
@@ -166,7 +197,7 @@ export class WorkshopsController {
                 }
 
                 // Send records to caller
-                let records = JSON.parse(results.contents);
+                let records = JSON.parse(results.contents).searchRecords;
                 res.status(HttpStatus.OK).json(records);
 
                 // Cache records
@@ -209,6 +240,41 @@ export class WorkshopsController {
             // Send records to caller
             let record = JSON.parse(results.contents)[0];
             return res.status(HttpStatus.OK).json(record);
+        });
+    }
+
+    @Get('/:id/facilitators')
+    public async facilitators(@Request() req, @Response() res, @Next() next, @Param('id') id){
+        // Check the id
+        const pattern = /a[\w\d]{14,17}/;
+        if(!pattern.test(id)) {
+            return res.status(HttpStatus.BAD_REQUEST)
+            .json({error: `Invalid Salesforce Id: ${id}`})
+        }
+
+        let query = {
+            action: "SELECT",
+            fields: [
+                "Instructor__r.FirstName",
+                "Instructor__r.LastName",
+                "Instructor__r.Email",
+                "Instructor__r.Title"
+            ],
+            table: "WorkshopFacilitatorAssociation__c",
+            clauses: `Workshop__c='${id}'`
+        }
+
+        client.query(query, (error, response) => {
+            if(error){
+                console.error('Error in WorkshopsController.facilitators(): ', error)
+                return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .json({ 
+                        error: JSON.parse(error.metadata.get('error-bin').toString())
+                    });
+            }
+            // Send records to caller
+            let records = JSON.parse(response.contents);
+            return res.status(HttpStatus.OK).json(records);
         });
     }
 
@@ -261,33 +327,37 @@ export class WorkshopsController {
     public async update(@Request() req, @Response() res, @Next() next, @Param('id') id, @Body() body, @Session() session){
         // Check the id
         const pattern = /[\w\d]{15,17}/;
-        if(!pattern.test(id) || !pattern.test(body.Id)) {
+        if(!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id) {
             return res.status(HttpStatus.BAD_REQUEST)
-            .json({error: 'Missing id parameter!'});
+                .json({error: 'Missing id parameter!'});
         }
 
         // Check required parameters
         if(!session.affiliate || !body.Organizing_Affiliate__c){
             return res.status(HttpStatus.BAD_REQUEST)
-                    .json({error: 'Missing Affiliate Id'});
+                .json({error: 'Missing Affiliate Id'});
         }
 
         if(!pattern.test(body.Organizing_Affiliate__c)) {
             return res.status(HttpStatus.BAD_REQUEST)
-            .json({error: `Invalid Salesforce Id: ${body.Organizing_Affiliate__c}`});
+                .json({error: `Invalid Salesforce Id: ${body.Organizing_Affiliate__c}`});
         }
 
         if(session.affiliate !== 'ALL' && session.affiliate !== body.Organizing_Affiliate__c){
             return res.status(HttpStatus.FORBIDDEN)
-                    .json({error: `You are not allowed to update workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}`});
+                .json({error: `You are not allowed to update workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}`});
         }
 
-        // Use the shingo-sf-api to create the new record
-        const data = {
-            object: 'Workshop__c',
-            records: [ { contents: JSON.stringify(body) }]
+        const newFacilitators = body.facilitators;
+        delete body.facilitators;
+
+        const query = {
+            action: 'SELECT',
+            fields: ['Id', 'Workshop__c', 'Instructor__c', 'Instructor__r.Email'],
+            table: 'WorkshopFacilitatorAssociation__c',
+            clauses: `Workshop__c='${id}'`
         }
-        client.update(data, (error, response) => {
+        client.query(query, (error, response) => {
             if(error){
                 console.error('Error in WorkshopsController.update(): ', error)
                 return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -296,9 +366,32 @@ export class WorkshopsController {
                     });
             }
 
-            const record = JSON.parse(response.contents)[0];
-            res.status(HttpStatus.OK).json(record);
-        });
+            const oldFacilitators = JSON.parse(response.contents).records;
+
+            console.log('oldFacilitators', oldFacilitators);
+
+            // Use the shingo-sf-api to create the new record
+            const data = {
+                object: 'Workshop__c',
+                records: [ { contents: JSON.stringify(body) }]
+            }
+            client.update(data, (error, response) => {
+                if(error){
+                    console.error('Error in WorkshopsController.update(): ', error)
+                    return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .json({ 
+                            error: JSON.parse(error.metadata.get('error-bin').toString())
+                        });
+                }
+
+
+                const record = JSON.parse(response.contents)[0];
+                WorkshopEmitter.emitter.emit('updated', new WorkshopUpdatedEvent(record.id, newFacilitators, oldFacilitators));
+                res.status(HttpStatus.OK).json(record);
+            });
+        })
+
+        
     }
 
     @Delete('/:id')

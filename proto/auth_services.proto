@@ -27,6 +27,8 @@ service AuthServices {
 
     rpc GrantPermission(GrantRequest) returns (PermissionSet) {}
 
+    rpc RevokePermission(GrantRequest) returns (PermissionSet) {}
+
     rpc RemovePermission(Permission) returns (Permission) {}
 
     rpc CreateRole(Role) returns (Role) {}

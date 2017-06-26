@@ -10,17 +10,26 @@ export class AuthMiddleware implements NestMiddleware {
 
     public resolve(level : number, resource? : string) {
         return (req, res, next) => {
-            console.log(`AuthMiddleware.resolve(${level}, ${resource}) session `, req.session);
             if((req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production')
-                || (req.session.user && req.session.user.role && req.session.user.role.name === 'Affilate Manager')) {
+                || (req.session.user && req.session.user.role && req.session.user.role.name === 'Affiliate Manager')) {
                 req.session.affiliate = req.headers['x-affiliate'] || 'ALL';
-                req.session.user = {};
-                req.session.user.id = req.headers['x-user-id'];
+                if(!req.session.user){
+                    req.session.user = {};
+                    req.session.user.permissions = [];
+                    req.session.user.id = req.headers['x-user-id'];
+                }
+                return next();
             }
-            if(resource === 'affiliate -- ') resource += req.session.affiliate;
-            else resource = `${req.path}`;
+            if(resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
+            else if(!resource) resource = `${req.path}`;
+
+            if(resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
+
+            console.log('canAccess with ', resource);
             
             client.canAccess({resource, level: 2, jwt: req.headers['x-jwt']}, (error, valid) => {
+                if(resource.includes('affiliate -- ')) resource = 'affiliate -- ';
+                else resource = '';
                 if(valid) return next();
                 if(error) console.error(`Error in AuthMiddleware.resolve(${resource}, ${level}, ${req.headers['x-jwt']}): `, error);
                 res.status(HttpStatus.FORBIDDEN)
