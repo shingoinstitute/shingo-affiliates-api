@@ -8,9 +8,9 @@ const client = new authservices.AuthServices('shingo-auth-api:80', grpc.credenti
 
 export function handle(event : WorkshopAddedEvent){
     console.log('event: ', event);
-    const levels = [0,1,2];
-    levels.map(level => {
-        client.removePermission({resource: `/workshops/${event.id}`, level }, (error, permission) => {
+
+    for(let level of [0,1,2]) {
+        client.deletePermission({resource: `/workshops/${event.id}`, level }, (error, permission) => {
             if(error) {
                 if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 return console.error('Error in remove-permissions.handle(): ', error);
@@ -18,5 +18,5 @@ export function handle(event : WorkshopAddedEvent){
 
             return console.log('remove-permissions-workshop.handle() removed Permission: ', permission);
         });
-    });
+    }
 }

@@ -19,7 +19,7 @@ export function handle(event : WorkshopUpdatedEvent){
         return other && val.Id === other.Instructor__c;
     });
 
-    add.map(facilitator => {
+    for(let facilitator of add) {
         console.log('Adding association: ',facilitator);
         const data = {
             object: 'WorkshopFacilitatorAssociation__c',
@@ -33,9 +33,9 @@ export function handle(event : WorkshopUpdatedEvent){
             };
             console.log('Association: ', result);
         });
-    });
+    };
 
-    remove.map(association => {
+    for(let association of remove) {
         console.log('Removing association: ', association);
         const data = {
             object: 'WorkshopFacilitatorAssociation__c',
@@ -49,5 +49,5 @@ export function handle(event : WorkshopUpdatedEvent){
             };
             console.log('Association: ', result);
         });
-    });
+    };
 }

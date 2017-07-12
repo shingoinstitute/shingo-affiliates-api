@@ -210,7 +210,10 @@ export class FacilitatorsController {
             return res.status(HttpStatus.BAD_REQUEST).json({ error:"MISSING_FIELDS", fields });
         }
 
-        let contact = _.omit(body, [ "password" ]);
+
+        const roleId = (body.roleId ? body.roleId : global['facilitatorId']);
+
+        let contact = _.omit(body, [ "password", "roleId" ]);
 
         contact.RecordTypeId = '012A0000000zpqrIAA';
         const data = {
@@ -226,22 +229,24 @@ export class FacilitatorsController {
 
             const record = JSON.parse(result.contents)[0];
 
-            authClient.createUser({username: body.Email, password: body.password, services: 'Affiliate Portal'}, (error, user) => {
-                if(error) return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .json({ error: JSON.parse(error.metadata.get('error-bin').toString()) });
+            authClient.createUser({email: body.Email, password: body.password, services: 'affiliate-portal'}, (error, user) => {
+                if(error){
+                    console.error('Error in FacilitatorsController.create(): ~ln 234', error);
+                    return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .json({ error });
+                }
 
-                authClient.getRole({value: 'Facilitator'}, (error, role) => {
-                    if(error) return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .json({ error: JSON.parse(error.metadata.get('error-bin').toString()) });
+                authClient.addRoleToUser({userEmail: user.email, roleId}, (error, added) => {
+                    if(error) {
+                        console.error('Error in FacilitatorsController.create(): ~ln 241', error);
+                        return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .json({ error });
+                    }
+                    
+                    if(!added.response) return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .json({error: 'ROLE_NOT_ADDED'});
 
-                    user.role = role;
-                    authClient.updateUser(user, (error, valid) => {
-                        if(error) return res.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .json({ error: JSON.parse(error.metadata.get('error-bin').toString()) });
-                        
-                        FacilitatorEmitter.emitter.emit('created', new FacilitatorAddedEvent(user.id, body.Email, body.AccountId));
-                        return res.status(HttpStatus.CREATED).json({ user, salesforceId: record.id });
-                    });
+                    return res.status(HttpStatus.CREATED).json({ jwt: user.jwt, id: user.id });
                 });
             });
         });

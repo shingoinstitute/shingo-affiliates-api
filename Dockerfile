@@ -1,15 +1,19 @@
-FROM node
+FROM node:8.1
 
 WORKDIR /code
 
+COPY package.json package.json
+
 RUN npm install -g typescript nodemon
+
+RUN npm install
 
 ENV PORT=80
 
 ENV SF_API=shingo-sf-api
 
-ENV REDIS_URL="redis://shingo-redis:6379"
-
 EXPOSE 80
 
-ENTRYPOINT npm install && npm start
+ENTRYPOINT ["npm", "run"]
+
+CMD ["start"]

@@ -8,13 +8,13 @@ export class IsAFManMiddleware implements NestMiddleware {
     public resolve() {
         return (req, res, next) => {
             if((req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production')
-                || (req.session.user && req.session.user.role && req.session.user.role.name === 'Affiliate Manager')) {
+                || (req.session.user && req.session.user.roles && req.session.user.roles.findIndex(r => { return r.name === 'Affiliate Manager' }))) {
                 req.session.affiliate = req.headers['x-affiliate'] || 'ALL';
                 if(!req.session.user){
                     req.session.user = {};
                     req.session.user.permissions = [];
                     req.session.user.id = req.headers['x-user-id'];
-                    req.session.user.role = { name: req.headers['x-role-name'], permissions: []}
+                    req.session.user.roles = [{ name: req.headers['x-role-name'], permissions: []}]
                 }
                 return next();
             } else {

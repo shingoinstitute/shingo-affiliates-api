@@ -20,7 +20,7 @@ export function handle(event : WorkshopAddedEvent){
                 if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 return console.error('Error in add-instructors.handle(): ', error);
             };
-            console.log('PermissionSet: ', result);
+            console.log('WorkshopFacilitatorAssociation__c: ', result);
         });
     });
 }

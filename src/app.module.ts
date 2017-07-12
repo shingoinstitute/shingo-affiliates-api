@@ -14,7 +14,20 @@ export class ApplicationModule implements OnModuleInit {
     configure(consumer : MiddlewaresConsumer){
         consumer
         .apply(IsValidMiddleware)
-        .forRoutes(WorkshopsController, FacilitatorsController)
+        .forRoutes(FacilitatorsController,
+            {
+                path: '/workshops', method: RequestMethod.ALL
+            },
+            {
+                path: '/workshops/a*', method: RequestMethod.ALL
+            },
+            {
+                path: '/workshops/search', method: RequestMethod.ALL
+            },
+            {
+                path: '/workshops/describe', method: RequestMethod.ALL
+            }
+        )
         .apply(AuthMiddleware)
         .with(1, 'affiliate -- ')
         .forRoutes({

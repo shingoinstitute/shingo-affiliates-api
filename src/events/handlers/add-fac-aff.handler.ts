@@ -6,26 +6,32 @@ const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_service
 const client = new authservices.AuthServices('shingo-auth-api:80', grpc.credentials.createInsecure());
 
 export function handle(event : FacilitatorAddedEvent){
-    client.getUserByEmail({value: event.email}, (error, user) => {
-        if(error) {
-            if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
-            return console.error('Error in add-fac-aff.handle(): ', error);
-        };
 
-        client.grantPermission({resource: `workshops -- ${event.affiliate}`, level: 2, userId: user.id}, (error, response) => {
+    let call = client.readUser({clause: `user.email='${event.email}'`});
+
+    let users = [];
+
+    call.on('data', user => users.push(user));
+
+    call.on('end', () => {
+        if(users.length !== 1) return console.error('Error finding users for facilitator email', event.email);
+
+        let user = users[0];
+
+        client.grantPermissionToUser({resource: `workshops -- ${event.affiliate}`, level: 2, accessorId: user.id}, (error, set) => {
             if(error) {
                 if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 return console.error('Error in add-fac-aff.handle(): ', error);
-            };
-            client.grantPermission({resource: `affiliate -- ${event.affiliate}`, level: 1, userId: user.id}, (error, response) => {
+            }
+
+            client.grantPermissionToUser({resource: `affiliate -- ${event.affiliate}`, level: 1, accessorId: user.id}, (error, set) => {
                 if(error) {
                     if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                     return console.error('Error in add-fac-aff.handle(): ', error);
-                };
-                console.log('PermissionSet: ', response);
+                }
+                console.log('PermissionSet: ', set);
             });
-            console.log('PermissionSet: ', response);
+            console.log('PermissionSet: ', set);
         });
-
     });
 }

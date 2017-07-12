@@ -10,8 +10,10 @@ export class AuthMiddleware implements NestMiddleware {
 
     public resolve(level : number, resource? : string) {
         return (req, res, next) => {
+            let role = req.session.user.roles.find(role => { return role.name === 'Affiliate Manager'; });
+            console.log('role is ', role);
             if((req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production')
-                || (req.session.user && req.session.user.role && req.session.user.role.name === 'Affiliate Manager')) {
+                || (req.session.user && role)) {
                 req.session.affiliate = req.headers['x-affiliate'] || 'ALL';
                 if(!req.session.user){
                     req.session.user = {};
@@ -30,7 +32,7 @@ export class AuthMiddleware implements NestMiddleware {
             client.canAccess({resource, level: 2, jwt: req.headers['x-jwt']}, (error, valid) => {
                 if(resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                 else resource = '';
-                if(valid) return next();
+                if(valid && valid.response) return next();
                 if(error) console.error(`Error in AuthMiddleware.resolve(${resource}, ${level}, ${req.headers['x-jwt']}): `, error);
                 res.status(HttpStatus.FORBIDDEN)
                     .json({error: 'ACCESS_FORBIDDEN'});

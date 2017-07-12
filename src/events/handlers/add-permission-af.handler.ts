@@ -7,18 +7,22 @@ const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_service
 const client = new authservices.AuthServices('shingo-auth-api:80', grpc.credentials.createInsecure());
 
 export function handle(event : WorkshopAddedEvent){
-    client.getRole({value: 'Affiliate Manager'}, (error, role) => {
-        if(error) {
-            if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
-            return console.error('Error in add-permission-af.handle(): ', error);
-        };
 
-        client.grantPermission({resource: `/workshops/${event.id}`, level: 2, roleId: role.id}, (error, response) => {
+    let call = client.readRole({clause: `role.name='Affiliate Manager' AND role.service='affiliate-portal'`});
+
+    let roles = [];
+
+    call.on('data', role => roles.push(role));
+
+    call.on('end', () => {
+        if(roles.length !== 1) return console.error('Multiple roles found for Affiliate Manager');
+        let role = roles[0];
+        client.grantPermissionToRole({resource: `/workshops/${event.id}`, level: 2, accessorId: role.id}, (error, set) => {
             if(error) {
                 if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 return console.error('Error in add-permission-af.handle(): ', error);
             };
-            return console.log('PermissionSet: ', response);
+            return console.log('PermissionSet: ', set);
         });
     });
 }

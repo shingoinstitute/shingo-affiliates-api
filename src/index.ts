@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ApplicationModule } from './app.module';
+import { InitService } from './initService';
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as session from 'express-session';
@@ -16,5 +17,6 @@ server.use(session({
     proxy: true
 }))
 
+InitService.init();
 const app = NestFactory.create(ApplicationModule, server);
 app.listen(port, () => console.log(`Application is listening on port ${port}`));

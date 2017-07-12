@@ -16,9 +16,9 @@ export class AuthController {
 
     @Post('login')
     public async login(@Request() req, @Response() res, @Body() body){
-        if(!body.username || !body.password) return res.status(HttpStatus.BAD_REQUEST).json({error: "MISSING_FIELDS"});
+        if(!body.email || !body.password) return res.status(HttpStatus.BAD_REQUEST).json({error: "MISSING_FIELDS"});
 
-        authClient.login({username: body.username, password: body.password}, (error, user) => {
+        authClient.login({email: body.email, password: body.password}, (error, user) => {
             if(error){
                 if(error.metadata && error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 console.error('Error in AuthController.login(): ', error)
@@ -26,6 +26,8 @@ export class AuthController {
                     return res.status(HttpStatus.NOT_FOUND).json({error: 'INVALID_CREDENTIALS'});
                 return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: 'INTERNAL_ERROR'});
             }
+
+            if(!user.services.includes('affiliate-portal')) return res.status(HttpStatus.NOT_FOUND).json({ error: 'NOT_REGISTERED' });
 
             let query = {
                 action: 'SELECT',
@@ -38,7 +40,7 @@ export class AuthController {
                     'Email'
                 ],
                 table: 'Contact',
-                clauses: `Email='${body.username}' AND RecordType.Name='Affiliate Instructor'`
+                clauses: `Email='${body.email}' AND RecordType.Name='Affiliate Instructor'`
             }
 
             sfClient.query(query, (error, response) => {
@@ -56,7 +58,7 @@ export class AuthController {
                 if(sfResult.totalSize !== 1){
                     let sfError = { code: '', details: '' };
                     sfError.code = (sfResult.totalSize > 1 ? 'DUPLICATE_EMAIL' : 'INVALID_LOGIN');
-                    sfError.details = (sfResult.totalSize > 1 ? `${body.username} has returned ${sfResult.totalSize} contacts in Salesforce!` : 'A Salesforce affiliate instructor could not be found for ' + body.username)
+                    sfError.details = (sfResult.totalSize > 1 ? `${body.email} has returned ${sfResult.totalSize} contacts in Salesforce!` : 'A Salesforce affiliate instructor could not be found for ' + body.username)
                     console.error('Error in AuthController.login(): ', { sfError });
                     return res.status(HttpStatus.BAD_REQUEST).json({ sfError });
                 }
@@ -64,8 +66,8 @@ export class AuthController {
                 let sfContact = sfResult.records[0];
                 console.log('User has logged in: ', user);
                 req.session.user = user;
-                req.session.user.contact=sfContact;
-                req.session.affiliate=sfContact.AccountId;
+                req.session.user.contact =sfContact;
+                req.session.affiliate = sfContact.AccountId;
                 res.status(HttpStatus.OK)
                     .json({jwt: user.jwt});
             });

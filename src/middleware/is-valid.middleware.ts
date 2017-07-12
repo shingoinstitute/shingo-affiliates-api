@@ -13,8 +13,8 @@ export class IsValidMiddleware implements NestMiddleware {
             if(req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production') return next();
             if(!req.session.user) return res.status(HttpStatus.FORBIDDEN).json({error: 'ACCESS_EXPIRED'});
 
-            client.isValid({value: req.headers['x-jwt']}, (error, valid) => {
-                if(valid && valid.value) return next();
+            client.isValid({token: req.headers['x-jwt']}, (error, valid) => {
+                if(valid && valid.response) return next();
                 if(error) console.error(`Error in IsValidMiddleware.resolve(${req.headers['x-jwt']}): `, error);
                 res.status(HttpStatus.FORBIDDEN)
                     .json({error: 'ACCESS_FORBIDDEN'});

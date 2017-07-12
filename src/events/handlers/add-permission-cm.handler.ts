@@ -7,19 +7,24 @@ const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_service
 const client = new authservices.AuthServices('shingo-auth-api:80', grpc.credentials.createInsecure());
 
 export function handle(event : WorkshopAddedEvent){
-    client.getRole({value: 'Course Manager -- ' + event.affiliate}, (error, role) => {
-        if(error) {
-            if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
-            return console.error('Error in add-permission-cm.handle(): ', error);
-        }
 
-        if(!role) return console.error(`Role not found for \'Course Manager -- ${event.affiliate}\'`);
-        client.grantPermission({resource: `/workshops/${event.id}`, level: 2, roleId: role.id}, (error, response) => {
+    let call = client.readRole({clause: `role.name='Course Manager -- ${event.affiliate}'`});
+
+    let roles = [];
+
+    call.on('data', role => roles.push(role));
+
+    call.on('end', () => {
+        if(roles.length !== 1) return console.error('Error finding role for course manager', event);
+
+        let role = roles[0];
+
+        client.grantPermission({resource: `/workshops/${event.id}`, level: 2, accessorId: role.id}, (error, set) => {
             if(error) {
                 if(error.metadata.get('error-bin')) error = JSON.parse(error.metadata.get('error-bin').toString());
                 return console.error('Error in add-permission-cm.handle(): ', error);
             };
-            return console.log('PermissionSet: ', response);
+            return console.log('PermissionSet: ', set);
         });
     });
 }
