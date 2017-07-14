@@ -1,11 +1,12 @@
 import { Module, MiddlewaresConsumer, RequestMethod, OnModuleInit } from '@nestjs/common';
 import { WorkshopsController, AuthController, FacilitatorsController } from './controllers';
 import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware } from './middleware'
+import { SalesforceService, CacheService, AuthService } from './components';
 import { WorkshopEmitter, FacilitatorEmitter } from './events';
 
 @Module({
     controllers: [ WorkshopsController, AuthController, FacilitatorsController ],
-    components: [ AuthMiddleware ]
+    components: [ AuthMiddleware, SalesforceService, CacheService, AuthService ]
 })
 export class ApplicationModule implements OnModuleInit {
 

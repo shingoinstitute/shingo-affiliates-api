@@ -1,23 +1,30 @@
 {
   "compilerOptions": {
+    "target": "es6",
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": false,
     "noImplicitAny": false,
     "noLib": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es6",
-    "outDir": "build",
+    "outDir": "spec",
     "typeRoots": [
       "node_modules/@types"
     ]
   },
+  "buildOnSave": false,
+  "compileOnSave": false,
   "include": [
     "**/*.ts"
   ],
   "exclude": [
+    "./**/*.d.ts",
     "node_modules",
     "build",
-    "**/*.spec.ts"
+    "specs"
+  ],
+  "filesGlob": [
+    "../**/*.ts"
   ]
 }
