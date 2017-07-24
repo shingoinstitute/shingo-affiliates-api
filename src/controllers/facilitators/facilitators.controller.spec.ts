@@ -4,12 +4,14 @@ import { FacilitatorsController } from './facilitators.controller';
 import { SalesforceService, CacheService, AuthService } from '../../components';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 import { mock, instance, when, anything } from 'ts-mockito';
+import * as _ from 'lodash';
 
 const expectedReadAll = { totalSize: 0, done: true, records: [{Id: '003g000001VvwEZAAZ', AccountId: '001g000001glcsWAAQ', RecordType: { Name: 'Affiliate Instructor' }}] };
 const expectedSFCreate = { id: '003g000001VvwEZAAZ', success: true, errors: [] };
 const expectedAuthCreate = { id: 1, jwt: 'aoijhfdposaiud.eiopiepoeih.aoihdpoaihgpoihj', email: 'testemail@example.com' };
-const expectedCreate = { id: expectedAuthCreate.id, jwt: expectedAuthCreate.jwt };
+const expectedCreate = { id: expectedAuthCreate.id, jwt: expectedAuthCreate.jwt, Id: expectedSFCreate.id };
 const expectedDescribe = {field: 'Some Field', why: 'SF Describe object is HUUUUGE!'};
+const expectedReadOne = _.merge(expectedAuthCreate, { password: 'password', roles: [], permissions: []});
 
 class MockSFClient {
     
@@ -48,8 +50,16 @@ class MockAuthClient {
         return callback(null, expectedAuthCreate);
     }
 
+    public updateUser(data, callback) {
+        return callback(null, { response: true });
+    }
+
     public addRoleToUser(data, callback) {
         return callback(null, { response: true });
+    }
+
+    public readOneUser(data, callback) {
+        return callback(null, expectedReadOne);
     }
 }
 
@@ -105,7 +115,9 @@ export class FacilitatorsControllerFixture {
         this.mockAuthInstance = instance(mockAuthService);
         SpyOn(this.mockAuthInstance, 'getClient');
         SpyOn(mockAuthClient, 'createUser');
+        SpyOn(mockAuthClient, 'updateUser');
         SpyOn(mockAuthClient, 'addRoleToUser');
+        SpyOn(mockAuthClient, 'readOneUser');
 
         NestTest.createTestingModule({
             controllers: [ FacilitatorsController ],
@@ -127,8 +139,8 @@ export class FacilitatorsControllerFixture {
         Expect(controller.search).toBeDefined();
         Expect(controller.read).toBeDefined();
         Expect(controller.create).toBeDefined();
-        // Expect(controller.update).toBeDefined();
-        // Expect(controller.delete).toBeDefined();
+        Expect(controller.update).toBeDefined();
+        Expect(controller.delete).toBeDefined();
     }
 
     @TestCase('001g000001glcsWAAQ', 'true', 'Affiliate Manager')
@@ -311,13 +323,14 @@ export class FacilitatorsControllerFixture {
         
         const actual = await controller.read(mockRequest, mockResponse, mockNext, expectedReadAll.records[0].Id);
         Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedReadAll.records[0]);
+        Expect(actual).toEqual(_.merge(expectedReadAll.records[0], _.omit(expectedReadOne, [ 'password', 'email' ])));
         Expect(this.mockSfInstance.getClient().retrieve).toHaveBeenCalled().exactly(1).times;
         Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
         Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
+        Expect(this.mockAuthInstance.getClient().readOneUser).toHaveBeenCalled().exactly(1).times;
     }
 
-    @AsyncTest('Create a workshop')
+    @AsyncTest('Create a facilitator')
     public async create(){
         const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
 
@@ -344,7 +357,7 @@ export class FacilitatorsControllerFixture {
 
         Expect(actual).toEqual(expectedCreate);
         Expect(this.mockSfInstance.getClient().create).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockAuthInstance.getClient().createUser).toHaveBeenCalled().exactly(1).times;
+        Expect(this.mockAuthInstance.getClient().updateUser).toHaveBeenCalled().exactly(1).times;
         Expect(this.mockAuthInstance.getClient().addRoleToUser).toHaveBeenCalled().exactly(1).times;
         Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
         Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;

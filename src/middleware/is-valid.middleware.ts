@@ -1,24 +1,48 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import * as grpc from 'grpc';
-import * as path from 'path';
-
-const authservices = grpc.load(path.join(__dirname, '../../proto/auth_services.proto')).authservices;
-const client = new authservices.AuthServices('shingo-auth-api:80', grpc.credentials.createInsecure());
+import { SalesforceService, AuthService, SFQueryObject } from '../components';
 
 @Middleware()
 export class IsValidMiddleware implements NestMiddleware {
 
+    private sfService = new SalesforceService();
+    private authService = new AuthService();
+
     public resolve() {
         return (req, res, next) => {
-            if(req.headers['x-jwt'] === '<<Shigeo1812>>' && process.env.NODE_ENV !== 'production') return next();
-            if(!req.session.user) return res.status(HttpStatus.FORBIDDEN).json({error: 'ACCESS_EXPIRED'});
+            return this.authService.isValid(req.headers['x-jwt'])
+                .then(valid => {
+                    if (valid && !valid.response) throw { error: 'ACCESS_FORBIDDEN' };
 
-            client.isValid({token: req.headers['x-jwt']}, (error, valid) => {
-                if(valid && valid.response) return next();
-                if(error) console.error(`Error in IsValidMiddleware.resolve(${req.headers['x-jwt']}): `, error);
-                res.status(HttpStatus.FORBIDDEN)
-                    .json({error: 'ACCESS_FORBIDDEN'});
-            });
+                    return this.authService.getUser(`user.jwt='${req.headers['x-jwt']}'`);
+                })
+                .then(user => {
+                    if (user === undefined) throw { error: 'USER_NOT_FOUND' };
+                    req.session.user = user;
+
+                    const query = {
+                        action: 'SELECT',
+                        fields: [
+                            'Id',
+                            'Name',
+                            'FirstName',
+                            'LastName',
+                            'AccountId',
+                            'Email'
+                        ],
+                        table: 'Contact',
+                        clauses: `Email='${user.email}' AND RecordType.Name='Affiliate Instructor'`
+                    }
+                    return this.sfService.query(query as SFQueryObject);
+                })
+                .then(contact => {
+                    req.session.user.contact = contact;
+                    req.session.affiliate = contact['AccountId'];
+                    return next();
+                })
+                .catch(error => {
+                    console.error('Error in is-valid.middleware.ts', error);
+                    return res.status(HttpStatus.FORBIDDEN).json(error);
+                });
         }
     }
 }

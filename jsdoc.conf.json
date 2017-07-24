@@ -6,15 +6,17 @@
     "includePattern": ".+\\.js(doc|x)?$",
     "excludePattern": ".*spec.*"
   },
-  "plugins": ["plugins/markdown"],
+  "plugins": [
+    "plugins/markdown"
+  ],
   "templates": {
     "logoFile": "",
-    "cleverLinks": false,
-    "monospaceLinks": false,
+    "cleverLinks": true,
+    "monospaceLinks": true,
     "dateFormat": "ddd MMM Do YYYY",
-    "outputSourceFiles": true,
-    "outputSourcePath": true,
-    "systemName": "Shingo Institute",
+    "outputSourceFiles": false,
+    "outputSourcePath": false,
+    "systemName": "Shingo Affiliate Portal",
     "footer": "",
     "copyright": "Shingo Affiliates Portal Copyright © 2017 Shingo Institute.",
     "navType": "vertical",

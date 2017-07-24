@@ -30,8 +30,10 @@
     "start": "nodemon -e ts  --exec \"npm run compile\"",
     "compile": "tsc && node build/index.js",
     "test": "tsc -p ./tsconfig.spec.json; cd spec; alsatian **/*.spec.js",
-    "coverage": "nyc --reporter=lcov --reporter=html npm run test && nyc report"
+    "coverage": "nyc --reporter=lcov --reporter=html npm run test && nyc report",
+    "docs": "tsc && jsdoc -t ./node_modules/ink-docstrap/template/ -r build/ -d docs -c jsdoc.conf.json"
   },
   "author": "Dustin E. Homan",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {}
 }
