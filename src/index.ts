@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000
 
 const server = express()
 server.use(bodyParser.json())
-server.use(bodyParser.urlencoded({extended: false}))
+server.use(bodyParser.urlencoded({ extended: false }))
 server.use(session({
     secret: process.env.SESSION_SECRET || 'ilikedogz',
     resave: true,
@@ -17,6 +17,11 @@ server.use(session({
     proxy: true
 }))
 
-InitService.init();
-const app = NestFactory.create(ApplicationModule, server);
-app.listen(port, () => console.log(`Application is listening on port ${port}`));
+InitService.init()
+    .then(() => {
+        const app = NestFactory.create(ApplicationModule, server);
+        app.listen(port, () => console.log(`Application is listening on port ${port}`));
+    })
+    .catch(error => {
+        console.error('Error in lifting application!', error);
+    });

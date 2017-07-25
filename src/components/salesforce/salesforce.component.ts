@@ -1,6 +1,7 @@
 import { Component } from '@nestjs/common';
 import * as grpc from 'grpc';
 import * as path from 'path';
+import * as bluebird from 'bluebird';
 
 export interface gRPCError { metadata: any }
 
@@ -16,7 +17,7 @@ export interface SFRecordData { object: string; records: object[] }
 
 export interface SFSearchData { retrieve: string; search: string }
 
-export interface SFSearchResults { searchResults: any[] }
+export interface SFSearchResults { searchRecords: any[] }
 
 const sfservices = grpc.load(path.join(__dirname, '../../../proto/sf_services.proto')).sfservices;
 
@@ -32,7 +33,7 @@ export class SalesforceService {
     private client;
 
     constructor() {
-        this.client = this.getClient();
+        this.client = bluebird.promisifyAll(this.getClient());
     }
 
     /**
@@ -47,28 +48,15 @@ export class SalesforceService {
     }
 
     /**
-     * @desc Parse a response for the Shingo SF Microservice
-     * 
-     * @private
-     * @param {any} error 
-     * @param {any} response 
-     * @returns {Promise<any>} 
-     * @memberof SalesforceService
-     */
-    private parseContents(error, response): Promise<any> {
-        if (error) return Promise.reject(error);
-        return Promise.resolve(JSON.parse(response.contents));
-    }
-
-    /**
      * @desc Async wrapper for the Shingo SF Microservice query call
      * 
      * @param {SFQueryObject} query - See {@link SFQueryObject}
      * @returns {Promise<SFQueryResponse>} See {@link SFQueryResponse}
      * @memberof SalesforceService
      */
-    public query(query: SFQueryObject): Promise<SFQueryResponse> {
-        return this.client.query(query, this.parseContents);
+    public async query(query: SFQueryObject): Promise<SFQueryResponse> {
+        const response = await this.client.queryAsync(query);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -78,8 +66,9 @@ export class SalesforceService {
      * @returns {Promise<object>} 
      * @memberof SalesforceService
      */
-    public retrieve(data: SFIdData): Promise<object> {
-        return this.client.retrieve(data, this.parseContents);
+    public async retrieve(data: SFIdData): Promise<object> {
+        const response = await this.client.retrieveAsync(data);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -89,8 +78,9 @@ export class SalesforceService {
      * @returns {Promise<SFSuccessObject[]>} - See {@link SFSuccessObject}
      * @memberof SalesforceService
      */
-    public create(data: SFRecordData): Promise<SFSuccessObject[]> {
-        return this.client.create(data, this.parseContents);
+    public async create(data: SFRecordData): Promise<SFSuccessObject[]> {
+        const response = await this.client.createAsync(data);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -100,8 +90,9 @@ export class SalesforceService {
      * @returns {Promise<SFSuccessObject[]>} - See {@link SFSuccessObject}
      * @memberof SalesforceService
      */
-    public update(data: SFRecordData): Promise<SFSuccessObject[]> {
-        return this.client.update(data, this.parseContents);
+    public async update(data: SFRecordData): Promise<SFSuccessObject[]> {
+        const response = await this.client.updateAsync(data);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -111,8 +102,9 @@ export class SalesforceService {
      * @returns {Promise<SFSuccessObject[]>} - See {@link SFSuccessObject}
      * @memberof SalesforceService
      */
-    public delete(data: SFIdData): Promise<SFSuccessObject[]> {
-        return this.client.delete(data, this.parseContents);
+    public async delete(data: SFIdData): Promise<SFSuccessObject[]> {
+        const response = await this.client.deleteAsync(data);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -122,8 +114,9 @@ export class SalesforceService {
      * @returns {Promise<object>} - See {@linkhttps://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_sobject_describe.htm|Salesforce Docs}
      * @memberof SalesforceService
      */
-    public describe(object: string): Promise<object> {
-        return this.client.describe({ object }, this.parseContents);
+    public async describe(object: string): Promise<object> {
+        const response = await this.client.describeAsync({ object });
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
@@ -133,18 +126,20 @@ export class SalesforceService {
      * @returns {Promise<SFSearchResults>} - Array of workshops
      * @memberof SalesforceService
      */
-    public search(data: SFSearchData): Promise<SFSearchResults> {
-        return this.client.search(data, this.parseContents);
+    public async search(data: SFSearchData): Promise<SFSearchResults> {
+        const response = await this.client.searchAsync(data);
+        return Promise.resolve(JSON.parse(response.contents));
     }
 
     /**
      * @desc Utility method to assist in parsing gRPC error metadata. Returns a JSON object from the parsed error data. If no JSON object can be parsed, the method attempts to return the 'error-bin' from the meta-data as a string. If that fails the method returns the error passed to it.
      * 
+     * @static
      * @param {gRPCError} error - The error to be parsed
      * @returns {object} The parsed error, 'error-bin'.toString(), or passed in error
      * @memberof SalesforceService
      */
-    public parseRPCErrorMeta(error: gRPCError): object {
+    public static parseRPCErrorMeta(error: gRPCError): object {
         try {
             let err = JSON.parse(error.metadata.get('error-bin').toString());
             return err;

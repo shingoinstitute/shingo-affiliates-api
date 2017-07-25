@@ -9,6 +9,7 @@ export class IsValidMiddleware implements NestMiddleware {
 
     public resolve() {
         return (req, res, next) => {
+            if (req.path === '/workshops' && (req.query.isPublic || req.headers['x-is-public'])) return next();
             return this.authService.isValid(req.headers['x-jwt'])
                 .then(valid => {
                     if (valid && !valid.response) throw { error: 'ACCESS_FORBIDDEN' };
@@ -35,8 +36,8 @@ export class IsValidMiddleware implements NestMiddleware {
                     return this.sfService.query(query as SFQueryObject);
                 })
                 .then(contact => {
-                    req.session.user.contact = contact;
-                    req.session.affiliate = contact['AccountId'];
+                    req.session.user.contact = contact.records[0];
+                    req.session.affiliate = contact.records[0]['AccountId'];
                     return next();
                 })
                 .catch(error => {

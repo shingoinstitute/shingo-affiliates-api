@@ -12,6 +12,8 @@ ENV PORT=80
 
 ENV SF_API=shingo-sf-api
 
+ENV AUTH_API=shingo-auth-api
+
 EXPOSE 80
 
 ENTRYPOINT ["npm", "run"]

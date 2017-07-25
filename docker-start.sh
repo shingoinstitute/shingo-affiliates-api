@@ -10,7 +10,7 @@ if [ -z "$2" ]; then
     PORT=3000;
 fi
 
-docker build --no-cache --tag shingo-affiliates-api:${TAG} .
+docker build --tag shingo-affiliates-api:${TAG} .
 
 docker kill shingo-affiliates-api
 docker rm shingo-affiliates-api

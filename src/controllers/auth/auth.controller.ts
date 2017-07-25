@@ -32,7 +32,7 @@ export class AuthController {
      * @memberof WorkshopsController
      */
     private handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = this.sfService.parseRPCErrorMeta(error);
+        if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
 
         console.error(message, error);
         return res.status(errorCode).json({ error });
@@ -52,7 +52,7 @@ export class AuthController {
         if (!body.email || !body.password) return this.handleError(res, 'Error in AuthController.login(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
 
         try {
-            const user = await this.authService.login(body);
+            const user = await this.authService.login({ email: body.email, password: body.password });
 
             if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
             if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);

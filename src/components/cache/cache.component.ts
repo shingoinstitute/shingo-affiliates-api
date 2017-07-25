@@ -11,7 +11,7 @@ import * as hash from 'object-hash';
 @Component()
 export class CacheService {
 
-    constructor(){
+    constructor() {
         this.theCache = new NodeCache({ stdTTL: 1800, checkperiod: 900 });
     }
 
@@ -31,7 +31,7 @@ export class CacheService {
      * @returns {string} 
      * @memberof CacheService
      */
-    private getKey(obj : object) : string {
+    private getKey(obj: object): string {
         return hash(obj);
     }
 
@@ -42,9 +42,9 @@ export class CacheService {
      * @returns The cached result. 'undefined' if key is not found.
      * @memberof CacheService
      */
-    public getCache(obj : object | string) {
+    public getCache(obj: object | string) {
         let key = obj;
-        if(typeof obj !== 'string') key = this.getKey(obj);
+        if (typeof obj !== 'string') key = this.getKey(obj);
 
         return this.theCache.get(key);
     }
@@ -56,9 +56,9 @@ export class CacheService {
      * @returns {boolean} 
      * @memberof CacheService
      */
-    public isCached(obj : object | string) : boolean {
+    public isCached(obj: object | string): boolean {
         let key = obj;
-        if(typeof obj !== 'string') key = this.getKey(obj);
+        if (typeof obj !== 'string') key = this.getKey(obj);
 
         return this.theCache.get(key) !== undefined;
     }
@@ -70,13 +70,14 @@ export class CacheService {
      * @param {*} value 
      * @memberof CacheService
      */
-    public cache(obj : object | string, value : any) : void {
+    public cache(obj: object | string, value: any): void {
         let key = obj;
-        if(typeof obj !== 'string') key = this.getKey(obj);
+        if (typeof obj !== 'string') key = this.getKey(obj);
+        if (!value) return;
 
         value['cached'] = new Date().toISOString();
         const success = this.theCache.set(key, value);
-        if(!success) console.error("Response could not be cached!");
+        if (!success) console.error("Response could not be cached!");
     }
 
 }

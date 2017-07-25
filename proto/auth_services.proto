@@ -11,7 +11,9 @@ service AuthServices {
 
     rpc CreateUser(Credentials) returns (User) {}
 
-    rpc ReadUser(QueryRequest) returns (stream User) {}
+    rpc ReadUser(QueryRequest) returns (UserBatch) {}
+
+    rpc ReadOneUser(QueryRequest) returns (User) {}
 
     rpc UpdateUser(User) returns (BooleanResponse) {}
 
@@ -25,13 +27,17 @@ service AuthServices {
 
     rpc ReadPermission(QueryRequest) returns (stream Permission) {}
 
+    rpc ReadOnePermission(QueryRequest) returns (Permission) {}
+
     rpc UpdatePermission(Permission) returns (BooleanResponse) {}
 
     rpc DeletePermission(Permission) returns (BooleanResponse) {}
 
     rpc CreateRole(Role) returns (Role) {}
 
-    rpc ReadRole(QueryRequest) returns (stream Role) {}
+    rpc ReadRole(QueryRequest) returns (RoleBatch) {}
+
+    rpc ReadOneRole(QueryRequest) returns (Role) {}
 
     rpc UpdateRole(Role) returns (BooleanResponse) {}
 
@@ -119,4 +125,12 @@ message PermissionSet {
 message RoleOperation {
     string userEmail = 1;
     int32 roleId = 2;
+}
+
+message UserBatch {
+    repeated User users = 1;
+}
+
+message RoleBatch {
+    repeated Role roles = 1;
 }

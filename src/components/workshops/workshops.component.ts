@@ -17,9 +17,19 @@ export { Workshop }
 @Component()
 export class WorkshopsService {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService, private cache: CacheService, private userService: UserService) { }
+    private sfService: SalesforceService;
+    private authService: AuthService;
+    private cache: CacheService;
+    private userService: UserService;
 
-    public parseRPCErrorMeta = this.sfService.parseRPCErrorMeta;
+    constructor() {
+        this.sfService = new SalesforceService();
+        this.authService = new AuthService();
+        this.cache = new CacheService();
+        this.userService = new UserService();
+    }
+
+    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -82,6 +92,8 @@ export class WorkshopsService {
             let workshops: Workshop[] = (await this.sfService.query(query)).records as Workshop[];
 
             if (isPublic) this.cache.cache(query, workshops);
+
+            console.log('Returning workshops: ', workshops);
 
             return Promise.resolve(workshops);
         } else {
@@ -189,7 +201,7 @@ export class WorkshopsService {
 
         // If no cached result, use the shingo-sf-api to get result
         if (!this.cache.isCached(data) || refresh) {
-            const workshops: Workshop[] = (await this.sfService.search(data)).searchResults as Workshop[];
+            const workshops: Workshop[] = (await this.sfService.search(data)).searchRecords as Workshop[] || [];
 
             // Cache results
             this.cache.cache(data, workshops);
@@ -219,6 +231,7 @@ export class WorkshopsService {
         let query: SFQueryObject = {
             action: "SELECT",
             fields: [
+                "Id",
                 "Instructor__r.Id",
                 "Instructor__r.FirstName",
                 "Instructor__r.LastName",
@@ -229,7 +242,7 @@ export class WorkshopsService {
             clauses: `Workshop__c='${id}'`
         }
 
-        const facilitators: object[] = (await this.sfService.query(query)).records;
+        const facilitators: object[] = (await this.sfService.query(query)).records || [];
         return Promise.resolve(facilitators);
     }
 
@@ -356,11 +369,12 @@ export class WorkshopsService {
     private async removePermissions(workshop: Workshop, remove: any[]): Promise<void> {
         const resource = `/workshops/${workshop.Id}`;
 
-        const ids = remove.map(facilitator => { return facilitator.Instructor__r.Id });
+        const ids = remove.map(facilitator => { return facilitator.Id });
 
         await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids });
 
-        const emails = remove.map(facilitator => { return `${facilitator.Instructor__r.Email}` });
+        const emails = remove.map(facilitator => { return `'${facilitator.Instructor__r.Email}'` });
+        if (!emails.length) return Promise.resolve();
         const users = await this.authService.getUsers(`user.email IN (${emails.join()})`);
         for (const user in users) {
             await this.authService.revokePermissionFromUser(resource, 2, user['id']);

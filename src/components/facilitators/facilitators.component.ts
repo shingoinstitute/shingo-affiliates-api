@@ -14,9 +14,16 @@ import * as _ from 'lodash';
 @Component()
 export class FacilitatorsService {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService, private cache: CacheService) { }
+    private sfService: SalesforceService;
+    private authService: AuthService;
+    private cache: CacheService;
+    constructor() {
+        this.sfService = new SalesforceService();
+        this.authService = new AuthService();
+        this.cache = new CacheService();
+    }
 
-    public parseRPCErrorMeta = this.sfService.parseRPCErrorMeta;
+    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
 
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>
@@ -137,7 +144,7 @@ export class FacilitatorsService {
         }
 
         if (!this.cache.isCached(data) || refresh) {
-            const facilitators = (await this.sfService.search(data)).searchResults.filter(result => {
+            const facilitators = (await this.sfService.search(data)).searchRecords.filter(result => {
                 if (affiliate === '') return result.RecordType.Name === 'Affiliate Instructor';
                 else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
             });

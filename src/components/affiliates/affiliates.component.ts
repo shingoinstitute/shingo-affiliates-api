@@ -13,9 +13,17 @@ export { Affiliate };
 @Component()
 export class AffiliatesService {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService, private cache: CacheService) { };
+    private sfService: SalesforceService;
+    private authService: AuthService;
+    private cache: CacheService;
 
-    public parseRPCErrorMeta = this.sfService.parseRPCErrorMeta;
+    constructor() {
+        this.sfService = new SalesforceService();
+        this.authService = new AuthService();
+        this.cache = new CacheService();
+    };
+
+    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
 
     /**
      * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
@@ -137,7 +145,7 @@ export class AffiliatesService {
 
         // If no cached result, use the shingo-sf-api to get result
         if (!this.cache.isCached(data) || refresh) {
-            let affiliates: Affiliate[] = (await this.sfService.search(data)).searchResults as Affiliate[];
+            let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[];
             affiliates = affiliates.filter(aff => { return aff.RecordType.Name === 'Licensed Affiliate'; });
 
             // Cache results

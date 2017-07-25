@@ -3,6 +3,12 @@ import { AffiliatesService, Affiliate } from '../../components';
 
 import { checkRequired } from '../../validators/objKeyValidator';
 
+/**
+ * @desc Controller of the REST API logic for Affiliates
+ * 
+ * @export
+ * @class AffiliatesController
+ */
 @Controller('affiliates')
 export class AffiliatesController {
 
@@ -90,9 +96,17 @@ export class AffiliatesController {
         }
     }
 
+    /**
+     * @desc <h5>GET: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
+     * 
+     * @param {Response} res - Express response
+     * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
     @Get(':id')
     public async read( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.matches(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const affiliate = await this.affService.get(id);
@@ -102,6 +116,14 @@ export class AffiliatesController {
         }
     }
 
+    /**
+     * @desc <h5>POST: /affiliates</h5> Calls {@link AffiliatesService#create} to create a new Affiliate
+     * 
+     * @param {Response} res - Express response
+     * @param {Body} body - Required fields <code>[ "Name" ]</code>
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
     @Post()
     public async create( @Response() res, @Body() body): Promise<Response> {
         const required = checkRequired(body, ['Name']);
@@ -114,9 +136,17 @@ export class AffiliatesController {
         }
     }
 
+    /**
+     * @desc <h5>POST: /affiliates/<em>:id</em>/map</h5> Calls {@link AffiliatesService#map} to create permissions for a Licensed Affiliate Account
+     * 
+     * @param {Response} res - Express response
+     * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
     @Post(':id/map')
     public async map( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.matches(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             await this.affService.map(id);
@@ -126,9 +156,20 @@ export class AffiliatesController {
         }
     }
 
+    /**
+     * @desc <h5>PUT: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#update} to update an Affiliate
+     * 
+     * @param {Response} res - Express response
+     * @param {Body} body - Required fields <code>[ "Id" ]</code>
+     * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
     @Put(':id')
     public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
-        if (!id.matches(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/) || id !== body.Id) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        let required = checkRequired(body, ['Id']);
+        if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
         try {
             const result = await this.affService.update(body);
@@ -138,9 +179,17 @@ export class AffiliatesController {
         }
     }
 
+    /**
+     * @desc <h5>DELETE: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#delete} to delete an Affiliate
+     * 
+     * @param {Response} res - Express response
+     * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
     @Delete(':id')
     public async delete( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.matches(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in AffiliatesController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const result = await this.affService.delete(id);

@@ -17,7 +17,7 @@ import * as _ from 'lodash';
 @Controller('facilitators')
 export class FacilitatorsController {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService, private cache: CacheService, private facilitatorsService: FacilitatorsService) { };
+    constructor(private facilitatorsService: FacilitatorsService) { };
 
     /**
      * @desc A helper function to return an error response to the client.
@@ -31,7 +31,7 @@ export class FacilitatorsController {
      * @memberof FacilitatorsController
      */
     private handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR): Promise<Response> {
-        if (error.metadata) error = this.sfService.parseRPCErrorMeta(error);
+        if (error.metadata) error = this.facilitatorsService.parseRPCErrorMeta(error);
 
         console.error(message, error);
         return res.status(errorCode).json({ error });
@@ -106,8 +106,8 @@ export class FacilitatorsController {
         if (!search || !retrieve) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, HttpStatus.BAD_REQUEST);
 
         try {
-            const searchResults = await this.facilitatorsService.search(search, retrieve, (isAfMan ? '' : req.session.affiliate), refresh === 'true');
-            return res.status(HttpStatus.OK).json(searchResults);
+            const searchRecords = await this.facilitatorsService.search(search, retrieve, (isAfMan ? '' : req.session.affiliate), refresh === 'true');
+            return res.status(HttpStatus.OK).json(searchRecords);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.search(): ', error);
         }
@@ -117,14 +117,14 @@ export class FacilitatorsController {
      * @desc <h5>GET: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#get} to retrieve a Facilitator
      * 
      * @param {Response} res - Express response
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
      * @memberof FacilitatorsController
      */
     @Get('/:id')
     public async read( @Response() res, @Param('id') id): Promise<Response> {
         // Check the id
-        if (!id.matches(/[\w\d]{14,17}/)) return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const facilitator = await this.facilitatorsService.get(id);
@@ -144,7 +144,7 @@ export class FacilitatorsController {
      */
     @Post()
     public async create( @Response() res, @Body() body): Promise<Response> {
-        if (!body.AccountId.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!body.AccountId.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email', 'password']);
         if (!required.valid) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
@@ -162,13 +162,13 @@ export class FacilitatorsController {
      * 
      * @param {Response} res - Express response
      * @param {any} body - Required fields <code>{ oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography', etc..] }</code>
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is status of updates and resulting SF Operation
      * @memberof FacilitatorsController
      */
     @Put('/:id')
     public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
-        if (!id.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         if (!body) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
 
@@ -185,14 +185,14 @@ export class FacilitatorsController {
      * @desc <h5>DELETE: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#delete}, {@link FacilitatorsService#deleteAuth} or {@link FacilitatorsService#unmapAuth} to remove a facilitator from the affiliate portal
      * 
      * @param {Response} res - Express response
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @param {string} [deleteAuth='true'] - Delete auth as well
      * @returns {Promise<Response>} Response is status of deletes and resulting SF Operation
      * @memberof FacilitatorsController
      */
     @Delete('/:id')
     public async delete( @Response() res, @Param('id') id, @Query('deleteAuth') deleteAuth = 'true'): Promise<Response> {
-        if (!id.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const record = await this.facilitatorsService.delete(id);
@@ -210,13 +210,13 @@ export class FacilitatorsController {
      * @desc <h5>DELETE: /facilitators/<em>:id</em>/login</h5> Calls {@link FacilitatorsService#deleteAuth} to delete a Facilitator's login only
      * 
      * @param {Response} res - Express response
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is result of delete
      * @memberof FacilitatorsController
      */
     @Delete('/:id/login')
     public async deleteLogin( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const deleted = await this.facilitatorsService.deleteAuth(id);
@@ -230,13 +230,13 @@ export class FacilitatorsController {
      * @desc <h5>DELETE: /facilitators/<em>:id</em>/unmap</h5> Calls {@link FacilitatorsService#unmapAuth} to remove the Affiliate Portal service from a login
      * 
      * @param {Response} res - Express response
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Reponse body is result of unmap
      * @memberof FacilitatorsController
      */
     @Delete('/:id/unmap')
     public async unamp( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const unmaped = await this.facilitatorsService.unmapAuth(id);
@@ -250,14 +250,14 @@ export class FacilitatorsController {
      * @desc <h5>POST: /facilitators/<em>:id</em>/roles/<em>:roleId</em></h5> Calls {@link FacilitatorsService#changeRole} to change a Facilitator's role
      * 
      * @param {Response} res - Express response
-     * @param {SalesforceId} id - Contact id. Matches <code>/[\w\d]{14,17}/</code>
+     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @param {number} roleId - Id of the role to change too
      * @returns {Promise<Response>} Response body is result of add
      * @memberof FacilitatorsController
      */
     @Post('/:id/roles/:roleId')
     public async changeRole( @Response() res, @Param('id') id, @Param('roleId') roleId): Promise<Response> {
-        if (!id.matches(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const added = this.facilitatorsService.changeRole(id, roleId);
