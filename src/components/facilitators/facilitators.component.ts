@@ -173,7 +173,7 @@ export class FacilitatorsService {
         }
 
         const facilitator = (await this.sfService.retrieve(data))[0];
-        const user = await this.authService.getUser(`user.email=${facilitator.Email}`);
+        const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
         return Promise.resolve(_.merge(facilitator, _.omit(user, ['email', 'password'])));
     }
 
@@ -200,14 +200,16 @@ export class FacilitatorsService {
             records: [{ contents: JSON.stringify(contact) }]
         }
         const record = (await this.sfService.create(data))[0];
-        let auth = await this.authService.getUser(`user.email=${user.Email}`);
+        let auth = await this.authService.getUser(`user.email='${user.Email}'`);
+        console.log('auth', auth);
 
-        if (auth === undefined) {
+        if (auth.email === '') {
             auth = await this.createNewAuth(user.Email, user.password, roleId, record.id);
+        } else {
+            auth = await this.mapCurrentAuth(user.Email, roleId, record.id);
         }
 
-        auth = await this.mapCurrentAuth(user.Email, roleId, record.id);
-        Promise.resolve({ id: record.id, ...auth });
+        return Promise.resolve({ id: record.id, ...auth });
     }
 
     /**
@@ -236,7 +238,7 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async mapCurrentAuth(userEmail: string, roleId: number, extId: string): Promise<any> {
-        const user = await this.authService.getUser(`user.email=${userEmail}`);
+        const user = await this.authService.getUser(`user.email='${userEmail}'`);
 
         if (user === undefined) Promise.reject({ error: 'USER_NOT_FOUND' });
 
@@ -271,8 +273,8 @@ export class FacilitatorsService {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
-        const record = (await this.sfService.create(data))[0];
-        if (user.Email || user.Password) {
+        const record = (await this.sfService.update(data))[0];
+        if (user.Email || user.password) {
             return Promise.resolve({ salesforce: true, auth: await this.updateAuth(user, record.id), record });
         }
 
@@ -292,7 +294,9 @@ export class FacilitatorsService {
         if (user.Email) set['email'] = user.Email;
         if (user.password) set['password'] = user.password;
 
+        console.log('set: ', set);
         const updated = await this.authService.updateUser(set as User);
+        console.log('updated', updated);
         return Promise.resolve((updated && updated.response));
     }
 

@@ -48,16 +48,28 @@ export class ApplicationModule {
             },
             {
                 path: '/facilitators/*', method: RequestMethod.GET
+            },
+            {
+                path: '/affiliates/*', method: RequestMethod.GET
             })
             .apply(IsAFManMiddleware)
             .forRoutes({
-                path: '/facilitators', method: RequestMethod.POST
+                path: '/facilitators*', method: RequestMethod.POST
             },
             {
-                path: '/facilitators/*', method: RequestMethod.PUT
+                path: '/facilitators*', method: RequestMethod.PUT
             },
             {
-                path: '/facilitators/*', method: RequestMethod.DELETE
+                path: '/facilitators*', method: RequestMethod.DELETE
+            },
+            {
+                path: '/affiliates*', method: RequestMethod.POST
+            },
+            {
+                path: '/affiliates*', method: RequestMethod.PUT
+            },
+            {
+                path: '/affiliates*', method: RequestMethod.DELETE
             })
             .apply(AuthMiddleware)
             .with(2, 'workshops -- ')

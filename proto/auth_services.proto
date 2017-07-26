@@ -9,7 +9,7 @@ package authservices;
 
 service AuthServices {
 
-    rpc CreateUser(Credentials) returns (User) {}
+    rpc CreateUser(User) returns (User) {}
 
     rpc ReadUser(QueryRequest) returns (UserBatch) {}
 
@@ -86,6 +86,7 @@ message User {
     repeated Role roles = 6;
     bool isEnabled = 7;
     string password = 8;
+    string extId = 9;
 }
 
 message AccessRequest {

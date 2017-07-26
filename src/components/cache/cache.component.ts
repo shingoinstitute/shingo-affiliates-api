@@ -75,7 +75,6 @@ export class CacheService {
         if (typeof obj !== 'string') key = this.getKey(obj);
         if (!value) return;
 
-        value['cached'] = new Date().toISOString();
         const success = this.theCache.set(key, value);
         if (!success) console.error("Response could not be cached!");
     }

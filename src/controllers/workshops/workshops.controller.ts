@@ -9,6 +9,8 @@ import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
 
+import * as multer from 'multer';
+
 /**
  * @desc Controller of the REST API logic for Workshops
  * 
@@ -201,6 +203,58 @@ export class WorkshopsController extends BaseController {
         }
     }
 
+    @Post('/:id/attendee_file')
+    public async uploadAttendeeFile( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
+        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!req.attendeeList) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'MISSING_FILEDS', fields: ['attendeeList'] });
+
+        const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25 } }).single('attendeeList');
+
+        return upload(req, res, error => {
+            if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
+            const ext: string = req.file.originalName.split('.').pop();
+
+            console.log('File Upload: ', req.file);
+            console.log('File Base64: ', req.file.buffer.toString('base64'));
+            console.log('File extension: ', ext);
+
+            try {
+                this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
+            } catch (error) {
+                return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
+            }
+
+            return res.status(HttpStatus.ACCEPTED).json();
+        });
+    }
+
+    @Post('/:id/attendee_file')
+    public async uploadEvaluations( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
+        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!req.evaluationFiles || !req.evaluationFiles.length) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'MISSING_FILEDS', fields: ['evaluationFiles'] });
+
+        const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25, files: 30 } }).files('evaluationFiles');
+
+        return upload(req, res, error => {
+            if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
+
+            const files = req.files.map(file => { return file.buffer.toString('base64'); });
+            const ext: string = req.files[0].originalName.split('.').pop();
+
+            console.log('Files Upload: ', req.files);
+            console.log('Files Base64: ', files);
+            console.log('File extension: ', ext);
+
+            try {
+                this.workshopsService.upload(id, `attendee_list.${ext}`, files);
+            } catch (error) {
+                return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
+            }
+
+            return res.status(HttpStatus.ACCEPTED).json();
+        });
+    }
+
     /**
      * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to delete the workshop given by <em>:id</em>
      * 
@@ -211,8 +265,7 @@ export class WorkshopsController extends BaseController {
     @Delete('/:id')
     public async delete( @Response() res, @Param('id') id): Promise<Response> {
         // Check the id
-        const pattern = /a[\w\d]{14,17}/;
-        if (!pattern.test(id)) return this.handleError(res, 'Error in WorkshopsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const result = await this.workshopsService.delete(id);

@@ -4,10 +4,12 @@ import { InitService } from './initService';
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as session from 'express-session';
+import * as cors from 'cors';
 
 const port = process.env.PORT || 3000
 
 const server = express()
+server.use(cors());
 server.use(bodyParser.json())
 server.use(bodyParser.urlencoded({ extended: false }))
 server.use(session({

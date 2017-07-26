@@ -137,7 +137,7 @@ export class FacilitatorsController extends BaseController {
     /**
      * @desc <h5>PUT: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#update} to update a Facilitator. If <code>body</code> contains <code>Email</code> or <code>password</code> the associated auth is also updated.
      * 
-     * @param {any} body - Required fields <code>{ oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography', etc..] }</code>
+     * @param {any} body - Required fields <code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography', etc..] }</code>
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is status of updates and resulting SF Operation
      * @memberof FacilitatorsController
@@ -146,7 +146,8 @@ export class FacilitatorsController extends BaseController {
     public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
-        if (!body) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
+
+        if (!_.omit(body, ["Id"]) || !body.Id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
 
         try {
             const result = await this.facilitatorsService.update(body);

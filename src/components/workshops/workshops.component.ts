@@ -91,8 +91,6 @@ export class WorkshopsService {
 
             if (isPublic) this.cache.cache(query, workshops);
 
-            console.log('Returning workshops: ', workshops);
-
             return Promise.resolve(workshops);
         } else {
             return Promise.resolve(this.cache.getCache(query));
@@ -299,6 +297,23 @@ export class WorkshopsService {
         await this.grantPermissions(workshop);
         await this.removePermissions(workshop, removeFacilitators);
 
+        return Promise.resolve(result);
+    }
+
+    public async upload(id: string, fileName: string, files: string[]): Promise<SFSuccessObject[]> {
+
+        const records = [];
+        let fileId = 0;
+        for (const file of files) {
+            records.push({ contents: JSON.stringify({ ParentId: id, Name: `${fileId++}-${fileName}`, Body: file }) });
+        }
+
+        const data = {
+            object: 'Attachment',
+            records
+        }
+
+        const result: SFSuccessObject[] = await this.sfService.create(data);
         return Promise.resolve(result);
     }
 

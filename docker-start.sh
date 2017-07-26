@@ -15,8 +15,9 @@ docker build --tag shingo-affiliates-api:${TAG} .
 docker kill shingo-affiliates-api
 docker rm shingo-affiliates-api
 
-docker run -itd                 \
+docker run -itd                     \
     --name shingo-affiliates-api    \
-    --network shingo-dev-net    \
-    --volume $(pwd):/code       \
+    --network shingo-dev-net        \
+    --volume $(pwd):/code           \
+    --publish 8080:80               \
     shingo-affiliates-api:${TAG}
