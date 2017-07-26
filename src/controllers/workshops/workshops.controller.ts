@@ -225,7 +225,7 @@ export class WorkshopsController {
     }
 
     /**
-     * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to dDelete the workshop given by <em>:id</em>
+     * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to delete the workshop given by <em>:id</em>
      * 
      * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>

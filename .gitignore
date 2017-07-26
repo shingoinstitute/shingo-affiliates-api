@@ -1,7 +1,7 @@
 node_modules/
 build/
 .vscode/
-docs/
+docs-dark/
 coverage/
 .nyc_output/
 spec/
