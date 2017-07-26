@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, HttpStatus, Request, Response, Next, Param, Query, Headers, Body, Session } from '@nestjs/common';
 import { AffiliatesService, Affiliate } from '../../components';
+import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
 
@@ -8,34 +9,16 @@ import { checkRequired } from '../../validators/objKeyValidator';
  * 
  * @export
  * @class AffiliatesController
+ * @extends {BaseController}
  */
 @Controller('affiliates')
-export class AffiliatesController {
+export class AffiliatesController extends BaseController {
 
-    constructor(private affService: AffiliatesService) { };
-
-    /**
-     * @desc A helper function to return an error response to the client.
-     * 
-     * @private
-     * @param {Response} res 
-     * @param {string} message 
-     * @param {*} error 
-     * @param {HttpStatus} [errorCode=HttpStatus.INTERNAL_SERVER_ERROR] 
-     * @returns Response body is a JSON object with the error.
-     * @memberof WorkshopsController
-     */
-    private handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = this.affService.parseRPCErrorMeta(error);
-
-        console.error(message, error);
-        return res.status(errorCode).json({ error });
-    }
+    constructor(private affService: AffiliatesService) { super(); };
 
     /**
      * @desc <h5>GET: /affiliates</h5> Calls {@link AffiliatesService#getAll} to get a list of affiliates
      * 
-     * @param {Response} res - Express response
      * @param {Query} isPublicQ - Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public affiliates
      * @param {Header} isPublicH - Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public affiliates
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
@@ -58,7 +41,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>GET: /affiliates/describe</h5> Calls {@link AffiliatesService#describe} to describe the Account Object
      * 
-     * @param {Response} res - Express response
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} 
      * @memberof AffiliatesController
@@ -76,7 +58,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>GET: /affiliates/search</h5> Calls {@link AffiliatesService#search}. Returns an array of affiliates that match search criteria
      * 
-     * @param {Response} res - Express response
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
@@ -99,7 +80,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>GET: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} 
      * @memberof AffiliatesController
@@ -119,7 +99,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>POST: /affiliates</h5> Calls {@link AffiliatesService#create} to create a new Affiliate
      * 
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields <code>[ "Name" ]</code>
      * @returns {Promise<Response>} 
      * @memberof AffiliatesController
@@ -139,7 +118,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>POST: /affiliates/<em>:id</em>/map</h5> Calls {@link AffiliatesService#map} to create permissions for a Licensed Affiliate Account
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} 
      * @memberof AffiliatesController
@@ -159,7 +137,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>PUT: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#update} to update an Affiliate
      * 
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields <code>[ "Id" ]</code>
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} 
@@ -182,7 +159,6 @@ export class AffiliatesController {
     /**
      * @desc <h5>DELETE: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#delete} to delete an Affiliate
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} 
      * @memberof AffiliatesController

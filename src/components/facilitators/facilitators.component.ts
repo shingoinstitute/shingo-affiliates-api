@@ -23,8 +23,6 @@ export class FacilitatorsService {
         this.cache = new CacheService();
     }
 
-    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
-
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>
      * <code>[<br>

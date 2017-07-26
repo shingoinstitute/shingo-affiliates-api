@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -95,39 +95,24 @@ var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _argument
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const components_1 = require("../../components");
+const base_controller_1 = require("../base.controller");
 const objKeyValidator_1 = require("../../validators/objKeyValidator");
 /**
  * @desc Controller of the REST API logic for Workshops
  *
  * @export
  * @class WorkshopsController
+ * @extends {BaseController}
  */
-let WorkshopsController = class WorkshopsController {
+let WorkshopsController = class WorkshopsController extends base_controller_1.BaseController {
     constructor(workshopsService) {
+        super();
         this.workshopsService = workshopsService;
     }
     ;
     /**
-     * @desc A helper function to return an error response to the client.
-     *
-     * @private
-     * @param {Response} res
-     * @param {string} message
-     * @param {*} error
-     * @param {HttpStatus} [errorCode=HttpStatus.INTERNAL_SERVER_ERROR]
-     * @returns Response body is a JSON object with the error.
-     * @memberof WorkshopsController
-     */
-    handleError(res, message, error, errorCode = common_1.HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata)
-            error = this.workshopsService.parseRPCErrorMeta(error);
-        console.error(message, error);
-        return res.status(errorCode).json({ error });
-    }
-    /**
      * @desc &lt;h5>GET: /workshops&lt;/h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
      *
-     * @param {Response} res - Express response
      * @param {Session} session - Session contains the current user. The function uses the permissions on this object to query Salesforce for the workshops.
      * @param {any} isPublicQ - Query parameter &lt;code>'isPublic'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Alias &lt;code>headers['x-force-refesh']&lt;/code>; Returns public workshops
      * @param {any} isPublicH - Header &lt;code>'x-is-public'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Alias &lt;code>query['isPublic']&lt;/code>; Returns public workshops
@@ -153,7 +138,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>GET: /workshops/describe&lt;/h5> Calls {@link WorkshopsService#describe} to describe Workshop\__c
      *
-     * @param {Response} res - Express response
      * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
      * @returns {Promise&lt;Response>} Response body is a JSON object with the describe result
      * @memberof WorkshopsController
@@ -173,7 +157,6 @@ let WorkshopsController = class WorkshopsController {
      * @desc &lt;h5>GET: /workshops/search&lt;/h5> Calls {@link WorkshopsService#search}. Returns an array of workshops that match search criteria
      *
      *
-     * @param {Response} res - Express response
      * @param {Header} search - Header &lt;code>'x-search'&lt;/code>. SOSL search expression (i.e. '*Discover Test*').
      * @param {Header} retrieve - Header &lt;code>'x-retrieve'&lt;/code>. A comma seperated list of the Workshop\__c fields to retrieve (i.e. 'Id, Name, Start_Date\__c')
      * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
@@ -197,7 +180,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>GET: /workshops/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
      *
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__c id. match &lt;code>/a[\w\d]{14,17}/&lt;/code>
      * @returns {Promise&lt;Response>} Response body is a JSON object of type {&lt;em>returned fields&lt;/em>}
      * @memberof WorkshopsController
@@ -219,7 +201,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>GET: /workshops/&lt;em>:id&lt;/em>/facilitators&lt;/h5> Calls {@link WorkshopsService#facilitators} to get all associated facilitators for a workshop
      *
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__cid. match &lt;code>/a[\w\d]{14,17}/&lt;/code>
      * @returns {Promise&lt;Response>} Response is a JSON Array of Contact objects
      * @memberof WorkshopsController
@@ -241,7 +222,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>POST: /workshops&lt;/h5> Calls {@link WorkshopsService#create} to create a new workshop in Salesforce and permissions for the workshop in the Shingo Auth API
      *
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields &lt;code>[ "Name", "Organizing_Affiliate\__c", "Start_Date\__c", "End_Date\__c", "Host_Site\__c", "Event_Country\__c", "Event_City\__c", "facilitators" ]&lt;/code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @returns {Promise&lt;Response>} Response is a JSON Object from the resulting Salesforce operation
@@ -274,7 +254,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>PUT: /workshops/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link WorkshopsService#update} to update a workshop's fields. This function also updates facilitator associations and permissions
      *
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields &lt;code>[ "Id", "Organizing_Affiliate\__c" ]&lt;/code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @param {SalesforceId} id - Workshop\__c id. match &lt;code>/a[\w\d]{14,17}/&lt;/code>
@@ -311,7 +290,6 @@ let WorkshopsController = class WorkshopsController {
     /**
      * @desc &lt;h5>DELETE: /workshops/&lt;em>:id&lt;/eM>&lt;/h5> Calls {@link WorkshopsService#delete} to delete the workshop given by &lt;em>:id&lt;/em>
      *
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__c id. match &lt;code>/a[\w\d]{14,17}/&lt;/code>
      * @returns {Promise&lt;Response>} Response is a JSON Object from the resulting Salesforce operation
      * @memberof WorkshopsController
@@ -332,12 +310,6 @@ let WorkshopsController = class WorkshopsController {
         });
     }
 };
-__decorate([
-    __param(0, common_1.Response()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Object, Number]),
-    __metadata("design:returntype", void 0)
-], WorkshopsController.prototype, "handleError", null);
 __decorate([
     common_1.Get(),
     __param(0, common_1.Response()), __param(1, common_1.Session()), __param(2, common_1.Query('isPublic')), __param(3, common_1.Headers('x-is-public')), __param(4, common_1.Headers('x-force-refresh')),

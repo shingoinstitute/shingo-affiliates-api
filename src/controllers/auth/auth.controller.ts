@@ -8,41 +8,23 @@ import {
     SalesforceService, AuthService,
     SFQueryObject
 } from '../../components';
+import { BaseController } from '../base.controller';
 
 /**
  * @desc Provides the controller of the Auth REST logic
  * 
  * @export
  * @class AuthController
+ * @extends {BaseController}
  */
 @Controller('auth')
-export class AuthController {
+export class AuthController extends BaseController {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService) { };
-
-    /**
-     * @desc A helper function to return an error response to the client.
-     * 
-     * @private
-     * @param {Response} res 
-     * @param {string} message 
-     * @param {*} error 
-     * @param {HttpStatus} [errorCode=HttpStatus.INTERNAL_SERVER_ERROR] 
-     * @returns Response body is a JSON object with the error.
-     * @memberof WorkshopsController
-     */
-    private handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-
-        console.error(message, error);
-        return res.status(errorCode).json({ error });
-    }
+    constructor(private sfService: SalesforceService, private authService: AuthService) { super(); };
 
     /**
      * @desc <h5>POST: /auth/login</h5> Calls {@link AuthService#login} and {@link SalesforceService#query} to login a user
      * 
-     * @param {Request} req - Express request
-     * @param {Reponse} res - Express response
      * @param {any} body - Required fields: <code>[ 'email', 'password' ]</code>
      * @returns {Promise<Response>} Response body is an object with the user's JWT
      * @memberof AuthController
@@ -84,8 +66,6 @@ export class AuthController {
     /**
      * @desc <h5>GET: /auth/logout</h5> Calls {@link AuthService#updateUser} to set the user's JWT to '' and removes the user from the session
      * 
-     * @param {Request} req - Express request 
-     * @param {Response} res - Express response
      * @returns {Promise<Response>} 
      * @memberof AuthController
      */

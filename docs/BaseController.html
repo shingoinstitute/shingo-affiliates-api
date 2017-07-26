@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-	<title>Shingo Affiliate Portal Class: AuthService</title>
+	<title>Shingo Affiliate Portal Class: BaseController</title>
 
 	<!--[if lt IE 9]>
 	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -66,13 +66,13 @@
 		<div id="main">
 			
 
-	<h1 class="page-title">Class: AuthService</h1>
+	<h1 class="page-title">Class: BaseController</h1>
 <section>
 
 <header>
     
         <h2>
-        AuthService
+        BaseController
         </h2>
         
     
@@ -85,7 +85,7 @@
         
 <hr>
 <dt>
-    <h4 class="name" id="AuthService"><span class="type-signature"></span>new AuthService()</h4>
+    <h4 class="name" id="BaseController"><span class="type-signature"></span>new BaseController()</h4>
     
     
 </dt>
@@ -93,7 +93,7 @@
 
     
     <div class="description">
-        <p>A service to abastract the Shingo Auth Microservice client</p>
+        <p>The base controller class contains methods shared between multiple routes</p>
     </div>
     
 
@@ -139,8 +139,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="components_auth_auth.component.js.html">components/auth/auth.component.js</a>,
-				 <a href="components_auth_auth.component.js.html#sunlight-1-line-17">line 17</a>
+				<a href="controllers_base.controller.js.html">controllers/base.controller.js</a>,
+				 <a href="controllers_base.controller.js.html#sunlight-1-line-17">line 17</a>
 			</li>
 		</ul>
 	</dd>
@@ -191,7 +191,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="parseRPCErrorMeta"><span class="type-signature"></span>parseRPCErrorMeta(error)</h4>
+    <h4 class="name" id="handleError"><span class="type-signature">&lt;protected> </span>handleError(res, message, error [, errorCode])</h4>
     
     
 </dt>
@@ -199,7 +199,7 @@
 
     
     <div class="description">
-        <p>Utility method to assist in parsing gRPC error metadata. Returns a JSON object from the parsed error data. If no JSON object can be parsed, the method attempts to return the 'error-bin' from the meta-data as a string. If that fails the method returns the error passed to it.</p>
+        <p>A helper function to return an error response to the client.</p>
     </div>
     
 
@@ -222,7 +222,11 @@
         <th>Type</th>
 
         
+        <th>Argument</th>
+        
 
+        
+        <th>Default</th>
         
 
         <th class="last">Description</th>
@@ -234,13 +238,13 @@
 
         <tr>
             
-                <td class="name"><code>error</code></td>
+                <td class="name"><code>res</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">gRPCError</span>
+<span class="param-type">Response</span>
 
 
 
@@ -248,10 +252,134 @@
             </td>
 
             
+                <td class="attributes">
+                
 
+                
+
+                
+                </td>
             
 
-            <td class="description last"><p>The error to be parsed</p></td>
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>The express response from the calling route</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>message</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>Log message</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>error</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">*</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>An error object to be logged and returned as JSON</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>errorCode</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">HttpStatus</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                
+                </td>
+            
+
+            <td class="description last"><p>HttpStatus CODE</p></td>
         </tr>
 
     
@@ -295,8 +423,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="components_auth_auth.component.js.html">components/auth/auth.component.js</a>,
-				 <a href="components_auth_auth.component.js.html#sunlight-1-line-116">line 116</a>
+				<a href="controllers_base.controller.js.html">controllers/base.controller.js</a>,
+				 <a href="controllers_base.controller.js.html#sunlight-1-line-35">line 35</a>
 			</li>
 		</ul>
 	</dd>
@@ -325,23 +453,10 @@
     
             
 <div class="param-desc">
-    <p>The parsed error, 'error-bin'.toString(), or passed in error</p>
+    <p>Response body is a JSON object with the error</p>
 </div>
 
 
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">object</span>
-
-
-
-    </dd>
-</dl>
 
 
         

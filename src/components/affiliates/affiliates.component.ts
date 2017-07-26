@@ -23,8 +23,6 @@ export class AffiliatesService {
         this.cache = new CacheService();
     };
 
-    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
-
     /**
      * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
      * <code>[<br>

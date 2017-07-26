@@ -5,6 +5,7 @@ import {
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
 import { WorkshopsService, Workshop } from '../../components';
+import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
 
@@ -13,34 +14,16 @@ import { checkRequired } from '../../validators/objKeyValidator';
  * 
  * @export
  * @class WorkshopsController
+ * @extends {BaseController}
  */
 @Controller('workshops')
-export class WorkshopsController {
+export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService) { };
-
-    /**
-     * @desc A helper function to return an error response to the client.
-     * 
-     * @private
-     * @param {Response} res 
-     * @param {string} message 
-     * @param {*} error 
-     * @param {HttpStatus} [errorCode=HttpStatus.INTERNAL_SERVER_ERROR] 
-     * @returns Response body is a JSON object with the error.
-     * @memberof WorkshopsController
-     */
-    private handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = this.workshopsService.parseRPCErrorMeta(error);
-
-        console.error(message, error);
-        return res.status(errorCode).json({ error });
-    }
+    constructor(private workshopsService: WorkshopsService) { super(); };
 
     /**
      * @desc <h5>GET: /workshops</h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
      * 
-     * @param {Response} res - Express response
      * @param {Session} session - Session contains the current user. The function uses the permissions on this object to query Salesforce for the workshops.
      * @param {any} isPublicQ - Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public workshops
      * @param {any} isPublicH - Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public workshops
@@ -66,7 +49,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>GET: /workshops/describe</h5> Calls {@link WorkshopsService#describe} to describe Workshop\__c
      * 
-     * @param {Response} res - Express response
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} Response body is a JSON object with the describe result
      * @memberof WorkshopsController
@@ -87,7 +69,6 @@ export class WorkshopsController {
      * @desc <h5>GET: /workshops/search</h5> Calls {@link WorkshopsService#search}. Returns an array of workshops that match search criteria
      * 
      * 
-     * @param {Response} res - Express response
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. '*Discover Test*').
      * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Workshop\__c fields to retrieve (i.e. 'Id, Name, Start_Date\__c')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
@@ -112,7 +93,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>GET: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
      * @memberof WorkshopsController
@@ -133,7 +113,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>GET: /workshops/<em>:id</em>/facilitators</h5> Calls {@link WorkshopsService#facilitators} to get all associated facilitators for a workshop
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__cid. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response is a JSON Array of Contact objects
      * @memberof WorkshopsController
@@ -156,7 +135,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>POST: /workshops</h5> Calls {@link WorkshopsService#create} to create a new workshop in Salesforce and permissions for the workshop in the Shingo Auth API
      * 
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields <code>[ "Name", "Organizing_Affiliate\__c", "Start_Date\__c", "End_Date\__c", "Host_Site\__c", "Event_Country\__c", "Event_City\__c", "facilitators" ]</code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
@@ -189,7 +167,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>PUT: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#update} to update a workshop's fields. This function also updates facilitator associations and permissions
      * 
-     * @param {Response} res - Express response
      * @param {Body} body - Required fields <code>[ "Id", "Organizing_Affiliate\__c" ]</code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
@@ -227,7 +204,6 @@ export class WorkshopsController {
     /**
      * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to delete the workshop given by <em>:id</em>
      * 
-     * @param {Response} res - Express response
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
      * @memberof WorkshopsController

@@ -29,8 +29,6 @@ export class WorkshopsService {
         this.userService = new UserService();
     }
 
-    public parseRPCErrorMeta = SalesforceService.parseRPCErrorMeta;
-
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
      *  <code>[<br>
