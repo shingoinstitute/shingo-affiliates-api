@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Shingo Affiliate Portal Source: components/salesforce/salesforce.component.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.lumen.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html"><img class="branding-logo" src="./Shingo_Logo.png"
+		alt="logo"/>Shingo Affiliate Portal</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+        
+            <div class="col-sm-3 col-md-3">
+                <form class="navbar-form" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                        <div class="input-group-btn">
+                            <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-12">
+	
+		<div id="main">
+			
+
+		<h1 class="page-title">Source: components/salesforce/salesforce.component.js</h1>
+    
+<section>
+    <article>
+        <pre
+            class="sunlight-highlight-javascript linenums">"use strict";
+var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c &lt; 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" &amp;&amp; typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c &lt; 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 &amp;&amp; r &amp;&amp; Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const common_1 = require("@nestjs/common");
+const grpc = require("grpc");
+const path = require("path");
+const bluebird = require("bluebird");
+const sfservices = grpc.load(path.join(__dirname, '../../../proto/sf_services.proto')).sfservices;
+/**
+ * @desc A service to abastract the Shingo SF Microservice client
+ *
+ * @export
+ * @class SalesforceService
+ */
+let SalesforceService = class SalesforceService {
+    constructor() {
+        this.client = bluebird.promisifyAll(this.getClient());
+    }
+    /**
+     * @desc Method to instantiate a RPC Client from the sf_services.proto
+     *
+     * @private
+     * @returns Returns a RPC Client to be used in consuming the Shingo SF Microservice
+     * @memberof SalesforceService
+     */
+    getClient() {
+        return new sfservices.SalesforceMicroservices(`${process.env.SF_API}:80`, grpc.credentials.createInsecure());
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice query call
+     *
+     * @param {SFQueryObject} query - See {@link SFQueryObject}
+     * @returns {Promise&lt;SFQueryResponse>} See {@link SFQueryResponse}
+     * @memberof SalesforceService
+     */
+    query(query) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.queryAsync(query);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice retrieve call
+     *
+     * @param {SFIdData} data - See {@link SFIdData}
+     * @returns {Promise&lt;object>}
+     * @memberof SalesforceService
+     */
+    retrieve(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.retrieveAsync(data);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice create call
+     *
+     * @param {SFRecordData} data - See {@link SFRecordData}
+     * @returns {Promise&lt;SFSuccessObject[]>} - See {@link SFSuccessObject}
+     * @memberof SalesforceService
+     */
+    create(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.createAsync(data);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice update call
+     *
+     * @param {SFRecordData} data - See {@link SFRecordData}
+     * @returns {Promise&lt;SFSuccessObject[]>} - See {@link SFSuccessObject}
+     * @memberof SalesforceService
+     */
+    update(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.updateAsync(data);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice delete call
+     *
+     * @param {SFIdData} data - See {@link SFIdData}
+     * @returns {Promise&lt;SFSuccessObject[]>} - See {@link SFSuccessObject}
+     * @memberof SalesforceService
+     */
+    delete(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.deleteAsync(data);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice describe call
+     *
+     * @param {string} object - SF Object to describe
+     * @returns {Promise&lt;object>} - See {@linkhttps://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_sobject_describe.htm|Salesforce Docs}
+     * @memberof SalesforceService
+     */
+    describe(object) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.describeAsync({ object });
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Async wrapper for the Shingo SF Microservice search call
+     *
+     * @param {SFSearchData} data - See {@link SFSearchData}
+     * @returns {Promise&lt;SFSearchResults>} - Array of workshops
+     * @memberof SalesforceService
+     */
+    search(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.client.searchAsync(data);
+            return Promise.resolve(JSON.parse(response.contents));
+        });
+    }
+    /**
+     * @desc Utility method to assist in parsing gRPC error metadata. Returns a JSON object from the parsed error data. If no JSON object can be parsed, the method attempts to return the 'error-bin' from the meta-data as a string. If that fails the method returns the error passed to it.
+     *
+     * @static
+     * @param {gRPCError} error - The error to be parsed
+     * @returns {object} The parsed error, 'error-bin'.toString(), or passed in error
+     * @memberof SalesforceService
+     */
+    static parseRPCErrorMeta(error) {
+        try {
+            let err = JSON.parse(error.metadata.get('error-bin').toString());
+            return err;
+        }
+        catch (caught) {
+            console.error('Couldn\'t parse RPC Error;', { error, caught });
+            if (error.metadata.get('error-bin'))
+                return error.metadata.get('error-bin').toString();
+            else
+                return error;
+        }
+    }
+};
+SalesforceService = __decorate([
+    common_1.Component(),
+    __metadata("design:paramtypes", [])
+], SalesforceService);
+exports.SalesforceService = SalesforceService;
+</pre>
+    </article>
+</section>
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+
+</div>
+</div>
+
+
+    <div class="modal fade" id="searchResults">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Search results</h4>
+          </div>
+          <div class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div>
+
+
+<footer>
+
+
+	<span class="copyright">
+	Shingo Affiliates Portal Copyright © 2017 Shingo Institute.
+	</span>
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.1</a>
+	
+		on Wed Jul 26th 2017
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+
+    <script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre, pre.prettyprint.source" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : true,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			return $( heading ).attr( "id" ) || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            SearcherDisplay.init();
+        });
+    </script>
+
+
+</body>
+</html>
