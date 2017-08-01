@@ -73,7 +73,7 @@ export class AuthController extends BaseController {
      * @memberof AuthController
      */
     @Get('valid')
-    public async( @Response() res): Promise<Response> {
+    public async valid( @Response() res): Promise<Response> {
         return res.status(HttpStatus.OK).json();
     }
 
