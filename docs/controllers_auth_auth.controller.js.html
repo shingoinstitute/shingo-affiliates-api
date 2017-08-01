@@ -158,8 +158,10 @@ let AuthController = class AuthController extends base_controller_1.BaseControll
      * @returns {Promise&lt;Response>}
      * @memberof AuthController
      */
-    async(res) {
-        return res.status(common_1.HttpStatus.OK).json();
+    valid(res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return res.status(common_1.HttpStatus.OK).json();
+        });
     }
     /**
      * @desc &lt;h5>GET: /auth/logout&lt;/h5> Calls {@link AuthService#updateUser} to set the user's JWT to '' and removes the user from the session
@@ -196,7 +198,7 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "async", null);
+], AuthController.prototype, "valid", null);
 __decorate([
     common_1.Get('logout'),
     __param(0, common_1.Request()), __param(1, common_1.Response()),
