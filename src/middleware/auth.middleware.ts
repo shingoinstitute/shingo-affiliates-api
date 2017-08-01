@@ -1,5 +1,5 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { AuthService } from '../components';
+import { AuthService, SalesforceService } from '../components';
 
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
@@ -25,6 +25,7 @@ export class AuthMiddleware implements NestMiddleware {
                     throw { error: 'ACCESS_FORBIDDEN' };
                 })
                 .catch(error => {
+                    if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
                     console.error('Error in AuthMiddleware.resolve(): ', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });

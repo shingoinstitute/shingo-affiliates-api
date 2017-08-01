@@ -14,6 +14,10 @@ ENV SF_API=shingo-sf-api
 
 ENV AUTH_API=shingo-auth-api
 
+ENV LOG_PATH='./'
+
+ENV LOG_FILE='debug.log'
+
 EXPOSE 80
 
 ENTRYPOINT ["npm", "run"]

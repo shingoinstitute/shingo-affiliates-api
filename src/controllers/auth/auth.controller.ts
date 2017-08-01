@@ -10,6 +10,8 @@ import {
 } from '../../components';
 import { BaseController } from '../base.controller';
 
+import * as _ from 'lodash';
+
 /**
  * @desc Provides the controller of the Auth REST logic
  * 
@@ -53,7 +55,7 @@ export class AuthController extends BaseController {
                 clauses: `Email='${body.email}' AND RecordType.Name='Affiliate Instructor'`
             }
             const contact = (await this.sfService.query(query as SFQueryObject)).records[0];
-            req.session.user = user;
+            req.session.user = _.omit(user, ['password']);
             req.session.user.contact = contact;
             req.session.affiliate = contact['AccountId'];
 
@@ -61,6 +63,18 @@ export class AuthController extends BaseController {
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
+    }
+
+
+    /**
+     * <h5>GET: /auth/valid</h5> Protected by isValid middleware. Only get called if the value of x-jwt corresponds to a valid user
+     * 
+     * @returns {Promise<Response>} 
+     * @memberof AuthController
+     */
+    @Get('valid')
+    public async( @Response() res): Promise<Response> {
+        return res.status(HttpStatus.OK).json();
     }
 
     /**
@@ -71,9 +85,10 @@ export class AuthController extends BaseController {
      */
     @Get('logout')
     public async logout( @Request() req, @Response() res): Promise<Response> {
+        if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' })
         try {
             req.session.user.jwt = '';
-            await this.authService.updateUser(req.session.user);
+            await this.authService.updateUser(_.omit(req.session.user, ['contact']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {

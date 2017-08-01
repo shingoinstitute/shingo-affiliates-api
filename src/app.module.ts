@@ -4,7 +4,7 @@ import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware } from './middlewa
 import {
     SalesforceService, CacheService, AuthService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService
+    UserService, LoggerService
 } from './components';
 
 @Module({
@@ -17,7 +17,8 @@ import {
         WorkshopsService,
         FacilitatorsService,
         AffiliatesService,
-        UserService
+        UserService,
+        LoggerService
     ]
 })
 export class ApplicationModule {
@@ -39,6 +40,9 @@ export class ApplicationModule {
             },
             {
                 path: '/workshops/describe', method: RequestMethod.ALL
+            },
+            {
+                path: '/auth/valid', method: RequestMethod.ALL
             }
             )
             .apply(AuthMiddleware)

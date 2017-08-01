@@ -41,6 +41,7 @@ export class IsValidMiddleware implements NestMiddleware {
                     return next();
                 })
                 .catch(error => {
+                    if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
                     console.error('Error in is-valid.middleware.ts', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });

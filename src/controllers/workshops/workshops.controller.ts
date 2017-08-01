@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { WorkshopsService, Workshop } from '../../components';
+import { WorkshopsService, Workshop, LoggerService } from '../../components';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
@@ -21,7 +21,7 @@ import * as multer from 'multer';
 @Controller('workshops')
 export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService) { super(); };
+    constructor(private workshopsService: WorkshopsService, private log: LoggerService) { super(); };
 
     /**
      * @desc <h5>GET: /workshops</h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
@@ -41,6 +41,9 @@ export class WorkshopsController extends BaseController {
 
         try {
             const workshops: Workshop[] = await this.workshopsService.getAll(isPublic, forceRefresh, session.user);
+
+            this.log.silly('Returning workshops: %j', workshops);
+
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
             return this.handleError(res, 'Error in WorkshopsController.readAll(): ', error);
