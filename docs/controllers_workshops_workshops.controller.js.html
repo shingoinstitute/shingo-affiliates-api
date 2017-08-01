@@ -97,6 +97,7 @@ const common_1 = require("@nestjs/common");
 const components_1 = require("../../components");
 const base_controller_1 = require("../base.controller");
 const objKeyValidator_1 = require("../../validators/objKeyValidator");
+const multer = require("multer");
 /**
  * @desc Controller of the REST API logic for Workshops
  *
@@ -105,9 +106,10 @@ const objKeyValidator_1 = require("../../validators/objKeyValidator");
  * @extends {BaseController}
  */
 let WorkshopsController = class WorkshopsController extends base_controller_1.BaseController {
-    constructor(workshopsService) {
+    constructor(workshopsService, log) {
         super();
         this.workshopsService = workshopsService;
+        this.log = log;
     }
     ;
     /**
@@ -128,6 +130,7 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
                 return this.handleError(res, 'Error in WorkshopsController.readAll()', { error: "SESSION_EXPIRED" }, common_1.HttpStatus.FORBIDDEN);
             try {
                 const workshops = yield this.workshopsService.getAll(isPublic, forceRefresh, session.user);
+                this.log.silly('Returning workshops: %j', workshops);
                 return res.status(common_1.HttpStatus.OK).json(workshops);
             }
             catch (error) {
@@ -287,6 +290,55 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
             }
         });
     }
+    uploadAttendeeFile(req, res, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/a[\w\d]{14,17}/))
+                return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            if (!req.attendeeList)
+                return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'MISSING_FILEDS', fields: ['attendeeList'] });
+            const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25 } }).single('attendeeList');
+            return upload(req, res, error => {
+                if (error)
+                    return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
+                const ext = req.file.originalName.split('.').pop();
+                console.log('File Upload: ', req.file);
+                console.log('File Base64: ', req.file.buffer.toString('base64'));
+                console.log('File extension: ', ext);
+                try {
+                    this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
+                }
+                catch (error) {
+                    return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
+                }
+                return res.status(common_1.HttpStatus.ACCEPTED).json();
+            });
+        });
+    }
+    uploadEvaluations(req, res, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/a[\w\d]{14,17}/))
+                return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            if (!req.evaluationFiles || !req.evaluationFiles.length)
+                return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'MISSING_FILEDS', fields: ['evaluationFiles'] });
+            const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25, files: 30 } }).files('evaluationFiles');
+            return upload(req, res, error => {
+                if (error)
+                    return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
+                const files = req.files.map(file => { return file.buffer.toString('base64'); });
+                const ext = req.files[0].originalName.split('.').pop();
+                console.log('Files Upload: ', req.files);
+                console.log('Files Base64: ', files);
+                console.log('File extension: ', ext);
+                try {
+                    this.workshopsService.upload(id, `attendee_list.${ext}`, files);
+                }
+                catch (error) {
+                    return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
+                }
+                return res.status(common_1.HttpStatus.ACCEPTED).json();
+            });
+        });
+    }
     /**
      * @desc &lt;h5>DELETE: /workshops/&lt;em>:id&lt;/eM>&lt;/h5> Calls {@link WorkshopsService#delete} to delete the workshop given by &lt;em>:id&lt;/em>
      *
@@ -297,8 +349,7 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
     delete(res, id) {
         return __awaiter(this, void 0, void 0, function* () {
             // Check the id
-            const pattern = /a[\w\d]{14,17}/;
-            if (!pattern.test(id))
+            if (!id.match(/a[\w\d]{14,17}/))
                 return this.handleError(res, 'Error in WorkshopsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const result = yield this.workshopsService.delete(id);
@@ -360,6 +411,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkshopsController.prototype, "update", null);
 __decorate([
+    common_1.Post('/:id/attendee_file'),
+    __param(0, common_1.Request()), __param(1, common_1.Response()), __param(2, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], WorkshopsController.prototype, "uploadAttendeeFile", null);
+__decorate([
+    common_1.Post('/:id/attendee_file'),
+    __param(0, common_1.Request()), __param(1, common_1.Response()), __param(2, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], WorkshopsController.prototype, "uploadEvaluations", null);
+__decorate([
     common_1.Delete('/:id'),
     __param(0, common_1.Response()), __param(1, common_1.Param('id')),
     __metadata("design:type", Function),
@@ -368,7 +433,7 @@ __decorate([
 ], WorkshopsController.prototype, "delete", null);
 WorkshopsController = __decorate([
     common_1.Controller('workshops'),
-    __metadata("design:paramtypes", [components_1.WorkshopsService])
+    __metadata("design:paramtypes", [components_1.WorkshopsService, components_1.LoggerService])
 ], WorkshopsController);
 exports.WorkshopsController = WorkshopsController;
 </pre>
@@ -414,9 +479,9 @@ exports.WorkshopsController = WorkshopsController;
 	</span>
 
 <span class="jsdoc-message">
-	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.1</a>
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Wed Jul 26th 2017
+		on Tue Aug 1st 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
