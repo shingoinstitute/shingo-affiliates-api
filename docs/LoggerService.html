@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-	<title>Shingo Affiliate Portal Class: AffiliatesController</title>
+	<title>Shingo Affiliate Portal Class: LoggerService</title>
 
 	<!--[if lt IE 9]>
 	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -66,13 +66,13 @@
 		<div id="main">
 			
 
-	<h1 class="page-title">Class: AffiliatesController</h1>
+	<h1 class="page-title">Class: LoggerService</h1>
 <section>
 
 <header>
     
         <h2>
-        AffiliatesController
+        LoggerService
         </h2>
         
     
@@ -85,7 +85,7 @@
         
 <hr>
 <dt>
-    <h4 class="name" id="AffiliatesController"><span class="type-signature"></span>new AffiliatesController()</h4>
+    <h4 class="name" id="LoggerService"><span class="type-signature"></span>new LoggerService()</h4>
     
     
 </dt>
@@ -93,7 +93,7 @@
 
     
     <div class="description">
-        <p>Controller of the REST API logic for Affiliates</p>
+        <p>Provides an abstraction of the <a href="https://github.com/winstonjs/winston">Winston</a> JS logger. Uses Console and File transports.</p>
     </div>
     
 
@@ -139,8 +139,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-27">line 27</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-15">line 15</a>
 			</li>
 		</ul>
 	</dd>
@@ -171,17 +171,6 @@
 
     
     </div>
-
-    
-        <h3 class="subsection-title">Extends</h3>
-
-        
-
-
-    <ul>
-        <li><a href="BaseController.html">BaseController</a></li>
-    </ul>
-
 
     
 
@@ -202,7 +191,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="create"><span class="type-signature"></span>create(body)</h4>
+    <h4 class="name" id="debug"><span class="type-signature"></span>debug(message [, meta])</h4>
     
     
 </dt>
@@ -210,323 +199,7 @@
 
     
     <div class="description">
-        <p><h5>POST: /affiliates</h5> Calls <a href="AffiliatesService.html#create"><code>AffiliatesService#create</code></a> to create a new Affiliate</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>body</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Body</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Required fields <code>[ &quot;Name&quot; ]</code></p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
-	<dd class="tag-source">
-		<ul class="dummy">
-			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-130">line 130</a>
-			</li>
-		</ul>
-	</dd>
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Response></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="delete"><span class="type-signature"></span>delete(id)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p><h5>DELETE: /affiliates/<em>:id</em></h5> Calls <a href="AffiliatesService.html#delete"><code>AffiliatesService#delete</code></a> to delete an Affiliate</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">SalesforceId</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Account id. match <code>/[\w\d]{15,17}/</code></p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
-	<dd class="tag-source">
-		<ul class="dummy">
-			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-195">line 195</a>
-			</li>
-		</ul>
-	</dd>
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Response></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="describe"><span class="type-signature"></span>describe( [refresh])</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p><h5>GET: /affiliates/describe</h5> Calls <a href="AffiliatesService.html#describe"><code>AffiliatesService#describe</code></a> to describe the Account Object</p>
+        <p>Logs a <code>'debug'</code> level message. Used for more permanent messages that shouldn't make it to production.</p>
     </div>
     
 
@@ -553,8 +226,6 @@
         
 
         
-        <th>Default</th>
-        
 
         <th class="last">Description</th>
     </tr>
@@ -565,13 +236,45 @@
 
         <tr>
             
-                <td class="name"><code>refresh</code></td>
+                <td class="name"><code>message</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Header</span>
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>meta</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">any</span>
 
 
 
@@ -591,14 +294,8 @@
             
 
             
-                <td class="default">
-                
-                    'false'
-                
-                </td>
-            
 
-            <td class="description last"><p>Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh</p></td>
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
         </tr>
 
     
@@ -642,8 +339,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-69">line 69</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-64">line 64</a>
 			</li>
 		</ul>
 	</dd>
@@ -679,7 +376,7 @@
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Response></span>
+<span class="param-type">LoggerInstance</span>
 
 
 
@@ -696,7 +393,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="handleError"><span class="type-signature">&lt;protected> </span>handleError(res, message, error [, errorCode])</h4>
+    <h4 class="name" id="error"><span class="type-signature"></span>error(message [, meta])</h4>
     
     
 </dt>
@@ -704,7 +401,7 @@
 
     
     <div class="description">
-        <p>A helper function to return an error response to the client.</p>
+        <p>Logs a <code>'error'</code> level message. Used for permanent messages to alert developers of unexpected state or application failure.</p>
     </div>
     
 
@@ -731,8 +428,6 @@
         
 
         
-        <th>Default</th>
-        
 
         <th class="last">Description</th>
     </tr>
@@ -743,13 +438,13 @@
 
         <tr>
             
-                <td class="name"><code>res</code></td>
+                <td class="name"><code>message</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Response</span>
+<span class="param-type">string</span>
 
 
 
@@ -767,12 +462,412 @@
             
 
             
-                <td class="default">
+
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>meta</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">any</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
                 
                 </td>
             
 
-            <td class="description last"><p>The express response from the calling route</p></td>
+            
+
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-108">line 108</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">LoggerInstance</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="info"><span class="type-signature"></span>info(message [, meta])</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Logs a <code>'info'</code> level message. Used for permanent messages that will be logged in production.</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Argument</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>message</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>meta</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">any</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-86">line 86</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">LoggerInstance</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="log"><span class="type-signature"></span>log(level, message [, meta])</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>The log function is multipurpse</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Argument</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>level</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Level</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>NPM Logging levels (<code>'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly'</code>)</p></td>
         </tr>
 
     
@@ -803,61 +898,21 @@
             
 
             
-                <td class="default">
-                
-                </td>
-            
 
-            <td class="description last"><p>Log message</p></td>
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>error</code></td>
+                <td class="name"><code>meta</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">*</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                </td>
-            
-
-            <td class="description last"><p>An error object to be logged and returned as JSON</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>errorCode</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">HttpStatus</span>
+<span class="param-type">any</span>
 
 
 
@@ -877,172 +932,8 @@
             
 
             
-                <td class="default">
-                
-                    HttpStatus.INTERNAL_SERVER_ERROR
-                
-                </td>
-            
 
-            <td class="description last"><p>HttpStatus CODE</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-	<dt class="inherited-from method-doc-label method-doc-details-label">Inherited From:</dt>
-	<dd class="inherited-from">
-		<ul class="dummy">
-			<li>
-				<a href="BaseController.html#handleError">BaseController#handleError</a>
-			</li>
-		</ul>
-	</dd>
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
-	<dd class="tag-source">
-		<ul class="dummy">
-			<li>
-				<a href="controllers_base.controller.js.html">controllers/base.controller.js</a>,
-				 <a href="controllers_base.controller.js.html#sunlight-1-line-39">line 39</a>
-			</li>
-		</ul>
-	</dd>
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-<div class="param-desc">
-    <p>Response body is a JSON object with the error</p>
-</div>
-
-
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="map"><span class="type-signature"></span>map(id)</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p><h5>POST: /affiliates/<em>:id</em>/map</h5> Calls <a href="AffiliatesService.html#map"><code>AffiliatesService#map</code></a> to create permissions for a Licensed Affiliate Account</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">SalesforceId</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Account id. match <code>/[\w\d]{15,17}/</code></p></td>
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
         </tr>
 
     
@@ -1086,8 +977,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-151">line 151</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-42">line 42</a>
 			</li>
 		</ul>
 	</dd>
@@ -1123,7 +1014,7 @@
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Response></span>
+<span class="param-type">LoggerInstance</span>
 
 
 
@@ -1140,7 +1031,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="read"><span class="type-signature"></span>read(id)</h4>
+    <h4 class="name" id="silly"><span class="type-signature"></span>silly(message [, meta])</h4>
     
     
 </dt>
@@ -1148,165 +1039,7 @@
 
     
     <div class="description">
-        <p><h5>GET: /affiliates/<em>:id</em></h5> Calls <a href="AffiliatesService.html#get"><code>AffiliatesService#get</code></a> to retrieve a specific affiliate</p>
-    </div>
-    
-
-    
-
-    
-
-    
-    
-        <h5>Parameters:</h5>
-        
-
-<table class="params table table-striped">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">SalesforceId</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Account id. match <code>/[\w\d]{15,17}/</code></p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-    
-
-    
-<dl class="details">
-    
-
-	
-
-	
-
-	
-
-    
-
-    
-
-    
-
-    
-
-	
-
-	
-
-	
-
-	
-
-	
-
-
-
-	
-	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
-	<dd class="tag-source">
-		<ul class="dummy">
-			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-110">line 110</a>
-			</li>
-		</ul>
-	</dd>
-	
-
-	
-
-	
-
-	
-</dl>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <h5>Returns:</h5>
-    
-            
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;Response></span>
-
-
-
-    </dd>
-</dl>
-
-
-        
-
-    
-</dd>
-
-        
-            
-<hr>
-<dt>
-    <h4 class="name" id="readAll"><span class="type-signature"></span>readAll(isPublicQ, isPublicH [, refresh])</h4>
-    
-    
-</dt>
-<dd>
-
-    
-    <div class="description">
-        <p><h5>GET: /affiliates</h5> Calls <a href="AffiliatesService.html#getAll"><code>AffiliatesService#getAll</code></a> to get a list of affiliates</p>
+        <p>Logs a <code>'silly'</code> level message. Used for temporary log messages.</p>
     </div>
     
 
@@ -1333,8 +1066,6 @@
         
 
         
-        <th>Default</th>
-        
 
         <th class="last">Description</th>
     </tr>
@@ -1345,13 +1076,13 @@
 
         <tr>
             
-                <td class="name"><code>isPublicQ</code></td>
+                <td class="name"><code>message</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Query</span>
+<span class="param-type">string</span>
 
 
 
@@ -1369,61 +1100,21 @@
             
 
             
-                <td class="default">
-                
-                </td>
-            
 
-            <td class="description last"><p>Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public affiliates</p></td>
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>isPublicH</code></td>
+                <td class="name"><code>meta</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Header</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                </td>
-            
-
-            <td class="description last"><p>Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public affiliates</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>refresh</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Header</span>
+<span class="param-type">any</span>
 
 
 
@@ -1443,14 +1134,8 @@
             
 
             
-                <td class="default">
-                
-                    'false'
-                
-                </td>
-            
 
-            <td class="description last"><p>Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh</p></td>
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
         </tr>
 
     
@@ -1494,8 +1179,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-49">line 49</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-53">line 53</a>
 			</li>
 		</ul>
 	</dd>
@@ -1531,7 +1216,7 @@
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Response></span>
+<span class="param-type">LoggerInstance</span>
 
 
 
@@ -1548,7 +1233,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="search"><span class="type-signature"></span>search(search, retrieve [, refresh])</h4>
+    <h4 class="name" id="verbose"><span class="type-signature"></span>verbose(message [, meta])</h4>
     
     
 </dt>
@@ -1556,7 +1241,7 @@
 
     
     <div class="description">
-        <p><h5>GET: /affiliates/search</h5> Calls <a href="AffiliatesService.html#search"><code>AffiliatesService#search</code></a>. Returns an array of affiliates that match search criteria</p>
+        <p>Logs a <code>'verbose'</code> level message. Used for permanent messages that may or may not be filtered in production.</p>
     </div>
     
 
@@ -1583,8 +1268,6 @@
         
 
         
-        <th>Default</th>
-        
 
         <th class="last">Description</th>
     </tr>
@@ -1595,13 +1278,13 @@
 
         <tr>
             
-                <td class="name"><code>search</code></td>
+                <td class="name"><code>message</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Header</span>
+<span class="param-type">string</span>
 
 
 
@@ -1619,61 +1302,21 @@
             
 
             
-                <td class="default">
-                
-                </td>
-            
 
-            <td class="description last"><p>Header <code>'x-search'</code>. SOSL search expression (i.e. '<em>Test</em>').</p></td>
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>retrieve</code></td>
+                <td class="name"><code>meta</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Header</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                </td>
-            
-
-            <td class="description last"><p>Header <code>'x-retrieve'</code>. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>refresh</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Header</span>
+<span class="param-type">any</span>
 
 
 
@@ -1693,14 +1336,8 @@
             
 
             
-                <td class="default">
-                
-                    'false'
-                
-                </td>
-            
 
-            <td class="description last"><p>Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh</p></td>
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
         </tr>
 
     
@@ -1744,8 +1381,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-89">line 89</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-75">line 75</a>
 			</li>
 		</ul>
 	</dd>
@@ -1781,7 +1418,7 @@
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Response></span>
+<span class="param-type">LoggerInstance</span>
 
 
 
@@ -1798,7 +1435,7 @@
             
 <hr>
 <dt>
-    <h4 class="name" id="update"><span class="type-signature"></span>update(body, id)</h4>
+    <h4 class="name" id="warn"><span class="type-signature"></span>warn(message [, meta])</h4>
     
     
 </dt>
@@ -1806,7 +1443,7 @@
 
     
     <div class="description">
-        <p><h5>PUT: /affiliates/<em>:id</em></h5> Calls <a href="AffiliatesService.html#update"><code>AffiliatesService#update</code></a> to update an Affiliate</p>
+        <p>Logs a <code>'warn'</code> level message. Used for permanent messages to alert developers of potential bugs or issues.</p>
     </div>
     
 
@@ -1829,6 +1466,8 @@
         <th>Type</th>
 
         
+        <th>Argument</th>
+        
 
         
 
@@ -1841,13 +1480,13 @@
 
         <tr>
             
-                <td class="name"><code>body</code></td>
+                <td class="name"><code>message</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Body</span>
+<span class="param-type">string</span>
 
 
 
@@ -1855,23 +1494,31 @@
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last"><p>Required fields <code>[ &quot;Id&quot; ]</code></p></td>
+            <td class="description last"><p>The message to print. May include one formatting operator (i.e. 'my object: %j')</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>id</code></td>
+                <td class="name"><code>meta</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">SalesforceId</span>
+<span class="param-type">any</span>
 
 
 
@@ -1879,10 +1526,20 @@
             </td>
 
             
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last"><p>Account id. match <code>/[\w\d]{15,17}/</code></p></td>
+            <td class="description last"><p>The value to insert into message with formatting operator</p></td>
         </tr>
 
     
@@ -1926,8 +1583,8 @@
 	<dd class="tag-source">
 		<ul class="dummy">
 			<li>
-				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-172">line 172</a>
+				<a href="components_logger_logger.component.js.html">components/logger/logger.component.js</a>,
+				 <a href="components_logger_logger.component.js.html#sunlight-1-line-97">line 97</a>
 			</li>
 		</ul>
 	</dd>
@@ -1963,7 +1620,7 @@
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;Response></span>
+<span class="param-type">LoggerInstance</span>
 
 
 

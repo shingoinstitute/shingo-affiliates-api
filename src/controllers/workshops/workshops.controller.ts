@@ -21,7 +21,9 @@ import * as multer from 'multer';
 @Controller('workshops')
 export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService, private log: LoggerService) { super(); };
+    constructor(private workshopsService: WorkshopsService, logger: LoggerService) {
+        super(logger);
+    };
 
     /**
      * @desc <h5>GET: /workshops</h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
@@ -41,8 +43,6 @@ export class WorkshopsController extends BaseController {
 
         try {
             const workshops: Workshop[] = await this.workshopsService.getAll(isPublic, forceRefresh, session.user);
-
-            this.log.silly('Returning workshops: %j', workshops);
 
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
@@ -139,7 +139,8 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>POST: /workshops</h5> Calls {@link WorkshopsService#create} to create a new workshop in Salesforce and permissions for the workshop in the Shingo Auth API
-     * 
+     * <br><br>
+     * NOTE: <code>"facilitators"</code> is exptected to be of type <code>[{"Id", "Email"}]</code>. Where <code>"Id"</code> is a Salesforce Contact Id.
      * @param {Body} body - Required fields <code>[ "Name", "Organizing_Affiliate\__c", "Start_Date\__c", "End_Date\__c", "Host_Site\__c", "Event_Country\__c", "Event_City\__c", "facilitators" ]</code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
@@ -217,9 +218,9 @@ export class WorkshopsController extends BaseController {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
             const ext: string = req.file.originalName.split('.').pop();
 
-            console.log('File Upload: ', req.file);
-            console.log('File Base64: ', req.file.buffer.toString('base64'));
-            console.log('File extension: ', ext);
+            this.log.debug('File Upload: %j', req.file);
+            this.log.debug('File Base64: %s', req.file.buffer.toString('base64'));
+            this.log.debug('File extension: %s', ext);
 
             try {
                 this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
@@ -244,9 +245,9 @@ export class WorkshopsController extends BaseController {
             const files = req.files.map(file => { return file.buffer.toString('base64'); });
             const ext: string = req.files[0].originalName.split('.').pop();
 
-            console.log('Files Upload: ', req.files);
-            console.log('Files Base64: ', files);
-            console.log('File extension: ', ext);
+            this.log.debug('Files Upload: %j', req.files);
+            this.log.debug('Files Base64: %j', files);
+            this.log.debug('File extension: %s', ext);
 
             try {
                 this.workshopsService.upload(id, `attendee_list.${ext}`, files);

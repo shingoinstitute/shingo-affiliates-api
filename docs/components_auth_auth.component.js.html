@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -107,97 +107,256 @@ let AuthService = class AuthService {
     getClient() {
         return new authservices.AuthServices(`${process.env.AUTH_API}:80`, grpc.credentials.createInsecure());
     }
+    /**
+     * Get an array of users based upon a TypeORM query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getUsers(clause) {
         return this.client.readUserAsync({ clause });
     }
+    /**
+     * Get a single user based upon a TypeORM query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getUser(clause) {
         return this.client.readOneUserAsync({ clause });
     }
+    /**
+     * Create a user in the Auth Database
+     *
+     * @param {User} user - Expecting &lt;code>{"email", "password", "services", "extId?"}&lt;/code>
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     createUser(user) {
         return this.client.createUserAsync(user);
     }
+    /**
+     * Update a user in the Auth Database
+     *
+     * @param {User} user - Expecting &lt;code>{oneormoreof: {"email", "password", "services"}, oneof: {"id", extId"}}&lt;/code>
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     updateUser(user) {
         return this.client.updateUserAsync(user);
     }
+    /**
+     * Delete a user from the Auth Database
+     *
+     * @param {User} user - User to delete
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     deleteUser(user) {
         return this.client.deleteUserAsync(user);
     }
+    /**
+     * Add a role to a user by email
+     *
+     * @param {RoleRequest} set - User and Role to associate
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     addRoleToUser(set) {
         return this.client.addRoleToUserAsync(set);
     }
+    /**
+     * Remove a role from a user by email
+     *
+     * @param {RoleRequest} set - User and Role to disassociate
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     removeRoleFromUser(set) {
         return this.client.removeRoleFromUserAsync(set);
     }
+    /**
+     * Get an array of permissions based on TypeORM query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getPermissions(clause) {
         return this.client.readPermissionAsync({ clause });
     }
-    createPermission(permission) {
-        return this.client.createPermissionAsync(permission);
-    }
-    updatePermission(permission) {
-        return this.client.updatePermissionAsync(permission);
-    }
+    /**
+     * Get a single permission based on a TypeORM Query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getPermission(clause) {
         return this.client.readOnePermissionAsync({ clause });
     }
+    /**
+     * Create a permission.
+     *
+     * @param {Permission} permission - Permission to be created
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
+    createPermission(permission) {
+        return this.client.createPermissionAsync(permission);
+    }
+    /**
+     * Update a permission
+     *
+     * @param {Permission} permission - Permission to update
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
+    updatePermission(permission) {
+        return this.client.updatePermissionAsync(permission);
+    }
+    /**
+     * Delete a permission
+     *
+     * @param {string} resource - Permission resource
+     * @param {(0 | 1 | 2)} level - Permission level
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     deletePermission(resource, level) {
         return this.client.deletePermissionAsync({ resource, level });
     }
+    /**
+     * Get an array of roles based on a TypeORM query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getRoles(clause) {
         return this.client.readRoleAsync({ clause });
     }
+    /**
+     * Get a single role based on a TypeORM query
+     *
+     * @param {string} clause - A TypeORM query. See [here](https://typeorm.github.io/query-builder.html) for some examples
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     getRole(clause) {
         return this.client.readOneRoleAsync({ clause });
     }
+    /**
+     * Create a role
+     *
+     * @param {Role} role - Role to create
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     createRole(role) {
         return this.client.createRoleAsync(role);
     }
+    /**
+     * Update a role
+     *
+     * @param {Role} role - Role to update
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     updateRole(role) {
         return this.client.updateRoleAsync(role);
     }
+    /**
+     * Delete a role
+     *
+     * @param {Role} role - Id of role to delete
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     deleteRole(role) {
         return this.client.deleteRoleAsync(role);
     }
+    /**
+     * Grant permission to a user based on resource and level
+     *
+     * @param {string} resource - Resource to grant permissions to
+     * @param {(0 | 1 | 2)} level - Level to grant (0=Deny,1=Read,2=Write)
+     * @param {number} userId - User's Id
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     grantPermissionToUser(resource, level, userId) {
         return this.client.grantPermissionToUserAsync({ resource, level, accessorId: userId });
     }
+    /**
+     * Grant permission to a role based on resource and level
+     *
+     * @param {string} resource - Resource to grant permissions to
+     * @param {(0 | 1 | 2)} level - Level to grant (0=Deny,1=Read,2=Write)
+     * @param {number} roleId - Role's Id
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     grantPermissionToRole(resource, level, roleId) {
         return this.client.grantPermissionToRoleAsync({ resource, level, accessorId: roleId });
     }
+    /**
+     * Revoke permission from a user based on resource and level
+     *
+     * @param {string} resource - Resource to grant permissions to
+     * @param {(0 | 1 | 2)} level - Level to grant (0=Deny,1=Read,2=Write)
+     * @param {number} userId - User's Id
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     revokePermissionFromUser(resource, level, userId) {
         return this.client.revokePermissionFromUserAsync({ resource, level, accessorId: userId });
     }
+    /**
+     * Revoke permission from a role based on resource and level
+     *
+     * @param {string} resource - Resource to grant permissions to
+     * @param {(0 | 1 | 2)} level - Level to grant (0=Deny,1=Read,2=Write)
+     * @param {number} roleId - Role's Id
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     revokePermissionFromRole(resource, level, roleId) {
         return this.client.revokePermissionFromRoleAsync({ resource, level, accessorId: roleId });
     }
+    /**
+     * Use email and password to login a user
+     *
+     * @param {Credentials} creds
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     login(creds) {
         return this.client.loginAsync(creds);
     }
+    /**
+     * Check if JWT is valid
+     *
+     * @param {string} token - JWT
+     * @returns {Promise&lt;any>}
+     * @memberof AuthService
+     */
     isValid(token) {
         return this.client.isValidAsync({ token });
     }
-    canAccess(resource, level, jwt) {
-        return this.client.canAccessAsync({ resource, level, jwt });
-    }
     /**
-     * @desc Utility method to assist in parsing gRPC error metadata. Returns a JSON object from the parsed error data. If no JSON object can be parsed, the method attempts to return the 'error-bin' from the meta-data as a string. If that fails the method returns the error passed to it.
+     * Check if user with JWT can access the requested resource with given permission level
      *
-     * @param {gRPCError} error - The error to be parsed
-     * @returns {object} The parsed error, 'error-bin'.toString(), or passed in error
+     * @param {string} resource - Resource to grant permissions to
+     * @param {(1 | 2)} level - Level of access (1=Read,2=Write)
+     * @param {string} jwt - User's JWT
+     * @returns {Promise&lt;any>}
      * @memberof AuthService
      */
-    parseRPCErrorMeta(error) {
-        try {
-            let err = JSON.parse(error.metadata.get('error-bin').toString());
-            return err;
-        }
-        catch (caught) {
-            console.error('Couldn\'t parse RPC Error;', { error, caught });
-            if (error.metadata.get('error-bin'))
-                return error.metadata.get('error-bin').toString();
-            else
-                return error;
-        }
+    canAccess(resource, level, jwt) {
+        return this.client.canAccessAsync({ resource, level, jwt });
     }
 };
 AuthService = __decorate([
@@ -250,7 +409,7 @@ exports.AuthService = AuthService;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Tue Aug 1st 2017
+		on Wed Aug 2nd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

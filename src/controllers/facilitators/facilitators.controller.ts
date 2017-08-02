@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { SalesforceService, CacheService, AuthService, FacilitatorsService } from '../../components';
+import { SalesforceService, CacheService, AuthService, FacilitatorsService, LoggerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
@@ -19,7 +19,9 @@ import * as _ from 'lodash';
 @Controller('facilitators')
 export class FacilitatorsController extends BaseController {
 
-    constructor(private facilitatorsService: FacilitatorsService) { super(); };
+    constructor(private facilitatorsService: FacilitatorsService, logger: LoggerService) {
+        super(logger);
+    };
 
     /**
      * @desc <h5>GET: /facilitators</h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given <code>'x-affiliate' || req.session.affilaite</code>

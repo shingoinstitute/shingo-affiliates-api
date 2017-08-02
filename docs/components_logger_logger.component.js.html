@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
-	<title>Shingo Affiliate Portal Source: controllers/base.controller.js</title>
+	<title>Shingo Affiliate Portal Source: components/logger/logger.component.js</title>
 
 	<!--[if lt IE 9]>
 	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -66,7 +66,7 @@
 		<div id="main">
 			
 
-		<h1 class="page-title">Source: controllers/base.controller.js</h1>
+		<h1 class="page-title">Source: components/logger/logger.component.js</h1>
     
 <section>
     <article>
@@ -81,48 +81,112 @@ var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, targ
 var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this &amp;&amp; this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
-const components_1 = require("../components");
+const winston_1 = require("winston");
+const path = require("path");
 /**
- * @desc The base controller class contains methods shared between multiple routes
+ * Provides an abstraction of the [Winston](https://github.com/winstonjs/winston) JS logger. Uses Console and File transports.
  *
  * @export
- * @class BaseController
+ * @class LoggerService
  */
-class BaseController {
-    constructor(log) {
-        this.log = log;
+let LoggerService = class LoggerService {
+    constructor() {
+        let logPath = process.env.LOG_PATH || '';
+        let logName = process.env.LOG_FILE || 'affiliates-api.log';
+        let logLevel = process.env.LOG_LEVEL || 'silly';
+        const logTransports = [
+            new winston_1.transports.Console({ colorize: true, prettyPrint: true, timestamp: true }),
+            new winston_1.transports.File({ filename: path.join(logPath, logName), json: false, prettyPrint: true })
+        ];
+        const logOptions = { transports: logTransports, level: logLevel };
+        this.logger = new winston_1.Logger(logOptions);
     }
-    ;
     /**
-    * @desc A helper function to return an error response to the client.
-    *
-    * @protected
-    * @param {Response} res - The express response from the calling route
-    * @param {string} message - Log message
-    * @param {*} error - An error object to be logged and returned as JSON
-    * @param {HttpStatus} [errorCode=HttpStatus.INTERNAL_SERVER_ERROR] - HttpStatus CODE
-    * @returns Response body is a JSON object with the error
-    * @memberof BaseController
-    */
-    handleError(res, message, error, errorCode = common_1.HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata)
-            error = components_1.SalesforceService.parseRPCErrorMeta(error);
-        this.log.error(message + ' %j', error);
-        return res.status(errorCode).json({ error });
+     * The log function is multipurpse
+     *
+     * @param {Level} level - NPM Logging levels (&lt;code>'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly'&lt;/code>)
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    log(level, message, meta) {
+        return this.logger.log(level, message, meta);
     }
-}
-__decorate([
-    __param(0, common_1.Response()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Object, Number]),
-    __metadata("design:returntype", void 0)
-], BaseController.prototype, "handleError", null);
-exports.BaseController = BaseController;
+    /**
+     * Logs a &lt;code>'silly'&lt;/code> level message. Used for temporary log messages.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    silly(message, meta) {
+        return this.logger.silly(message, meta);
+    }
+    /**
+     * Logs a &lt;code>'debug'&lt;/code> level message. Used for more permanent messages that shouldn't make it to production.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    debug(message, meta) {
+        return this.logger.debug(message, meta);
+    }
+    /**
+     * Logs a &lt;code>'verbose'&lt;/code> level message. Used for permanent messages that may or may not be filtered in production.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    verbose(message, meta) {
+        return this.logger.verbose(message, meta);
+    }
+    /**
+     * Logs a &lt;code>'info'&lt;/code> level message. Used for permanent messages that will be logged in production.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    info(message, meta) {
+        return this.logger.info(message, meta);
+    }
+    /**
+     * Logs a &lt;code>'warn'&lt;/code> level message. Used for permanent messages to alert developers of potential bugs or issues.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    warn(message, meta) {
+        return this.logger.warn(message, meta);
+    }
+    /**
+     * Logs a &lt;code>'error'&lt;/code> level message. Used for permanent messages to alert developers of unexpected state or application failure.
+     *
+     * @param {string} message - The message to print. May include one formatting operator (i.e. 'my object: %j')
+     * @param {any} [meta] - The value to insert into message with formatting operator
+     * @returns {LoggerInstance}
+     * @memberof LoggerService
+     */
+    error(message, meta) {
+        return this.logger.error(message, meta);
+    }
+};
+LoggerService = __decorate([
+    common_1.Component(),
+    __metadata("design:paramtypes", [])
+], LoggerService);
+exports.LoggerService = LoggerService;
 </pre>
     </article>
 </section>

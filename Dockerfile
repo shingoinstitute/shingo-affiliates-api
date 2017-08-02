@@ -18,6 +18,8 @@ ENV LOG_PATH='./'
 
 ENV LOG_FILE='debug.log'
 
+ENV DEBUG_ROUTES='true'
+
 EXPOSE 80
 
 ENTRYPOINT ["npm", "run"]

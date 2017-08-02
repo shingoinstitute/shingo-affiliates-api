@@ -1,10 +1,11 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { AuthService, SalesforceService } from '../components';
+import { AuthService, SalesforceService, LoggerService } from '../components';
 
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
 
     private authService = new AuthService();
+    private log = new LoggerService();
 
     public resolve(level: number, resource?: string) {
         return (req, res, next) => {
@@ -26,7 +27,7 @@ export class AuthMiddleware implements NestMiddleware {
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-                    console.error('Error in AuthMiddleware.resolve(): ', error);
+                    this.log.error('Error in AuthMiddleware.resolve(): %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });
         }

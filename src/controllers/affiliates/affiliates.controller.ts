@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, HttpStatus, Request, Response, Next, Param, Query, Headers, Body, Session } from '@nestjs/common';
-import { AffiliatesService, Affiliate } from '../../components';
+import { AffiliatesService, Affiliate, LoggerService } from '../../components';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
@@ -14,7 +14,9 @@ import { checkRequired } from '../../validators/objKeyValidator';
 @Controller('affiliates')
 export class AffiliatesController extends BaseController {
 
-    constructor(private affService: AffiliatesService) { super(); };
+    constructor(private affService: AffiliatesService, logger: LoggerService) {
+        super(logger);
+    };
 
     /**
      * @desc <h5>GET: /affiliates</h5> Calls {@link AffiliatesService#getAll} to get a list of affiliates

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import {
     SalesforceService, AuthService,
-    SFQueryObject
+    SFQueryObject, LoggerService
 } from '../../components';
 import { BaseController } from '../base.controller';
 
@@ -22,7 +22,9 @@ import * as _ from 'lodash';
 @Controller('auth')
 export class AuthController extends BaseController {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService) { super(); };
+    constructor(private sfService: SalesforceService, private authService: AuthService, logger: LoggerService) {
+        super(logger);
+    };
 
     /**
      * @desc <h5>POST: /auth/login</h5> Calls {@link AuthService#login} and {@link SalesforceService#query} to login a user
@@ -59,6 +61,7 @@ export class AuthController extends BaseController {
             req.session.user.contact = contact;
             req.session.affiliate = contact['AccountId'];
 
+
             return res.status(HttpStatus.OK).json({ jwt: user.jwt });
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
@@ -67,14 +70,14 @@ export class AuthController extends BaseController {
 
 
     /**
-     * <h5>GET: /auth/valid</h5> Protected by isValid middleware. Only get called if the value of x-jwt corresponds to a valid user
+     * <h5>GET: /auth/valid</h5> Protected by isValid middleware. Returns the user's JWT
      * 
      * @returns {Promise<Response>} 
      * @memberof AuthController
      */
     @Get('valid')
-    public async valid( @Response() res): Promise<Response> {
-        return res.status(HttpStatus.OK).json();
+    public async valid( @Request() req, @Response() res): Promise<Response> {
+        return res.status(HttpStatus.OK).json({ jwt: req.session.user.jwt });
     }
 
     /**
@@ -88,7 +91,7 @@ export class AuthController extends BaseController {
         if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' })
         try {
             req.session.user.jwt = '';
-            await this.authService.updateUser(_.omit(req.session.user, ['contact']));
+            await this.authService.updateUser(_.omit(req.session.user, ['contact', 'password']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {

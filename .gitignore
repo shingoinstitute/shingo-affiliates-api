@@ -5,4 +5,4 @@ docs-dark/
 coverage/
 .nyc_output/
 spec/
-.log
+*.log

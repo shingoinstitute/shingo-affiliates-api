@@ -1,5 +1,5 @@
 import { Response, HttpStatus } from '@nestjs/common';
-import { SalesforceService } from '../components';
+import { SalesforceService, LoggerService } from '../components';
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -7,7 +7,9 @@ import { SalesforceService } from '../components';
  * @export
  * @class BaseController
  */
-export class BaseController {
+export abstract class BaseController {
+
+    constructor(protected log: LoggerService) { };
 
     /**
     * @desc A helper function to return an error response to the client.
@@ -23,7 +25,7 @@ export class BaseController {
     protected handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
         if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
 
-        console.error(message, error);
+        this.log.error(message + ' %j', error);
         return res.status(errorCode).json({ error });
     }
 }

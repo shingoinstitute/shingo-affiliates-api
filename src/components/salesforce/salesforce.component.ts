@@ -1,4 +1,5 @@
 import { Component } from '@nestjs/common';
+import { LoggerService } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';
@@ -144,7 +145,6 @@ export class SalesforceService {
             let err = JSON.parse(error.metadata.get('error-bin').toString());
             return err;
         } catch (caught) {
-            console.error('Couldn\'t parse RPC Error;', { error, caught });
             if (error.metadata.get('error-bin')) return error.metadata.get('error-bin').toString();
             else return error;
         }

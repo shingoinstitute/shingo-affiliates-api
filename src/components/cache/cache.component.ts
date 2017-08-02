@@ -1,4 +1,5 @@
 import { Component } from '@nestjs/common';
+import { LoggerService } from '../';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
 
@@ -11,8 +12,11 @@ import * as hash from 'object-hash';
 @Component()
 export class CacheService {
 
+    private log;
+
     constructor() {
         this.theCache = new NodeCache({ stdTTL: 1800, checkperiod: 900 });
+        this.log = new LoggerService();
     }
 
     /**
@@ -76,7 +80,7 @@ export class CacheService {
         if (!value) return;
 
         const success = this.theCache.set(key, value);
-        if (!success) console.error("Response could not be cached!");
+        if (!success) this.log.error("Response could not be cached!");
     }
 
 }

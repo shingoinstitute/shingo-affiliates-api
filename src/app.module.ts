@@ -1,6 +1,6 @@
 import { Module, MiddlewaresConsumer, RequestMethod, OnModuleInit } from '@nestjs/common';
 import { WorkshopsController, AuthController, FacilitatorsController, AffiliatesController } from './controllers';
-import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware } from './middleware'
+import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddleware } from './middleware'
 import {
     SalesforceService, CacheService, AuthService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
@@ -18,6 +18,7 @@ import {
         FacilitatorsService,
         AffiliatesService,
         UserService,
+        { provide: 'logOptions', useValue: undefined },
         LoggerService
     ]
 })
@@ -26,6 +27,12 @@ export class ApplicationModule {
     private eventsEmitter;
 
     configure(consumer: MiddlewaresConsumer) {
+
+        if (process.env.DEBUG_ROUTES === 'true') {
+            consumer.apply(RouteLoggerMiddleware)
+                .forRoutes(WorkshopsController, AuthController, AffiliatesController, FacilitatorsController);
+        }
+
         consumer
             .apply(IsValidMiddleware)
             .forRoutes(FacilitatorsController,
@@ -40,6 +47,9 @@ export class ApplicationModule {
             },
             {
                 path: '/workshops/describe', method: RequestMethod.ALL
+            },
+            {
+                path: '/auth/logout', method: RequestMethod.ALL
             },
             {
                 path: '/auth/valid', method: RequestMethod.ALL
@@ -84,7 +94,7 @@ export class ApplicationModule {
             .with(2)
             .forRoutes({
                 path: '/workshops/a*', method: RequestMethod.ALL
-            })
+            });
     }
 
 }

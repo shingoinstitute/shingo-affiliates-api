@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -106,10 +106,9 @@ const multer = require("multer");
  * @extends {BaseController}
  */
 let WorkshopsController = class WorkshopsController extends base_controller_1.BaseController {
-    constructor(workshopsService, log) {
-        super();
+    constructor(workshopsService, logger) {
+        super(logger);
         this.workshopsService = workshopsService;
-        this.log = log;
     }
     ;
     /**
@@ -130,7 +129,6 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
                 return this.handleError(res, 'Error in WorkshopsController.readAll()', { error: "SESSION_EXPIRED" }, common_1.HttpStatus.FORBIDDEN);
             try {
                 const workshops = yield this.workshopsService.getAll(isPublic, forceRefresh, session.user);
-                this.log.silly('Returning workshops: %j', workshops);
                 return res.status(common_1.HttpStatus.OK).json(workshops);
             }
             catch (error) {
@@ -224,7 +222,8 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
     }
     /**
      * @desc &lt;h5>POST: /workshops&lt;/h5> Calls {@link WorkshopsService#create} to create a new workshop in Salesforce and permissions for the workshop in the Shingo Auth API
-     *
+     * &lt;br>&lt;br>
+     * NOTE: &lt;code>"facilitators"&lt;/code> is exptected to be of type &lt;code>[{"Id", "Email"}]&lt;/code>. Where &lt;code>"Id"&lt;/code> is a Salesforce Contact Id.
      * @param {Body} body - Required fields &lt;code>[ "Name", "Organizing_Affiliate\__c", "Start_Date\__c", "End_Date\__c", "Host_Site\__c", "Event_Country\__c", "Event_City\__c", "facilitators" ]&lt;/code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @returns {Promise&lt;Response>} Response is a JSON Object from the resulting Salesforce operation
@@ -301,9 +300,9 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
                 if (error)
                     return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
                 const ext = req.file.originalName.split('.').pop();
-                console.log('File Upload: ', req.file);
-                console.log('File Base64: ', req.file.buffer.toString('base64'));
-                console.log('File extension: ', ext);
+                this.log.debug('File Upload: %j', req.file);
+                this.log.debug('File Base64: %s', req.file.buffer.toString('base64'));
+                this.log.debug('File extension: %s', ext);
                 try {
                     this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
                 }
@@ -326,9 +325,9 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
                     return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
                 const files = req.files.map(file => { return file.buffer.toString('base64'); });
                 const ext = req.files[0].originalName.split('.').pop();
-                console.log('Files Upload: ', req.files);
-                console.log('Files Base64: ', files);
-                console.log('File extension: ', ext);
+                this.log.debug('Files Upload: %j', req.files);
+                this.log.debug('Files Base64: %j', files);
+                this.log.debug('File extension: %s', ext);
                 try {
                     this.workshopsService.upload(id, `attendee_list.${ext}`, files);
                 }
@@ -481,7 +480,7 @@ exports.WorkshopsController = WorkshopsController;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Tue Aug 1st 2017
+		on Wed Aug 2nd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

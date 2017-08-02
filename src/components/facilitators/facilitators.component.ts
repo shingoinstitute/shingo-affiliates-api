@@ -201,7 +201,6 @@ export class FacilitatorsService {
         }
         const record = (await this.sfService.create(data))[0];
         let auth = await this.authService.getUser(`user.email='${user.Email}'`);
-        console.log('auth', auth);
 
         if (auth.email === '') {
             auth = await this.createNewAuth(user.Email, user.password, roleId, record.id);
@@ -294,9 +293,7 @@ export class FacilitatorsService {
         if (user.Email) set['email'] = user.Email;
         if (user.password) set['password'] = user.password;
 
-        console.log('set: ', set);
         const updated = await this.authService.updateUser(set as User);
-        console.log('updated', updated);
         return Promise.resolve((updated && updated.response));
     }
 
