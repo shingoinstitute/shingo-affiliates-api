@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="ApplicationModule.html">ApplicationModule</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthMiddleware.html">AuthMiddleware</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="InitService.html">InitService</a></li><li><a href="IsAFManMiddleware.html">IsAFManMiddleware</a></li><li><a href="IsValidMiddleware.html">IsValidMiddleware</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="RouteLoggerMiddleware.html">RouteLoggerMiddleware</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -307,7 +307,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-130">line 130</a>
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-155">line 155</a>
 			</li>
 		</ul>
 	</dd>
@@ -465,7 +465,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-195">line 195</a>
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-220">line 220</a>
 			</li>
 		</ul>
 	</dd>
@@ -1087,7 +1087,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-151">line 151</a>
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-176">line 176</a>
 			</li>
 		</ul>
 	</dd>
@@ -1245,7 +1245,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-110">line 110</a>
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-135">line 135</a>
 			</li>
 		</ul>
 	</dd>
@@ -1798,6 +1798,292 @@
             
 <hr>
 <dt>
+    <h4 class="name" id="searchCMS"><span class="type-signature"></span>searchCMS(id, search, retrieve [, refresh])</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Search the related contacts of an Affiliate. Calls <code>AffiliatesService#searchCM</code> to retrieve a list of contacts</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Argument</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">SalesforceId</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>The Salesforce Id of the affiliate</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>search</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Header</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>Header <code>'x-search'</code>. SOSL search expression (i.e. 'User*').</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>retrieve</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Header</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>Header <code>'x-retrieve'</code>. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name')</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>refresh</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Header</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    'false'
+                
+                </td>
+            
+
+            <td class="description last"><p>Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-113">line 113</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Response></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
     <h4 class="name" id="update"><span class="type-signature"></span>update(body, id)</h4>
     
     
@@ -1927,7 +2213,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="controllers_affiliates_affiliates.controller.js.html">controllers/affiliates/affiliates.controller.js</a>,
-				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-172">line 172</a>
+				 <a href="controllers_affiliates_affiliates.controller.js.html#sunlight-1-line-197">line 197</a>
 			</li>
 		</ul>
 	</dd>
@@ -2030,7 +2316,7 @@
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Wed Aug 2nd 2017
+		on Thu Aug 3rd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

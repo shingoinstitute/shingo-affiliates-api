@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="ApplicationModule.html">ApplicationModule</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthMiddleware.html">AuthMiddleware</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="InitService.html">InitService</a></li><li><a href="IsAFManMiddleware.html">IsAFManMiddleware</a></li><li><a href="IsValidMiddleware.html">IsValidMiddleware</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="RouteLoggerMiddleware.html">RouteLoggerMiddleware</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -174,6 +174,31 @@ let AffiliatesController = class AffiliatesController extends base_controller_1.
         });
     }
     /**
+     * Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
+     *
+     * @param {SalesforceId} id - The Salesforce Id of the affiliate
+     * @param {Header} search - Header &lt;code>'x-search'&lt;/code>. SOSL search expression (i.e. 'User*').
+     * @param {Header} retrieve - Header &lt;code>'x-retrieve'&lt;/code>. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name')
+     * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    searchCMS(res, id, search, retrieve, refresh = 'false') {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            if (!search || !retrieve)
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search &amp;&amp; !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const cms = yield this.affService.searchCM(id, search, retrieve, refresh === 'true');
+                return res.status(common_1.HttpStatus.OK).json(cms);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', error);
+            }
+        });
+    }
+    /**
      * @desc &lt;h5>GET: /affiliates/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
      *
      * @param {SalesforceId} id - Account id. match &lt;code>/[\w\d]{15,17}/&lt;/code>
@@ -301,6 +326,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AffiliatesController.prototype, "search", null);
 __decorate([
+    common_1.Get('/:id/coursemanagers'),
+    __param(0, common_1.Response()), __param(1, common_1.Param('id')), __param(2, common_1.Headers('x-search')), __param(3, common_1.Headers('x-retrieve')), __param(4, common_1.Headers('x-force-refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "searchCMS", null);
+__decorate([
     common_1.Get(':id'),
     __param(0, common_1.Response()), __param(1, common_1.Param('id')),
     __metadata("design:type", Function),
@@ -385,7 +417,7 @@ exports.AffiliatesController = AffiliatesController;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Wed Aug 2nd 2017
+		on Thu Aug 3rd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

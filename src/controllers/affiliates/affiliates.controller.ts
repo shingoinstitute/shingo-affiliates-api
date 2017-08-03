@@ -80,6 +80,28 @@ export class AffiliatesController extends BaseController {
     }
 
     /**
+     * Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
+     * 
+     * @param {SalesforceId} id - The Salesforce Id of the affiliate
+     * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. 'User*').
+     * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name')
+     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
+     * @returns {Promise<Response>} 
+     * @memberof AffiliatesController
+     */
+    @Get('/:id/coursemanagers')
+    public async searchCMS( @Response() res, @Param('id') id, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!search || !retrieve) return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
+        try {
+            const cms = await this.affService.searchCM(id, search, retrieve, refresh === 'true');
+            return res.status(HttpStatus.OK).json(cms);
+        } catch (error) {
+            return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', error);
+        }
+    }
+
+    /**
      * @desc <h5>GET: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
      * 
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>

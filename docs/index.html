@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="ApplicationModule.html">ApplicationModule</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthMiddleware.html">AuthMiddleware</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="InitService.html">InitService</a></li><li><a href="IsAFManMiddleware.html">IsAFManMiddleware</a></li><li><a href="IsValidMiddleware.html">IsValidMiddleware</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="RouteLoggerMiddleware.html">RouteLoggerMiddleware</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -92,39 +92,41 @@
 <h2>External Depedancies</h2><p>The Shingo Affiliate Portal API consumes the <a href="https://github.com/shingoinstitute/shingo-sf-api">Shingo SF Microservice</a> and the <a href="https://github.com/shingoinstitute/shingo-auth-api">Shingo Auth Microservice</a>.</p>
 <h2>Reference</h2><h3>Workshops</h3><ul>
 <li><strong><a href="./WorkshopsController.html#readAll__anchor">GET:    /workshops</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#read__anchor">GET:    /workshops/:id</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#facilitators__anchor">GET:    /workshops/:id/facilitators</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#describe__anchor">GET:    /workshops/describe</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#search__anchor">GET:    /workshops/search</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#create__anchor">POST:   /workshops</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#update__anchor">PUT:    /workshops/:id</a></strong></li>
-<li><strong><a href="./WorkshopsController.html#delete__anchor">DELETE: /workshops/:id</a></strong></li>
+<li><strong><a href="./WorkshopsController.html#read__anchor">GET:    /workshops/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#facilitators__anchor">GET:    /workshops/:id/facilitators</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#describe__anchor">GET:    /workshops/describe</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#search__anchor">GET:    /workshops/search</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#create__anchor">POST:   /workshops</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#update__anchor">PUT:    /workshops/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./WorkshopsController.html#delete__anchor">DELETE: /workshops/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
 </ul>
 <h3>Facilitators</h3><ul>
-<li><strong><a href="./FacilitatorsController.html#readAll__anchor">GET:    /facilitators</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#read__anchor">GET:    /facilitators/:id</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#describe__anchor">GET:    /facilitators/describe</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#search__anchor">GET:    /facilitators/search</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#create__anchor">POST:   /facilitators</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#changeRole__anchor">POST:   /facilitators/:id/roles/:roleId</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#update__anchor">PUT:    /facilitators/:id</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#delete__anchor">DELETE: /facilitators/:id</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#deleteLogin__anchor">DELETE: /facilitators/:id/login</a></strong></li>
-<li><strong><a href="./FacilitatorsController.html#unmap__anchor">DELETE: /facilitators/:id/unamp</a></strong></li>
+<li><strong><a href="./FacilitatorsController.html#readAll__anchor">GET:    /facilitators</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#read__anchor">GET:    /facilitators/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#describe__anchor">GET:    /facilitators/describe</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#search__anchor">GET:    /facilitators/search</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#create__anchor">POST:   /facilitators</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#changeRole__anchor">POST:   /facilitators/:id/roles/:roleId</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#update__anchor">PUT:    /facilitators/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#delete__anchor">DELETE: /facilitators/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#deleteLogin__anchor">DELETE: /facilitators/:id/login</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./FacilitatorsController.html#unmap__anchor">DELETE: /facilitators/:id/unamp</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
 </ul>
 <h3>Affiliates</h3><ul>
 <li><strong><a href="./AffiliatesController.html#readAll__anchor">GET:    /affiliates</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#read__anchor">GET:    /affiliates/:id</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#describe__anchor">GET:    /affiliates/describe</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#search__anchor">GET:    /affiliates/search</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#create__anchor">POST:   /affiliates</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#map__anchor">POST:   /affiliates/:id/map</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#update__anchor">PUT:    /affiliates/:id</a></strong></li>
-<li><strong><a href="./AffiliatesController.html#delete__anchor">DELETE: /affiliates/:id</a></strong></li>
+<li><strong><a href="./AffiliatesController.html#read__anchor">GET:    /affiliates/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#searchCMS__anchor">GET:    /affiliates/:id/coursemanagers</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./AuthMiddleware.html">AuthMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#describe__anchor">GET:    /affiliates/describe</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#search__anchor">GET:    /affiliates/search</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#create__anchor">POST:   /affiliates</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#map__anchor">POST:   /affiliates/:id/map</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#update__anchor">PUT:    /affiliates/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
+<li><strong><a href="./AffiliatesController.html#delete__anchor">DELETE: /affiliates/:id</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a> and <a href="./IsAFManMiddleware.html">IsAFManMiddleware</a></li>
 </ul>
 <h3>Auth</h3><ul>
 <li><strong><a href="./AuthController.html#login__anchor">POST:   /auth/login</a></strong></li>
-<li><strong><a href="./AuthController.html#logout__anchor">GET:    /auth/logout</a></strong></li>
+<li><strong><a href="./AuthController.html#valid__anchor">POST:   /auth/valid</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a></li>
+<li><strong><a href="./AuthController.html#logout__anchor">GET:    /auth/logout</a></strong> -- Protected by <a href="./IsValidMiddleware.html">IsValidMiddleware</a></li>
 </ul></article>
     </section>
 
@@ -175,7 +177,7 @@
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Wed Aug 2nd 2017
+		on Thu Aug 3rd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

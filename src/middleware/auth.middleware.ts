@@ -1,17 +1,37 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
 import { AuthService, SalesforceService, LoggerService } from '../components';
 
+/**
+ * The auth middleware uses the Shingo Auth API to test if the user has permissions to access a given resource
+ * 
+ * @export
+ * @class AuthMiddleware
+ * @implements {NestMiddleware}
+ */
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
 
-    private authService = new AuthService();
-    private log = new LoggerService();
+    private authService;
+    private log;
 
+    constructor() {
+        this.authService = new AuthService();
+        this.log = new LoggerService();
+    }
+
+    /**
+     * The function called when the middleware is activated. Calls {@link AuthService#canAccess}. NOTE: If user is an Affiliate Manager all check logic is skipped as the user implicitly has all permissions.
+     * 
+     * @param {(1|2)} level - The level of permissions required (1=Read,2=Write)
+     * @param {string} [resource] - The resource being accessed
+     * @returns {void}
+     * @memberof AuthMiddleware
+     */
     public resolve(level: number, resource?: string) {
         return (req, res, next) => {
-            let role = req.session.user.roles.find(role => { return role.name === 'Affiliate Manager'; });
+            let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
 
-            if (req.session.user && role) return next();
+            if (isAfMan) return next();
 
             if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
             else if (!resource) resource = `${req.path}`;

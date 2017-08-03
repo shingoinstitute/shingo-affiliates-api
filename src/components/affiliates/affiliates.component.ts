@@ -157,6 +157,25 @@ export class AffiliatesService {
         }
     }
 
+    public async searchCM(id: string, search: string, retrieve: string, refresh: boolean = false): Promise<any[]> {
+        if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
+        const data = {
+            search: `{${search}}`,
+            retrieve: `Contact(${retrieve})`
+        }
+
+        if (!this.cache.isCached(data) || refresh) {
+            let cms = (await this.sfService.search(data)).searchRecords;
+            cms = cms.filter(cm => { return cm.AccountId === id; });
+
+            this.cache.cache(data, cms);
+            return Promise.resolve(cms);
+        }
+        else {
+            return Promise.resolve(this.cache.getCache(data));
+        }
+    }
+
     /**
      * @desc Creates a new Account of record type 'Licensed Affiliate' in Salesforce and corresponding permissions and roles. Returns the following:<br><br>
      * <code>{<br>

@@ -4,6 +4,12 @@ import * as _ from 'lodash';
 const authService = new AuthService();
 const log = new LoggerService();
 
+/**
+ * This class handles lifting the server. It checks for required roles (creates them if not found) and stores the requried global ids
+ * 
+ * @export
+ * @class InitService
+ */
 export class InitService {
 
     public static async  init() {

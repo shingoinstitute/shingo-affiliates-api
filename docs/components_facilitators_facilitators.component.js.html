@@ -34,7 +34,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu ">
-					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="ApplicationModule.html">ApplicationModule</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthMiddleware.html">AuthMiddleware</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="InitService.html">InitService</a></li><li><a href="IsAFManMiddleware.html">IsAFManMiddleware</a></li><li><a href="IsValidMiddleware.html">IsValidMiddleware</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="RouteLoggerMiddleware.html">RouteLoggerMiddleware</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
 				</ul>
 			</li>
 			
@@ -104,6 +104,7 @@ let FacilitatorsService = class FacilitatorsService {
         this.sfService = new _1.SalesforceService();
         this.authService = new _1.AuthService();
         this.cache = new _1.CacheService();
+        this.log = new _1.LoggerService();
     }
     /**
      * @desc Get all facilitators for the affiliate specified. All if &lt;code>affiliate === ''&lt;/code>. The queried fields from Salesforce are as follows:&lt;br>&lt;br>
@@ -129,11 +130,7 @@ let FacilitatorsService = class FacilitatorsService {
      */
     getAll(user, refresh = false, affiliate) {
         return __awaiter(this, void 0, void 0, function* () {
-            let isAfMan = false;
-            for (let role of user.roles) {
-                if (role.name === 'Affiliate Manager')
-                    isAfMan = true;
-            }
+            let isAfMan = user.role.name === 'Affiliate Manager';
             let query = {
                 action: "SELECT",
                 fields: [
@@ -155,9 +152,18 @@ let FacilitatorsService = class FacilitatorsService {
             if (affiliate != '')
                 query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
             if (!this.cache.isCached(query) || refresh) {
-                const facilitators = yield this.sfService.query(query);
+                let facilitators = (yield this.sfService.query(query)).records;
+                const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'`; });
+                const usersArr = (yield this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                const users = _.keyBy(usersArr, 'extId');
+                // Add the facilitator's auth id to object
+                for (let facilitator of facilitators) {
+                    if (users[facilitator['Id']])
+                        facilitator['id'] = users[facilitator['Id']].id;
+                }
+                facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
                 this.cache.cache(query, facilitators);
-                return Promise.resolve(facilitators.records);
+                return Promise.resolve(facilitators);
             }
             else {
                 return Promise.resolve(this.cache.getCache(query));
@@ -219,17 +225,30 @@ let FacilitatorsService = class FacilitatorsService {
                 retrieve += ', AccountId';
             if (!retrieve.includes('RecordType.Name'))
                 retrieve += ', RecordType.Name';
+            if (!retrieve.includes('Id'))
+                retrieve += ', Id';
             const data = {
                 search: `{${search}}`,
                 retrieve: `Contact(${retrieve})`
             };
             if (!this.cache.isCached(data) || refresh) {
-                const facilitators = (yield this.sfService.search(data)).searchRecords.filter(result => {
+                let facilitators = (yield this.sfService.search(data)).searchRecords.filter(result => {
                     if (affiliate === '')
                         return result.RecordType.Name === 'Affiliate Instructor';
                     else
                         return result.AccountId === affiliate &amp;&amp; result.RecordType.Name === 'Affiliate Instructor';
                 });
+                if (facilitators.length) {
+                    const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'`; });
+                    const usersArr = (yield this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                    const users = _.keyBy(usersArr, 'extId');
+                    // Add the facilitator's auth id to the object
+                    for (let facilitator of facilitators) {
+                        if (users[facilitator['Id']])
+                            facilitator['id'] = users[facilitator['Id']].id;
+                    }
+                    facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
+                }
                 this.cache.cache(data, facilitators);
                 return Promise.resolve(facilitators);
             }
@@ -511,7 +530,7 @@ exports.FacilitatorsService = FacilitatorsService;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Wed Aug 2nd 2017
+		on Thu Aug 3rd 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

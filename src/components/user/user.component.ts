@@ -22,10 +22,8 @@ export class UserService {
         user.permissions.forEach(p => {
             if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
         });
-        user.roles.forEach(role => {
-            role.permissions.forEach(p => {
-                if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
-            });
+        user.role.permissions.forEach(p => {
+            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
         });
 
         return [...new Set(ids)]; // Only return unique ids

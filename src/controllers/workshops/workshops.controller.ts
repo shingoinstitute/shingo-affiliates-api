@@ -149,7 +149,7 @@ export class WorkshopsController extends BaseController {
     @Post()
     public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
         // Check required parameters
-        let valid = checkRequired(body, ['Name', 'Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
+        let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
         if (!session.affiliate || !valid.valid) {
             if (!session.affiliate) return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
             return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, HttpStatus.BAD_REQUEST);
@@ -210,19 +210,15 @@ export class WorkshopsController extends BaseController {
     @Post('/:id/attendee_file')
     public async uploadAttendeeFile( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-        if (!req.attendeeList) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'MISSING_FILEDS', fields: ['attendeeList'] });
 
         const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25 } }).single('attendeeList');
 
         return upload(req, res, error => {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
-            const ext: string = req.file.originalName.split('.').pop();
-
-            this.log.debug('File Upload: %j', req.file);
-            this.log.debug('File Base64: %s', req.file.buffer.toString('base64'));
-            this.log.debug('File extension: %s', ext);
 
             try {
+                const ext: string = req.file.originalname.split('.').pop();
+
                 this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
@@ -232,25 +228,20 @@ export class WorkshopsController extends BaseController {
         });
     }
 
-    @Post('/:id/attendee_file')
+    @Post('/:id/evaluation_files')
     public async uploadEvaluations( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-        if (!req.evaluationFiles || !req.evaluationFiles.length) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'MISSING_FILEDS', fields: ['evaluationFiles'] });
 
-        const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25, files: 30 } }).files('evaluationFiles');
+        const upload = multer({ storage: multer.memoryStorage() }).array('evaluationFiles', 30);
 
         return upload(req, res, error => {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
 
             const files = req.files.map(file => { return file.buffer.toString('base64'); });
-            const ext: string = req.files[0].originalName.split('.').pop();
-
-            this.log.debug('Files Upload: %j', req.files);
-            this.log.debug('Files Base64: %j', files);
-            this.log.debug('File extension: %s', ext);
+            const ext: string = req.files[0].originalname.split('.').pop();
 
             try {
-                this.workshopsService.upload(id, `attendee_list.${ext}`, files);
+                this.workshopsService.upload(id, `evaluation.${ext}`, files);
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
             }

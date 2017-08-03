@@ -57,12 +57,13 @@ export class AuthController extends BaseController {
                 clauses: `Email='${body.email}' AND RecordType.Name='Affiliate Instructor'`
             }
             const contact = (await this.sfService.query(query as SFQueryObject)).records[0];
-            req.session.user = _.omit(user, ['password']);
-            req.session.user.contact = contact;
+            req.session.user = _.omit(user, ['password', 'roles']);
+            req.session.user = _.merge(req.session.user, _.omit(contact, ['Email']));
+            req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
             req.session.affiliate = contact['AccountId'];
 
 
-            return res.status(HttpStatus.OK).json({ jwt: user.jwt });
+            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
@@ -77,7 +78,7 @@ export class AuthController extends BaseController {
      */
     @Get('valid')
     public async valid( @Request() req, @Response() res): Promise<Response> {
-        return res.status(HttpStatus.OK).json({ jwt: req.session.user.jwt });
+        return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
     }
 
     /**
@@ -91,7 +92,7 @@ export class AuthController extends BaseController {
         if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' })
         try {
             req.session.user.jwt = '';
-            await this.authService.updateUser(_.omit(req.session.user, ['contact', 'password']));
+            let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'password', 'role']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {

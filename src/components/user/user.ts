@@ -2,7 +2,7 @@ export interface User {
     id?: number,
     email: string,
     password: string,
-    roles?: any[],
+    role?: any,
     permissions?: any[],
     extId?: string,
     services: string

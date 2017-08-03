@@ -33,15 +33,12 @@ export class FacilitatorsController extends BaseController {
      */
     @Get('')
     public async readAll( @Request() req, @Response() res, @Headers('x-affiliate') xAffiliate = '', @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let isAfMan = false;
-        for (let role of req.session.user.roles) {
-            if (role.name === 'Affiliate Manager') isAfMan = true;
-        }
+        let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
 
-        if (!isAfMan && !req.session.affilaite) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
+        if (!isAfMan && !req.session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
 
         try {
-            const facilitators = await this.facilitatorsService.getAll(req.session.user, refresh === 'true', (isAfMan ? xAffiliate : req.session.affilaite));
+            const facilitators = await this.facilitatorsService.getAll(req.session.user, refresh === 'true', (isAfMan ? xAffiliate : req.session.affiliate));
             return res.status(HttpStatus.OK).json(facilitators);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
@@ -77,10 +74,7 @@ export class FacilitatorsController extends BaseController {
      */
     @Get('/search')
     public async search( @Request() req, @Response() res, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false') {
-        let isAfMan = false;
-        for (let role of req.session.user.roles) {
-            if (role.name === 'Affiliate Manager') isAfMan = true;
-        }
+        let isAfMan = req.session.user.role.name === 'Affiliate Manager';
         if (!isAfMan && !req.session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, HttpStatus.BAD_REQUEST);
 
         // Check for required fields
