@@ -38,7 +38,7 @@ export class AuthController extends BaseController {
         if (!body.email || !body.password) return this.handleError(res, 'Error in AuthController.login(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
 
         try {
-            const user = await this.authService.login({ email: body.email, password: body.password });
+            const user = await this.authService.login(body);
 
             if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
             if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
@@ -89,7 +89,7 @@ export class AuthController extends BaseController {
      */
     @Get('logout')
     public async logout( @Request() req, @Response() res): Promise<Response> {
-        if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' })
+        if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
         try {
             req.session.user.jwt = '';
             let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'password', 'role']));

@@ -39,7 +39,7 @@ export class WorkshopsController extends BaseController {
     public async readAll( @Response() res, @Session() session, @Query('isPublic') isPublicQ, @Headers('x-is-public') isPublicH, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
         const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
         const forceRefresh = refresh === 'true';
-        if (!session.user && !isPublic) return this.handleError(res, 'Error in WorkshopsController.readAll()', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
+        if (!session.user && !isPublic) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
 
         try {
             const workshops: Workshop[] = await this.workshopsService.getAll(isPublic, forceRefresh, session.user);
@@ -126,7 +126,7 @@ export class WorkshopsController extends BaseController {
     public async facilitators( @Response() res, @Param('id') id): Promise<Response> {
 
         // Check the id
-        if (!id.match(/a[\w\d]{14,17}/)) this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const facilitators = await this.workshopsService.facilitators(id);
@@ -149,17 +149,17 @@ export class WorkshopsController extends BaseController {
     @Post()
     public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
         // Check required parameters
+        this.log.debug('Trying to create workshop:\n%j', body);
         let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
-        if (!session.affiliate || !valid.valid) {
-            if (!session.affiliate) return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
+        if (!valid.valid)
             return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, HttpStatus.BAD_REQUEST);
-        }
 
         // Check for valid SF ID on Organizing_Affiliate\__c
-        if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/))
+            return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         // Check can create for Organizing_Affiliate\__c
-        if (session.affiliate !== 'ALL' && session.affiliate !== body.Organizing_Affiliate__c)
+        if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c)
             return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'PERM_DENIDED', message: `You are not allowed to post workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, HttpStatus.FORBIDDEN);
 
         try {
@@ -183,21 +183,17 @@ export class WorkshopsController extends BaseController {
     public async update( @Response() res, @Param('id') id, @Body() body, @Session() session): Promise<Response> {
         // Check required parameters
         let required = checkRequired(body, ['Id', 'Organizing_Affiliate__c']);
-        if (!session.affiliate || !required.valid) {
-            if (!session.affiliate) return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
+        if (!required.valid)
             return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'MISSING_FIELD', fields: required.missing }, HttpStatus.BAD_REQUEST);
-        }
 
         // Check the id
-        const pattern = /[\w\d]{15,17}/;
-        if (!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id || !pattern.test(body.Organizing_Affiliate__c)) {
+        const pattern = /[\w\d]{15,18}/;
+        if (!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id || !pattern.test(body.Organizing_Affiliate__c))
             return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} or ${id} or ${body.Id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-        }
 
         // Check can update for Organizing_Affiliate\__c
-        if (session.affiliate !== 'ALL' && session.affiliate !== body.Organizing_Affiliate__c) {
+        if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c)
             return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'PERM_DENIDED', message: `You are not allowed to update workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, HttpStatus.FORBIDDEN);
-        }
 
         try {
             const result = await this.workshopsService.update(body);

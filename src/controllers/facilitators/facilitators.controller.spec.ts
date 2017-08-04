@@ -1,365 +1,319 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { FacilitatorsController } from './facilitators.controller';
-import { SalesforceService, CacheService, AuthService } from '../../components';
+import { FacilitatorsService, LoggerService } from '../../components';
+import {
+    MockLoggerFactory, MockLoggerInstance,
+    MockFacilitatorsFactory, MockFacilitatorsServiceInstance,
+    MockExpressFactory, MockExpressInstance, MockServiceFactory
+} from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
-import { mock, instance, when, anything } from 'ts-mockito';
-import * as _ from 'lodash';
 
-const expectedReadAll = { totalSize: 0, done: true, records: [{Id: '003g000001VvwEZAAZ', AccountId: '001g000001glcsWAAQ', RecordType: { Name: 'Affiliate Instructor' }}] };
-const expectedSFCreate = { id: '003g000001VvwEZAAZ', success: true, errors: [] };
-const expectedAuthCreate = { id: 1, jwt: 'aoijhfdposaiud.eiopiepoeih.aoihdpoaihgpoihj', email: 'testemail@example.com' };
-const expectedCreate = { id: expectedAuthCreate.id, jwt: expectedAuthCreate.jwt, Id: expectedSFCreate.id };
-const expectedDescribe = {field: 'Some Field', why: 'SF Describe object is HUUUUGE!'};
-const expectedReadOne = _.merge(expectedAuthCreate, { password: 'password', roles: [], permissions: []});
-
-class MockSFClient {
-    
-    public query(query, callback){
-        return callback(null, { contents: JSON.stringify(expectedReadAll) });
-    }
-
-    public retrieve(query, callback){
-        return callback(null, { contents: JSON.stringify(expectedReadAll.records) });
-    }
-
-    public create(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedSFCreate ]) });
-    }
-
-    public update(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedSFCreate ]) });        
-    }
-
-    public delete(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedSFCreate ]) });        
-    }
-
-    public describe(data, callback){
-        return callback(null, { contents: JSON.stringify(expectedDescribe) });
-    }
-
-    public search(data, callback){
-        return callback(null, { contents: JSON.stringify({ searchRecords: expectedReadAll.records }) });
-    }
-
-}
-
-class MockAuthClient {
-    public createUser(data, callback) {
-        return callback(null, expectedAuthCreate);
-    }
-
-    public updateUser(data, callback) {
-        return callback(null, { response: true });
-    }
-
-    public addRoleToUser(data, callback) {
-        return callback(null, { response: true });
-    }
-
-    public readOneUser(data, callback) {
-        return callback(null, expectedReadOne);
-    }
-}
-
-interface MockSfInstance {
-    getClient() : MockSFClient;
-}
-
-interface MockCacheInstance {
-    getCache(o : any) : any;
-    isCached(o : any) : boolean;
-    cache(o : any, v : any) : void;
-}
-
-interface MockAuthInstance {
-    getClient() : MockAuthClient;
+function getController() {
+    const controller: FacilitatorsController = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    const handleError = SpyOn(controller, 'handleError');
+    handleError.andStub();
+    return { controller, handleError };
 }
 
 @TestFixture('Facilitators Controller')
 export class FacilitatorsControllerFixture {
 
-    private mockSfInstance : MockSfInstance;
-    private mockCacheInstance : MockCacheInstance;
-    private mockAuthInstance : MockAuthInstance;
+    private mockFacilitatorsService: MockFacilitatorsServiceInstance;
+    private mockExpress: MockExpressInstance;
 
     @Setup
-    public Setup(){
-        let mockSfService = mock(SalesforceService);
-        let mockSfClient = new MockSFClient();
-        
-        when(mockSfService.getClient()).thenReturn(mockSfClient);
-        
-        this.mockSfInstance = instance(mockSfService);
-
-        SpyOn(this.mockSfInstance, 'getClient');
-        SpyOn(mockSfClient, 'query');
-        SpyOn(mockSfClient, 'retrieve');
-        SpyOn(mockSfClient, 'create');
-        SpyOn(mockSfClient, 'update');
-        SpyOn(mockSfClient, 'delete');
-        SpyOn(mockSfClient, 'describe');
-        SpyOn(mockSfClient, 'search');
-
-        let mockCacheService = mock(CacheService);
-        this.mockCacheInstance = instance(mockCacheService);
-        SpyOn(this.mockCacheInstance, 'cache');
-        SpyOn(this.mockCacheInstance, 'isCached').andReturn(true);
-
-        let mockAuthService = mock(AuthService);
-        let mockAuthClient = new MockAuthClient();
-
-        when(mockAuthService.getClient()).thenReturn(mockAuthClient);
-
-        this.mockAuthInstance = instance(mockAuthService);
-        SpyOn(this.mockAuthInstance, 'getClient');
-        SpyOn(mockAuthClient, 'createUser');
-        SpyOn(mockAuthClient, 'updateUser');
-        SpyOn(mockAuthClient, 'addRoleToUser');
-        SpyOn(mockAuthClient, 'readOneUser');
+    public Setup() {
+        this.mockFacilitatorsService = new MockFacilitatorsFactory().getMockInstance();
+        this.mockExpress = new MockExpressFactory().getMockInstance();
 
         NestTest.createTestingModule({
-            controllers: [ FacilitatorsController ],
-            components: [ 
-                { provide: SalesforceService, useValue: this.mockSfInstance },
-                { provide: CacheService, useValue: this.mockCacheInstance },
-                { provide: AuthService, useValue: this.mockAuthInstance }
+            controllers: [FacilitatorsController],
+            components: [
+                { provide: FacilitatorsService, useValue: this.mockFacilitatorsService },
+                { provide: LoggerService, useValue: new MockLoggerFactory().getMockInstance() }
             ]
         });
     }
 
     @Test('Controller initilized correctly')
-    public initialized(){
-        const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    public initilized() {
+        const { controller } = getController();
 
         Expect(controller).toBeDefined();
-        Expect(controller.readAll).toBeDefined();
-        Expect(controller.describe).toBeDefined();
-        Expect(controller.search).toBeDefined();
         Expect(controller.read).toBeDefined();
+        Expect(controller.readAll).toBeDefined();
         Expect(controller.create).toBeDefined();
         Expect(controller.update).toBeDefined();
         Expect(controller.delete).toBeDefined();
+        Expect(controller.unamp).toBeDefined();
+        Expect(controller.deleteLogin).toBeDefined();
+        Expect(controller.changeRole).toBeDefined();
+        Expect(controller.describe).toBeDefined();
+        Expect(controller.search).toBeDefined();
+        Expect(controller.map).toBeDefined();
     }
 
-    @TestCase('001g000001glcsWAAQ', 'true', 'Affiliate Manager')
-    @TestCase('001g000001glcsWAAQ', 'false', 'Affiliate Manager')
-    @TestCase('001g000001glcsWAAQ', '', 'Affiliate Manager')
-    @TestCase('', 'true', 'Affiliate Manager')
-    @TestCase('', 'false', 'Affiliate Manager')
-    @TestCase('', '', 'Affiliate Manager')
-    @TestCase('001g000001glcsWAAQ', 'true', 'Facilitator')
-    @TestCase('001g000001glcsWAAQ', 'false', 'Facilitator')
-    @TestCase('001g000001glcsWAAQ', '', 'Facilitator')
-    @TestCase('', 'true', 'Facilitator')
-    @TestCase('', 'false', 'Facilitator')
-    @TestCase('', '', 'Facilitator')
+    @TestCase({ affiliate: '', user: { role: { name: 'Affiliate Manager' } } }, '', 'false', true, true)
+    @TestCase({ affiliate: '', user: { role: { name: 'Affiliate Manager' } } }, '00030000bdffss', 'false', true, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, '', 'false', false, true)
+    @TestCase({ affiliate: '', user: { role: { name: 'Facilitator' } } }, '', 'false', false, false)
+    @TestCase({ affiliate: '', user: { role: { name: 'Affiliate Manager' } } }, '', 'true', true, true)
+    @TestCase({ affiliate: '', user: { role: { name: 'Affiliate Manager' } } }, '00030000bdffss', 'true', true, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, '', 'true', false, true)
+    @TestCase({ affiliate: '', user: { role: { name: 'Facilitator' } } }, '', 'true', false, false)
     @AsyncTest('Read all facilitators')
-    public async readAll(affId : string, refresh : string, role : string){
-        const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    public async readAll(session: any, xAffiliate: string, refresh: string, isAfMan: boolean, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
+        await controller.readAll(this.mockExpress.res, session, xAffiliate, refresh);
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedReadAll);
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        let mockSession = {
-            user: {
-                roles: [ { name: role } ]
-            },
-            affiliate: affId
-        }
-        let mockRequest = { session: mockSession };
-
-        const actual = await controller.readAll(mockRequest, mockResponse, mockNext, affId, refresh);
-
-        Expect(actual).toBeDefined();
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        if(role === 'Facilitator' && affId === '') {
-            Expect(actual).toEqual({error: "MISSING_FIELDS"})
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST).exactly(1).times;
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.getAll).toHaveBeenCalledWith(session.user, refresh === 'true', (isAfMan ? xAffiliate : session.affiliate)).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
         } else {
-            Expect(actual).toEqual(expectedReadAll);
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-            Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
-            if(refresh === 'true'){
-                Expect(this.mockSfInstance.getClient().query).toHaveBeenCalled().exactly(1).times;
-                Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-                Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
-            } else {
-                Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-                Expect(this.mockSfInstance.getClient().query).not.toHaveBeenCalled();
-                Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
-            }
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.readAll(): ', Any, HttpStatus.FORBIDDEN).exactly(1).times;
+            Expect(this.mockFacilitatorsService.getAll).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
     }
 
-    @TestCase('true')
     @TestCase('false')
-    @AsyncTest('Describe Contact')
-    public async describe(refresh){
-        const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    @TestCase('true')
+    @AsyncTest('Describe the Contact object in SF')
+    public async describe(refresh) {
+        const { controller } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
+        await controller.describe(this.mockExpress.res, refresh);
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedDescribe);
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-
-        const actual = await controller.describe(mockRequest, mockResponse, mockNext, refresh);
-
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedDescribe);
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
-        if(refresh === 'true'){
-            Expect(this.mockSfInstance.getClient().describe).toHaveBeenCalled().exactly(1).times;
-            Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-            Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
-        } else {
-            Expect(this.mockSfInstance.getClient().describe).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
-        }
+        Expect(this.mockFacilitatorsService.describe).toHaveBeenCalledWith(refresh === 'true').exactly(1).times;
+        Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+        Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
     }
 
-    @TestCase('true', 'Affiliate Manager', '001g000001glcsWAAQ')
-    @TestCase('false', 'Affiliate Manager', '001g000001glcsWAAQ')
-    @TestCase('', 'Affiliate Manager', '001g000001glcsWAAQ')
-    @TestCase('true', 'Affiliate Manager', '')
-    @TestCase('false', 'Affiliate Manager', '')
-    @TestCase('', 'Affiliate Manager', '')
-    @TestCase('true', 'Facilitator', '001g000001glcsWAAQ')
-    @TestCase('false', 'Facilitator', '001g000001glcsWAAQ')
-    @TestCase('', 'Facilitator', '001g000001glcsWAAQ')
-    @TestCase('true', 'Facilitator', '')
-    @TestCase('false', 'Facilitator', '')
-    @TestCase('', 'Facilitator', '')
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, 'D*', 'Id,Name', 'false', true, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, '', 'Id,Name', 'false', true, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, 'D*', '', 'false', true, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, 'D*', 'Id,Name', 'false', false, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, '', 'Id,Name', 'false', false, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, 'D*', '', 'false', false, false)
+    @TestCase({ affiliate: '', user: { role: { name: 'Facilitator' } } }, 'D*', 'Id,Name', 'false', false, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, 'D*', 'Id,Name', 'true', true, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, '', 'Id,Name', 'true', true, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Affiliate Manager' } } }, 'D*', '', 'true', true, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, 'D*', 'Id,Name', 'true', false, true)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, '', 'Id,Name', 'true', false, false)
+    @TestCase({ affiliate: '000300000asdfg', user: { role: { name: 'Facilitator' } } }, 'D*', '', 'true', false, false)
+    @TestCase({ affiliate: '', user: { role: { name: 'Facilitator' } } }, 'D*', 'Id,Name', 'true', false, false)
     @AsyncTest('Search for facilitators')
-    public async search(refresh : string, role : string, affId : string){
-    const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    public async search(session: any, search: string, retrieve: string, refresh: string, isAfMan: boolean, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
-        let mockSession = {
-            user: {
-                roles: [ { name: role } ]
-            },
-            affiliate: affId
-        }
-        let mockRequest = { 
-            session: mockSession,
-            headers: {
-                'x-affiliate': affId
-            }
-        };
+        await controller.search(this.mockExpress.res, session, search, retrieve, refresh);
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedReadAll.records);
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-
-        let s = '';
-        let r = '';
-        if(refresh !== ''){
-            s = '*Anthing*';
-            r = 'Id';
-        } 
-
-        const actual = await controller.search(mockRequest, mockResponse, mockNext, s, r, refresh);
-        Expect(actual).toBeDefined();
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        if(refresh === '' || (role === 'Facilitator' && affId === '')){
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST).exactly(1).times;
-            Expect(actual).toEqual({error: 'MISSING_FIELDS'})
-            Expect(this.mockCacheInstance.isCached).not.toHaveBeenCalled();
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.search).toHaveBeenCalledWith(search, retrieve, isAfMan ? '' : session.affiliate, refresh === 'true').exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
         } else {
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-            Expect(actual).toEqual(expectedReadAll.records);
-            Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
+            const status = (!isAfMan && !session.affiliate ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST);
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.search(): ', Any, status).exactly(1).times;
+            Expect(this.mockFacilitatorsService.search).not.toHaveBeenCalled();
 
-            if(refresh === 'true'){
-                Expect(this.mockSfInstance.getClient().search).toHaveBeenCalled().exactly(1).times;
-                Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-                Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
-            } else {
-                Expect(this.mockSfInstance.getClient().search).not.toHaveBeenCalled();
-                Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-                Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
-            }
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
     }
 
-    @AsyncTest('Read a facilitator')
-    public async read(){
-        const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('0003000000asdfg', true)
+    @AsyncTest('Read a single Facilitator')
+    public async read(id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        await controller.read(this.mockExpress.res, id);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.get).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.read(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.get).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        
-        const actual = await controller.read(mockRequest, mockResponse, mockNext, expectedReadAll.records[0].Id);
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(_.merge(expectedReadAll.records[0], _.omit(expectedReadOne, [ 'password', 'email' ])));
-        Expect(this.mockSfInstance.getClient().retrieve).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockAuthInstance.getClient().readOneUser).toHaveBeenCalled().exactly(1).times;
     }
 
-    @AsyncTest('Create a facilitator')
-    public async create(){
-        const controller = NestTest.get<FacilitatorsController>(FacilitatorsController);
+    @TestCase({ AccountId: '0003000000asdfg', FirstName: 'test', LastName: 'user', Email: 'test.user@gmail.com', password: 'password' }, true)
+    @TestCase({ AccountId: '0003000000asdfg', FirstName: 'test', LastName: 'user', Email: 'test.user@gmail.com', password: 'password', roleId: 1 }, true)
+    @TestCase({ FirstName: 'test', LastName: 'user', Email: 'test.user@gmail.com', password: 'password' }, false) // Missing AccountId
+    @TestCase({ AccountId: '0003000000asdfg', LastName: 'user', Email: 'test.user@gmail.com', password: 'password' }, false) // Missing FirstName
+    @TestCase({ AccountId: '0003000000asdfg', FirstName: 'test', LastName: 'user', password: 'password' }, false) // Missing Email
+    @TestCase({ AccountId: '0003000000asdfg', FirstName: 'test', LastName: 'user', Email: 'test.user@gmail.com' }, false) // Missing password
+    @TestCase({ AccountId: 'not a sf id', FirstName: 'test', LastName: 'user', Email: 'test.user@gmail.com', password: 'password' }, false) // Bad body.AccountId
+    @AsyncTest('Create a Facilitator')
+    public async create(body: any, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockSession = { affiliate: '001g000001glcsWAAQ', user: { permissions: []}};
-        let mockRequest = { session: mockSession};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        await controller.create(this.mockExpress.res, body);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.create).toHaveBeenCalledWith(body).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.create(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.get).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
+    }
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
+    @TestCase({ AccountId: '0003000000asdfg', Email: 'test.user@gmail.com', password: 'password' }, '0003000000aDFSAA', true)
+    @TestCase({ Email: 'test.user@gmail.com', password: 'password' }, '0003000000aDFSAA', false) // Missing AccountId
+    @TestCase({ AccountId: '0003000000asdfg', password: 'password' }, '0003000000aDFSAA', false) // Missing Email
+    @TestCase({ AccountId: '0003000000asdfg', Email: 'test.user@gmail.com' }, '0003000000aDFSAA', false) // Missing Password
+    @TestCase({ AccountId: '0003000000asdfg', Email: 'test.user@gmail.com', password: 'password' }, 'not a sf id', false) // Bad Id Param
+    @AsyncTest('Map an existing contact to a new/current auth')
+    public async map(body: any, id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockNext = function(error) { return Promise.resolve(error); }
-        let mockBody = {
-            AccountId: '001g000001glcsWAAQ',
-            FirstName: 'Example',
-            LastName: 'User',
-            Email: 'exampleuser@example.com',
-            password: 'password'
+        await controller.map(this.mockExpress.res, body, id);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.mapContact).toHaveBeenCalledWith(id, body).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.map(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.mapContact).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
+    }
 
-        const actual = await controller.create(mockRequest, mockResponse, mockNext, mockBody);
+    @TestCase({ Id: '0003000000asdfg', Email: 'test.user@gmail.com' }, '0003000000asdfg', true)
+    @TestCase({ Id: '0003000000asdfg', Email: 'test.user@gmail.com' }, 'not a sf id', false) // Bad Id Param
+    @TestCase({ Email: 'test.user@gmail.com' }, '0003000000asdfg', false) // Missing Id
+    @AsyncTest('Update a Facilitator')
+    public async update(body: any, id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        Expect(actual).toEqual(expectedCreate);
-        Expect(this.mockSfInstance.getClient().create).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockAuthInstance.getClient().updateUser).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockAuthInstance.getClient().addRoleToUser).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
+        await controller.update(this.mockExpress.res, body, id);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.update).toHaveBeenCalledWith(body).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.update(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.update).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
+    }
+
+    @TestCase('', 'true', false)
+    @TestCase('', 'false', false)
+    @TestCase('not a sf id', 'true', false)
+    @TestCase('not a sf id', 'false', false)
+    @TestCase('0003000000asdfg', 'true', true)
+    @TestCase('0003000000asdfg', 'false', true)
+    @AsyncTest('Delete a Facilitator')
+    public async delete(id: string, deleteAuth: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.delete(this.mockExpress.res, id, deleteAuth);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.delete).toHaveBeenCalledWith(id).exactly(1).times;
+            if (deleteAuth === 'true') Expect(this.mockFacilitatorsService.deleteAuth).toHaveBeenCalledWith(id).exactly(1).times;
+            else Expect(this.mockFacilitatorsService.unmapAuth).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.delete(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.delete).not.toHaveBeenCalled();
+            Expect(this.mockFacilitatorsService.deleteAuth).not.toHaveBeenCalled();
+            Expect(this.mockFacilitatorsService.unmapAuth).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
+    }
+
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('0003000000asdfg', true)
+    @AsyncTest('Delete only the login of a Facilitator')
+    public async deleteLogin(id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.deleteLogin(this.mockExpress.res, id);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.deleteAuth).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.deleteLogin(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.deleteAuth).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
+    }
+
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('0003000000asdfg', true)
+    @AsyncTest('Unmap the affiliate-portal service from a Facilitator\'s auth account')
+    public async unmap(id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.unamp(this.mockExpress.res, id);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.unmapAuth).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.unmap(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.unmapAuth).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
+    }
+
+    @TestCase('', 1, false)
+    @TestCase('not a sf id', 1, false)
+    @TestCase('0003000000asdfg', 1, true)
+    @AsyncTest('Change the role of a Facilitator')
+    public async changeRole(id: string, roleId: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.changeRole(this.mockExpress.res, id, roleId);
+
+        if (isValid) {
+            Expect(this.mockFacilitatorsService.changeRole).toHaveBeenCalledWith(id, roleId).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in FacilitatorsController.changeRole(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockFacilitatorsService.changeRole).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
     }
 }

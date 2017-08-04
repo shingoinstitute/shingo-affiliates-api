@@ -232,6 +232,7 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
     create(res, body, session) {
         return __awaiter(this, void 0, void 0, function* () {
             // Check required parameters
+            this.log.debug('Trying to create workshop:\n%j', body);
             let valid = objKeyValidator_1.checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
             if (!session.affiliate || !valid.valid) {
                 if (!session.affiliate)

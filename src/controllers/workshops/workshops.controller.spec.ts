@@ -1,104 +1,47 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { WorkshopsController } from './workshops.controller';
-import { SalesforceService, CacheService } from '../../components';
+import { WorkshopsService, LoggerService } from '../../components';
+import {
+    MockLoggerFactory, MockLoggerInstance,
+    MockWorkshopsFactory, MockWorkshopsServiceInstance,
+    MockExpressFactory, MockExpressInstance
+} from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
-import { mock, instance, when, anything } from 'ts-mockito';
 
-const expectedReadAll = { totalSize: 0, done: true, records: [{Id: 'a1Sg0000001jXbg'}] };
-const expectedFacilitators = { totalSize: 0, done: true, records: [{Instructor__r: {Email: "email@example.com"}}] };
-const expectedCreate = { id: 'a1Sg0000001jXbg', success: true, errors: [] };
-const expectedDescribe = {field: 'Some Field', why: 'SF Describe object is HUUUUGE!'};
-
-class MockSFClient {
-    
-    public query(query, callback){
-        if(query.table === 'WorkshopFacilitatorAssociation__c') return callback(null, { contents: JSON.stringify(expectedFacilitators) });
-        if(query.table === 'Workshop__c') return callback(null, { contents: JSON.stringify(expectedReadAll) });
-        else return callback({error: 'UNKNOWN_TABLE', query});
-    }
-
-    public retrieve(query, callback){
-        return callback(null, { contents: JSON.stringify(expectedReadAll.records) });
-    }
-
-    public create(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedCreate ]) });
-    }
-
-    public update(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedCreate ]) });        
-    }
-
-    public delete(data, callback){
-        return callback(null, { contents: JSON.stringify([ expectedCreate ]) });        
-    }
-
-    public describe(data, callback){
-        return callback(null, { contents: JSON.stringify(expectedDescribe) });
-    }
-
-    public search(data, callback){
-        return callback(null, { contents: JSON.stringify({ searchRecords: expectedReadAll.records }) });
-    }
-
-}
-
-interface MockSfInstance {
-    getClient() : MockSFClient;
-}
-
-interface MockCacheInstance {
-    getCache(o : any) : any;
-    isCached(o : any) : boolean;
-    cache(o : any, v : any) : void;
+function getController() {
+    const controller: WorkshopsController = NestTest.get<WorkshopsController>(WorkshopsController);
+    const handleError = SpyOn(controller, 'handleError');
+    handleError.andStub();
+    return { controller, handleError };
 }
 
 @TestFixture('Workshops Controller')
 export class WorkshopsControllerFixture {
 
-    private mockSfInstance : MockSfInstance;
-    private mockCacheInstance : MockCacheInstance;
+    private mockWorkshopsService: MockWorkshopsServiceInstance;
+    private mockExpress: MockExpressInstance;
 
     @Setup
-    public Setup(){
-        let mockSfService = mock(SalesforceService);
-        let mockSfClient = new MockSFClient();
-        
-        when(mockSfService.getClient()).thenReturn(mockSfClient);
-        
-        this.mockSfInstance = instance(mockSfService);
-
-        SpyOn(this.mockSfInstance, 'getClient');
-        SpyOn(mockSfClient, 'query');
-        SpyOn(mockSfClient, 'retrieve');
-        SpyOn(mockSfClient, 'create');
-        SpyOn(mockSfClient, 'update');
-        SpyOn(mockSfClient, 'delete');
-        SpyOn(mockSfClient, 'describe');
-        SpyOn(mockSfClient, 'search');
-
-        let mockCacheService = mock(CacheService);
-        this.mockCacheInstance = instance(mockCacheService);
-        SpyOn(this.mockCacheInstance, 'cache');
-        SpyOn(this.mockCacheInstance, 'isCached').andReturn(true);
+    public Setup() {
+        this.mockWorkshopsService = new MockWorkshopsFactory().getMockInstance();
+        this.mockExpress = new MockExpressFactory().getMockInstance();
 
         NestTest.createTestingModule({
-            controllers: [ WorkshopsController ],
-            components: [ 
-                { provide: SalesforceService, useValue: this.mockSfInstance },
-                { provide: CacheService, useValue: this.mockCacheInstance }
+            controllers: [WorkshopsController],
+            components: [
+                { provide: WorkshopsService, useValue: this.mockWorkshopsService },
+                { provide: LoggerService, useValue: new MockLoggerFactory().getMockInstance() }
             ]
         });
     }
 
     @Test('Controller initilized correctly')
-    public initialized(){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+    public initialized() {
+        const { controller } = getController();
 
         Expect(controller).toBeDefined();
         Expect(controller.readAll).toBeDefined();
-        Expect(controller.readPublic).toBeDefined();
         Expect(controller.describe).toBeDefined();
         Expect(controller.search).toBeDefined();
         Expect(controller.read).toBeDefined();
@@ -106,291 +49,409 @@ export class WorkshopsControllerFixture {
         Expect(controller.create).toBeDefined();
         Expect(controller.update).toBeDefined();
         Expect(controller.delete).toBeDefined();
+        Expect(controller.uploadAttendeeFile).toBeDefined();
+        Expect(controller.uploadEvaluations).toBeDefined();
     }
 
+    @TestCase({ id: 1 }, 'false', 'false', 'false')
+    @TestCase({ id: 1 }, 'false', 'false', 'true')
+    @TestCase({ id: 1 }, 'false', 'true', 'false')
+    @TestCase({ id: 1 }, 'false', 'true', 'true')
+    @TestCase({ id: 1 }, 'true', 'false', 'false')
+    @TestCase({ id: 1 }, 'true', 'false', 'true')
+    @TestCase({ id: 1 }, 'true', 'true', 'false')
+    @TestCase({ id: 1 }, 'true', 'true', 'true')
+    @TestCase(undefined, 'false', 'false', 'false')
+    @TestCase(undefined, 'false', 'false', 'true')
+    @TestCase(undefined, 'false', 'true', 'false')
+    @TestCase(undefined, 'false', 'true', 'true')
+    @TestCase(undefined, 'true', 'false', 'false')
+    @TestCase(undefined, 'true', 'false', 'true')
+    @TestCase(undefined, 'true', 'true', 'false')
+    @TestCase(undefined, 'true', 'true', 'true')
     @AsyncTest('Read all workshops')
-    public async readAll(){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+    public async readAll(sessionUser: object | undefined, isPublicQ: string, isPublicH: string, refresh: string) {
+        const { controller, handleError } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        const session = {
+            user: sessionUser
         }
+        await controller.readAll(this.mockExpress.res, session, isPublicQ, isPublicH, refresh);
+        const expectedIsPublic: boolean = (isPublicQ === 'true' || isPublicH === 'true');
+        const expectedRefresh: boolean = refresh === 'true';
+        const expectedUser: object | undefined = session.user;
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
+        if (!expectedIsPublic && !expectedUser) {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.readAll(): ', Any, HttpStatus.FORBIDDEN).exactly(1).times;
+            Expect(this.mockWorkshopsService.getAll).not.toHaveBeenCalled();
 
-        let mockNext = function(error) { return Promise.resolve(error); }
-        let mockSession = {
-            user: {
-                permissions: [{resource: `/workshops/${expectedReadAll.records[0].Id}`}],
-                roles: [{permissions: [{resource: `/workshops/${expectedReadAll.records[0].Id}`}]}]
-            }
-        }
-        const actual = await controller.readAll(mockRequest, mockResponse, mockNext, mockSession);
-
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedReadAll);
-        Expect(this.mockSfInstance.getClient().query).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-    }
-
-    @TestCase('true')
-    @TestCase('false')
-    @AsyncTest('Read all public workshops')
-    public async readPublic(refresh){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
-
-        let mockRequest = { };
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedReadAll);
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-
-        const actual = await controller.readPublic(mockRequest, mockResponse, mockNext, refresh);
-
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedReadAll);
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
-        if(refresh === 'true'){
-            Expect(this.mockSfInstance.getClient().query).toHaveBeenCalled().exactly(1).times;
-            Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-            Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         } else {
-            Expect(this.mockSfInstance.getClient().query).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
+            Expect(this.mockWorkshopsService.getAll).toHaveBeenCalledWith(expectedIsPublic, expectedRefresh, expectedUser).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
         }
     }
 
-    @TestCase('true')
     @TestCase('false')
-    @AsyncTest('Describe Workshop__c')
-    public async describe(refresh){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
-
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedDescribe);
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-
-        const actual = await controller.describe(mockRequest, mockResponse, mockNext, refresh);
-
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedDescribe);
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
-        if(refresh === 'true'){
-            Expect(this.mockSfInstance.getClient().describe).toHaveBeenCalled().exactly(1).times;
-            Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-            Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
-        } else {
-            Expect(this.mockSfInstance.getClient().describe).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-            Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
-        }
-    }
-
     @TestCase('true')
-    @TestCase('false')
-    @TestCase('')
-    @AsyncTest('Search for workshops')
-    public async search(refresh : string){
-    const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+    @AsyncTest('Describe the Workshop__c SF object')
+    public async describe(refresh: string) {
+        const { controller } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
-        }
+        await controller.describe(this.mockExpress.res, refresh);
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-        SpyOn(this.mockCacheInstance, 'getCache').andReturn(expectedReadAll.records);
+        Expect(this.mockWorkshopsService.describe).toHaveBeenCalledWith(refresh === 'true').exactly(1).times;
+        Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+        Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+    }
 
-        let mockNext = function(error) { return Promise.resolve(error); }
+    @TestCase('', '', 'false')
+    @TestCase('', 'Id,', 'true')
+    @TestCase('D*', '', 'true')
+    @TestCase('D*', 'Id,', 'true')
+    @AsyncTest('Search for a Workshop')
+    public async search(search: string, retrieve: string, refresh: string) {
+        const { controller, handleError } = getController();
 
-        let s = '';
-        let r = '';
-        if(refresh !== ''){
-            s = '*Anthing*';
-            r = 'Id';
-        } 
+        await controller.search(this.mockExpress.res, search, retrieve, refresh);
 
-        const actual = await controller.search(mockRequest, mockResponse, mockNext, s, r, refresh);
-        Expect(actual).toBeDefined();
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
-        if(refresh === ''){
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST).exactly(1).times;
-            Expect(actual).toEqual({error: 'Missing search and retrieve  parameters!'})
-            Expect(this.mockCacheInstance.isCached).not.toHaveBeenCalled();
+        if (search && retrieve) {
+            Expect(this.mockWorkshopsService.search).toHaveBeenCalledWith(search, retrieve, refresh === 'true').exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
         } else {
-            Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-            Expect(actual).toEqual(expectedReadAll.records);
-            Expect(this.mockCacheInstance.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.search(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockWorkshopsService.search).not.toHaveBeenCalled();
 
-            if(refresh === 'true'){
-                Expect(this.mockSfInstance.getClient().search).toHaveBeenCalled().exactly(1).times;
-                Expect(this.mockCacheInstance.cache).toHaveBeenCalledWith(Any, Any).exactly(1).times;
-                Expect(this.mockCacheInstance.getCache).not.toHaveBeenCalled();
-            } else {
-                Expect(this.mockSfInstance.getClient().search).not.toHaveBeenCalled();
-                Expect(this.mockCacheInstance.cache).not.toHaveBeenCalled();
-                Expect(this.mockCacheInstance.getCache).toHaveBeenCalledWith(Any).exactly(1).times;
-            }
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
     }
 
-    @AsyncTest('Read a workshop')
-    public async read(){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('a1Sg0000001jXbg', true)
+    @AsyncTest('Read a specific workshop')
+    public async read(id: string, isId: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        await controller.read(this.mockExpress.res, id);
+
+        if (isId) {
+            Expect(this.mockWorkshopsService.get).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.read(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockWorkshopsService.get).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        
-        const actual = await controller.read(mockRequest, mockResponse, mockNext, expectedReadAll.records[0].Id);
-        Expect(actual).toBeDefined();
-        Expect(actual).toEqual(expectedReadAll.records[0]);
-        Expect(this.mockSfInstance.getClient().retrieve).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
     }
 
-     @AsyncTest('Read the facilitators of a workshop')
-    public async facilitators(){
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('a1Sg0000001jXbg', true)
+    @AsyncTest('Get the facilitators for a Workshop')
+    public async facilitators(id: string, isId: boolean) {
+        const { controller, handleError } = getController();
 
-        let mockRequest = {};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        await controller.facilitators(this.mockExpress.res, id);
+
+        if (isId) {
+            Expect(this.mockWorkshopsService.facilitators).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.facilitators(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+            Expect(this.mockWorkshopsService.facilitators).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
 
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        
-        const actual = await controller.facilitators(mockRequest, mockResponse, mockNext, expectedReadAll.records[0].Id);
-
-        Expect(actual).toEqual(expectedFacilitators);
-        Expect(this.mockSfInstance.getClient().query).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
     }
 
-    @AsyncTest('Create a workshop')
-    public async create(){
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Facilitator' } }
+        },
+        true
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        true
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300000sfAAD',
+            user: { role: { name: 'Facilitator' } }
+        },
+        false // Differing Affiliate and Organizing_Affiliate__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: 'not a sf id', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Not an sf id
+    )
+    @TestCase(
+        {
+            Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing Organizing_Affiliate__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD',
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing Start_Date__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing End_Date__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Event_Country__c: 'USA',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing Host_Site__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU',
+            Event_City__c: 'Logan', facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing Event_Country__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            facilitators: []
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing Event_City__c
+    )
+    @TestCase(
+        {
+            Organizing_Affiliate__c: '00300s00000sfAAD', Start_Date__c: new Date().toString(),
+            End_Date__c: new Date().toString(), Host_Site__c: 'USU', Event_Country__c: 'USA',
+            Event_City__c: 'Logan'
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Missing facilitators
+    )
+    @AsyncTest('Create a new workshop')
+    public async create(body: any, session: any, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+        await controller.create(this.mockExpress.res, body, session);
 
-        let mockSession = { affiliate: '001g000001glcsWAAQ', user: { permissions: []}};
-        let mockRequest = { session: mockSession};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        if (isValid) {
+            Expect(this.mockWorkshopsService.create).toHaveBeenCalledWith(body).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            const status = (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST)
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.create(): ', Any, status);
+            Expect(this.mockWorkshopsService.create).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        let mockBody = {
-            Name: 'Test',
-            Organizing_Affiliate__c: mockSession.affiliate,
-            Start_Date__c: new Date(),
-            End_Date__c: new Date()
-        }
-
-        const actual = await controller.create(mockRequest, mockResponse, mockNext, mockBody, mockSession);
-
-        Expect(actual).toEqual(expectedCreate);
-        Expect(this.mockSfInstance.getClient().create).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
     }
-    
+
+    @TestCase(
+        'a1Sg0000001jXbg',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '00300s00000sfAAD',
+            user: { role: { name: 'Facilitator' } }
+        },
+        true
+    )
+    @TestCase(
+        'a1Sg0000001jXbg',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        true
+    )
+    @TestCase(
+        'not a sf id',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Bad Id Param
+    )
+    @TestCase(
+        'a1Sg0000001jXbg',
+        {
+            Id: 'not a sf id',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Bad body.Id
+    )
+    @TestCase(
+        'a1Sg0000001jXBg',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Id Param and body.Id do not match
+    )
+    @TestCase(
+        'a1Sg0000001jXbg',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: 'not a sf id'
+        },
+        {
+            affiliate: '',
+            user: { role: { name: 'Affiliate Manager' } }
+        },
+        false // Bad body.Organizing_Affiliate__c
+    )
+    @TestCase(
+        'a1Sg0000001jXbg',
+        {
+            Id: 'a1Sg0000001jXbg',
+            Organizing_Affiliate__c: '00300s00000sfAAD'
+        },
+        {
+            affiliate: '00300S00000SFAAD',
+            user: { role: { name: 'Facilitator' } }
+        },
+        false // session.affiliate and body.Organizing_Affiliate__c mismatch
+    )
     @AsyncTest('Update a workshop')
-    public async update(){
+    public async update(id: string, body: any, session: any, isValid: boolean) {
+        const { controller, handleError } = getController();
 
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+        await controller.update(this.mockExpress.res, id, body, session);
 
-        let mockSession = { affiliate: '001g000001glcsWAAQ', user: { permissions: []}};
-        let mockRequest = { session: mockSession};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        if (isValid) {
+            Expect(this.mockWorkshopsService.update).toHaveBeenCalledWith(body).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            const status = (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST)
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.update(): ', Any, status);
+            Expect(this.mockWorkshopsService.update).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-        let mockBody = {
-            Id: expectedCreate.id,
-            Name: 'Test',
-            Organizing_Affiliate__c: mockSession.affiliate,
-            Start_Date__c: new Date(),
-            End_Date__c: new Date()
-        }
-
-        const actual = await controller.update(mockRequest, mockResponse, mockNext, mockBody.Id, mockBody, mockSession);
-
-        Expect(actual).toEqual(expectedCreate);
-        Expect(this.mockSfInstance.getClient().update).toHaveBeenCalled().exactly(1).times;
-        Expect(this.mockSfInstance.getClient().query).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
     }
 
-    @AsyncTest('delete a workshop')
-    public async delete(){
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('a1Sg0000001jXbg', true)
+    @AsyncTest('Delete a Workshop')
+    public async delete(id: string, isId: boolean) {
+        const { controller, handleError } = getController();
 
-        const controller = NestTest.get<WorkshopsController>(WorkshopsController);
+        await controller.delete(this.mockExpress.res, id);
 
-        let mockSession = { affiliate: '001g000001glcsWAAQ', user: { permissions: [ { resource: `/workshops/${expectedCreate.id}`}], roles: [{ permissions: [{resource: `/workshops/${expectedReadAll.records[0].Id}`}]}]}};
-        let mockRequest = { session: mockSession};
-        let mockResponse = {
-            json(o) { return Promise.resolve(o); },
-            status(code) { return this; }
+        if (isId) {
+            Expect(this.mockWorkshopsService.delete).toHaveBeenCalledWith(id).exactly(1).times;
+            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
+            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in WorkshopsController.delete(): ', Any, HttpStatus.BAD_REQUEST);
+            Expect(this.mockWorkshopsService.delete).not.toHaveBeenCalled();
+
+            // Because we "stubbed" the handleError, res.status never gets called
+            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
-
-        SpyOn(mockResponse, 'json');
-        SpyOn(mockResponse, 'status');
-
-        let mockNext = function(error) { return Promise.resolve(error); }
-
-        const actual = await controller.delete(mockRequest, mockResponse, mockNext, expectedCreate.id);
-
-        Expect(actual).toEqual(expectedCreate);
-        Expect(this.mockSfInstance.getClient().delete).toHaveBeenCalled().exactly(1).times;
-        Expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(mockResponse.json).toHaveBeenCalled().exactly(1).times;
     }
+
 }

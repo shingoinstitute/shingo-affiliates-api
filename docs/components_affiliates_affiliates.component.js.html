@@ -103,6 +103,7 @@ let AffiliatesService = class AffiliatesService {
         this.sfService = new _1.SalesforceService();
         this.authService = new _1.AuthService();
         this.cache = new _1.CacheService();
+        this.log = new _1.LoggerService();
     }
     ;
     /**
@@ -224,7 +225,7 @@ let AffiliatesService = class AffiliatesService {
             };
             // If no cached result, use the shingo-sf-api to get result
             if (!this.cache.isCached(data) || refresh) {
-                let affiliates = (yield this.sfService.search(data)).searchRecords;
+                let affiliates = (yield this.sfService.search(data)).searchRecords || [];
                 affiliates = affiliates.filter(aff => { return aff.RecordType.Name === 'Licensed Affiliate'; });
                 // Cache results
                 this.cache.cache(data, affiliates);
@@ -244,7 +245,7 @@ let AffiliatesService = class AffiliatesService {
                 retrieve: `Contact(${retrieve})`
             };
             if (!this.cache.isCached(data) || refresh) {
-                let cms = (yield this.sfService.search(data)).searchRecords;
+                let cms = (yield this.sfService.search(data)).searchRecords || [];
                 cms = cms.filter(cm => { return cm.AccountId === id; });
                 this.cache.cache(data, cms);
                 return Promise.resolve(cms);
@@ -322,32 +323,48 @@ let AffiliatesService = class AffiliatesService {
         });
     }
     /**
-     * @desc Deletes an Affiliate. Returns the following:&lt;br>&lt;br>
+     * @desc Removes all permissions, roles, and user logins associated with the Affiliate. Returns the following:&lt;br>&lt;br>
      * &lt;code>{&lt;br>
      *      &amp;emsp;"id": SalesforceId,&lt;br>
      *      &amp;emsp;"success": boolean,&lt;br>
      *      &amp;emsp;"errors": []&lt;br>
      *  }&lt;/code>
      *
-     * @param {string} id - Salesforce Id of the Account to delete
+     * @param {string} id - Salesforce Id of the Account to "delete"
      * @returns {Promise&lt;any>}
      * @memberof AffiliatesService
      */
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
             // Create the data parameter for the RPC call
-            const data = {
+            const retrieveData = {
                 object: 'Account',
                 ids: [id]
             };
-            const result = (yield this.sfService.delete(data))[0];
+            const result = (yield this.sfService.retrieve(retrieveData))[0];
+            result.RecordTypeId = '012A0000000zprfIAA';
+            const query = {
+                action: "SELECT",
+                fields: ["Id"],
+                table: "Contact",
+                clauses: `AccountId='${result.Id}' AND RecordType.Name='Affiliate Instructor'`
+            };
             for (const level of [0, 1, 2]) {
                 yield this.authService.deletePermission(`workshops -- ${id}`, level);
                 yield this.authService.deletePermission(`affiliate -- ${id}`, level);
             }
             const cm = yield this.authService.getRole(`role.name='Course Manager -- ${id}'`);
             yield this.authService.deleteRole(cm);
-            return Promise.resolve(result);
+            const facilitators = (yield this.sfService.query(query)).records;
+            for (const facilitator of facilitators) {
+                yield this.authService.deleteUser({ extId: facilitator.Id });
+            }
+            const updateData = {
+                object: 'Account',
+                records: [{ content: JSON.stringify(result) }]
+            };
+            const update = (yield this.sfService.update(updateData))[0];
+            return Promise.resolve(update);
         });
     }
 };

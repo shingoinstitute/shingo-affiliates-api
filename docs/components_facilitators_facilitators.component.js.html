@@ -232,7 +232,8 @@ let FacilitatorsService = class FacilitatorsService {
                 retrieve: `Contact(${retrieve})`
             };
             if (!this.cache.isCached(data) || refresh) {
-                let facilitators = (yield this.sfService.search(data)).searchRecords.filter(result => {
+                let facilitators = (yield this.sfService.search(data)).searchRecords || [];
+                facilitators = facilitators.filter(result => {
                     if (affiliate === '')
                         return result.RecordType.Name === 'Affiliate Instructor';
                     else
@@ -292,7 +293,6 @@ let FacilitatorsService = class FacilitatorsService {
      */
     create(user) {
         return __awaiter(this, void 0, void 0, function* () {
-            const roleId = (user.roleId ? user.roleId : global['facilitatorId']);
             let contact = _.omit(user, ["password", "roleId"]);
             // Create the contact in Salesforce
             contact.RecordTypeId = '012A0000000zpqrIAA';
@@ -301,14 +301,58 @@ let FacilitatorsService = class FacilitatorsService {
                 records: [{ contents: JSON.stringify(contact) }]
             };
             const record = (yield this.sfService.create(data))[0];
+            return this.createOrMapAuth(record.id, user);
+        });
+    }
+    /**
+     * @desc Maps an existing Contact record to a new/current login
+     *
+     * @param {SalesforceId} id  - The Salesforce Id of the Contact to map
+     * @param {any} user
+     * @returns {Promise&lt;any>}
+     * @memberof FacilitatorsService
+     */
+    mapContact(id, user) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = {
+                object: 'Contact',
+                ids: [id]
+            };
+            const record = (yield this.sfService.retrieve(data))[0];
+            if (record.RecordTypeId !== '012A0000000zpqrIAA') {
+                record.RecordTypeId = '012A0000000zpqrIAA';
+                const updateData = {
+                    object: 'Contact',
+                    records: [{ contents: JSON.stringify(record) }]
+                };
+                const successObject = (yield this.sfService.update(updateData))[0];
+            }
+            if (!record)
+                Promise.reject({ error: 'CONTACT_NOT_FOUND' });
+            return this.createOrMapAuth(id, user);
+        });
+    }
+    /**
+     * @desc Searches for an existing user with the same email. If not found, one is created, else the 'affiliate-portal' service is added and permissions are granted.
+     *
+     * @param {SalesforceId} id - Salesforce Id of the associated contact
+     * @param {any} user
+     * @returns {Promise&lt;any>}
+     * @memberof FacilitatorsService
+     */
+    createOrMapAuth(id, user) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const roleId = (user.roleId ? user.roleId : global['facilitatorId']);
             let auth = yield this.authService.getUser(`user.email='${user.Email}'`);
             if (auth.email === '') {
-                auth = yield this.createNewAuth(user.Email, user.password, roleId, record.id);
+                auth = yield this.createNewAuth(user.Email, user.password, roleId, id);
             }
             else {
-                auth = yield this.mapCurrentAuth(user.Email, roleId, record.id);
+                auth = yield this.mapCurrentAuth(user.Email, roleId, id);
             }
-            return Promise.resolve(Object.assign({ id: record.id }, auth));
+            yield this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, auth.id);
+            yield this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, auth.id);
+            return Promise.resolve(Object.assign({ id: id }, auth));
         });
     }
     /**

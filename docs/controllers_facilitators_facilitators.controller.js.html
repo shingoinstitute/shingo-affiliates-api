@@ -223,6 +223,30 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
         });
     }
     /**
+     * @desc &lt;h5>POST: /facilitators/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link FacilitatorsService#mapContact} to map an existing Affiliate Instructor Contact to a new/current Auth login
+     *
+     * @param {Body} body - Required fields: &lt;code>[ 'AccountId', 'Email', 'password' ]&lt;/code>&lt;br>Optional fields: &lt;code>['roleId']&lt;/code>
+     * @param {SalesforceId} id - SalesforceId of the Contact to map
+     * @returns {Promise&lt;Response>}
+     * @memberof FacilitatorsController
+     */
+    map(res, body, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,18}/))
+                return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            const required = objKeyValidator_1.checkRequired(body, ['AccountId', 'Email', 'password']);
+            if (!required.valid)
+                return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: "MISSING_FIELDS", fields: required.missing }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const result = yield this.facilitatorsService.mapContact(id, body);
+                return res.status(common_1.HttpStatus.CREATED).json(result);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in FacilitatorsController.map(): ', error);
+            }
+        });
+    }
+    /**
      * @desc &lt;h5>PUT: /facilitators/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link FacilitatorsService#update} to update a Facilitator. If &lt;code>body&lt;/code> contains &lt;code>Email&lt;/code> or &lt;code>password&lt;/code> the associated auth is also updated.
      *
      * @param {any} body - Required fields &lt;code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography', etc..] }&lt;/code>
@@ -368,6 +392,13 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], FacilitatorsController.prototype, "create", null);
+__decorate([
+    common_1.Post('/:id'),
+    __param(0, common_1.Response()), __param(1, common_1.Body()), __param(2, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], FacilitatorsController.prototype, "map", null);
 __decorate([
     common_1.Put('/:id'),
     __param(0, common_1.Response()), __param(1, common_1.Body()), __param(2, common_1.Param('id')),

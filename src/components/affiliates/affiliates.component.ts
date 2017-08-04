@@ -1,5 +1,5 @@
 import { Component } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject } from '../';
+import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '../';
 import { Affiliate } from './affiliate';
 
 export { Affiliate };
@@ -16,11 +16,13 @@ export class AffiliatesService {
     private sfService: SalesforceService;
     private authService: AuthService;
     private cache: CacheService;
+    private log: LoggerService;
 
     constructor() {
         this.sfService = new SalesforceService();
         this.authService = new AuthService();
         this.cache = new CacheService();
+        this.log = new LoggerService();
     };
 
     /**
@@ -143,7 +145,7 @@ export class AffiliatesService {
 
         // If no cached result, use the shingo-sf-api to get result
         if (!this.cache.isCached(data) || refresh) {
-            let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[];
+            let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[] || [];
             affiliates = affiliates.filter(aff => { return aff.RecordType.Name === 'Licensed Affiliate'; });
 
             // Cache results
@@ -165,7 +167,7 @@ export class AffiliatesService {
         }
 
         if (!this.cache.isCached(data) || refresh) {
-            let cms = (await this.sfService.search(data)).searchRecords;
+            let cms = (await this.sfService.search(data)).searchRecords || [];
             cms = cms.filter(cm => { return cm.AccountId === id; });
 
             this.cache.cache(data, cms);
@@ -246,24 +248,33 @@ export class AffiliatesService {
     }
 
     /**
-     * @desc Deletes an Affiliate. Returns the following:<br><br>
+     * @desc Removes all permissions, roles, and user logins associated with the Affiliate. Returns the following:<br><br>
      * <code>{<br>
      *      &emsp;"id": SalesforceId,<br>
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
      * 
-     * @param {string} id - Salesforce Id of the Account to delete
+     * @param {string} id - Salesforce Id of the Account to "delete"
      * @returns {Promise<any>} 
      * @memberof AffiliatesService
      */
     public async delete(id: string): Promise<any> {
         // Create the data parameter for the RPC call
-        const data = {
+        const retrieveData = {
             object: 'Account',
             ids: [id]
         }
-        const result: SFSuccessObject = (await this.sfService.delete(data))[0];
+        const result: Affiliate = (await this.sfService.retrieve(retrieveData))[0];
+        result.RecordTypeId = '012A0000000zprfIAA';
+
+        const query: SFQueryObject = {
+            action: "SELECT",
+            fields: ["Id"],
+            table: "Contact",
+            clauses: `AccountId='${result.Id}' AND RecordType.Name='Affiliate Instructor'`
+        }
+
         for (const level of [0, 1, 2]) {
             await this.authService.deletePermission(`workshops -- ${id}`, level as 0 | 1 | 2);
             await this.authService.deletePermission(`affiliate -- ${id}`, level as 0 | 1 | 2);
@@ -272,6 +283,17 @@ export class AffiliatesService {
         const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`);
         await this.authService.deleteRole(cm);
 
-        return Promise.resolve(result);
+        const facilitators = (await this.sfService.query(query)).records as any;
+        for (const facilitator of facilitators) {
+            await this.authService.deleteUser({ extId: facilitator.Id });
+        }
+
+        const updateData = {
+            object: 'Account',
+            records: [{ content: JSON.stringify(result) }]
+        }
+        const update: SFSuccessObject = (await this.sfService.update(updateData))[0];
+
+        return Promise.resolve(update);
     }
 }

@@ -181,7 +181,7 @@ export class AffiliatesController extends BaseController {
     }
 
     /**
-     * @desc <h5>DELETE: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#delete} to delete an Affiliate
+     * @desc <h5>DELETE: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#delete} to "delete" an Affiliate
      * 
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} 

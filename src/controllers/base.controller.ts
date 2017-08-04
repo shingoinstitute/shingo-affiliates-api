@@ -24,6 +24,7 @@ export abstract class BaseController {
     */
     protected handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
         if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
+        if (error.message) error = { message: error.message };
 
         this.log.error(message + ' %j', error);
         return res.status(errorCode).json({ error });

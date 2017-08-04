@@ -78,8 +78,12 @@ var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, targ
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c &lt; 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 &amp;&amp; r &amp;&amp; Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
+const components_1 = require("../components");
 /**
  * This middleware checks if the current session's user has the role of Affiliate Manager
  *
@@ -88,6 +92,9 @@ const common_1 = require("@nestjs/common");
  * @implements {NestMiddleware}
  */
 let IsAFManMiddleware = class IsAFManMiddleware {
+    constructor() {
+        this.log = new components_1.LoggerService();
+    }
     /**
      * The function called when the middleware is activated. Checks that &lt;code>req.session.user.role === 'Affiliate Manager'&lt;/code>
      *
@@ -96,15 +103,17 @@ let IsAFManMiddleware = class IsAFManMiddleware {
      */
     resolve() {
         return (req, res, next) => {
-            if (req.session.user &amp;&amp; req.session.user.role === 'Affiliate Manager')
+            const isAFMan = req.session.user &amp;&amp; req.session.user.role.name === 'Affiliate Manager';
+            this.log.debug('Is AF Man %j', isAFMan);
+            if (isAFMan)
                 return next();
-            else
-                return res.status(common_1.HttpStatus.FORBIDDEN).json({ error: 'ACCESS_FORBIDDEN' });
+            return res.status(common_1.HttpStatus.FORBIDDEN).json({ error: 'ACCESS_FORBIDDEN' });
         };
     }
 };
 IsAFManMiddleware = __decorate([
-    common_1.Middleware()
+    common_1.Middleware(),
+    __metadata("design:paramtypes", [])
 ], IsAFManMiddleware);
 exports.IsAFManMiddleware = IsAFManMiddleware;
 </pre>
