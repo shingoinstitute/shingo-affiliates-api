@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Component, Inject } from '@nestjs/common';
 import { LoggerService } from '../';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
@@ -12,11 +12,8 @@ import * as hash from 'object-hash';
 @Component()
 export class CacheService {
 
-    private log;
-
-    constructor() {
+    constructor( @Inject('LoggerService') private log: LoggerService = new LoggerService()) {
         this.theCache = new NodeCache({ stdTTL: 1800, checkperiod: 900 });
-        this.log = new LoggerService();
     }
 
     /**

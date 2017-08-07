@@ -5,11 +5,10 @@ import {
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
 import { WorkshopsService, Workshop, LoggerService } from '../../components';
+import { MulterFactory } from '../../factories';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
-
-import * as multer from 'multer';
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -21,7 +20,7 @@ import * as multer from 'multer';
 @Controller('workshops')
 export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService, logger: LoggerService) {
+    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory, logger: LoggerService) {
         super(logger);
     };
 
@@ -203,11 +202,18 @@ export class WorkshopsController extends BaseController {
         }
     }
 
+    /**
+     * @desc <h5>POST: /workshops/<em>:id</em>/attendee_file</h5> Calls {@link WorkshopsService#upload} to upload a file (containing the Attendee List) as an attachment to the Workshop\__c record in Salesforce
+     * <br>NOTE: Expecting attached file to be in the field attendeeList and <= 25MB in size
+     * @param {SalesforceId} id - The record Id of the Workshop to attach the file to
+     * @returns {Promise<Response>} 
+     * @memberof WorkshopsController
+     */
     @Post('/:id/attendee_file')
     public async uploadAttendeeFile( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
-        const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25 } }).single('attendeeList');
+        const upload = this.multer.getUploadFunction('attendeeList');
 
         return upload(req, res, error => {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
@@ -216,19 +222,27 @@ export class WorkshopsController extends BaseController {
                 const ext: string = req.file.originalname.split('.').pop();
 
                 this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
+
+                return res.status(HttpStatus.ACCEPTED).json();
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
             }
 
-            return res.status(HttpStatus.ACCEPTED).json();
         });
     }
 
+    /**
+     * @desc <h5>POST: /workshops/<em>:id</em>/evaluation_files</h5> Calls {@link WorkshopsService#upload} to upload an array of files (containing workshop evaluations) as attachments to the Workshop\__c record in Salesforce
+     *
+     * @param {SalesforceId} id - The record Id of the Workshop to attach the files to 
+     * @returns {Promise<Response>} 
+     * @memberof WorkshopsController
+     */
     @Post('/:id/evaluation_files')
     public async uploadEvaluations( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
-        const upload = multer({ storage: multer.memoryStorage() }).array('evaluationFiles', 30);
+        const upload = this.multer.getUploadFunction('evaluationFiles', 'array');
 
         return upload(req, res, error => {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
@@ -238,11 +252,12 @@ export class WorkshopsController extends BaseController {
 
             try {
                 this.workshopsService.upload(id, `evaluation.${ext}`, files);
+
+                return res.status(HttpStatus.ACCEPTED).json();
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
             }
 
-            return res.status(HttpStatus.ACCEPTED).json();
         });
     }
 

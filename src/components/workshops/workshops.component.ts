@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, UserService,
     SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError
@@ -17,17 +17,10 @@ export { Workshop }
 @Component()
 export class WorkshopsService {
 
-    private sfService: SalesforceService;
-    private authService: AuthService;
-    private cache: CacheService;
-    private userService: UserService;
-
-    constructor() {
-        this.sfService = new SalesforceService();
-        this.authService = new AuthService();
-        this.cache = new CacheService();
-        this.userService = new UserService();
-    }
+    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
+        @Inject('AuthService') private authService: AuthService = new AuthService(),
+        @Inject('CacheService') private cache: CacheService = new CacheService(),
+        @Inject('UserService') private userService: UserService = new UserService()) { }
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -300,6 +293,15 @@ export class WorkshopsService {
         return Promise.resolve(result);
     }
 
+    /**
+     * @desc Upload a file(s) as an attachment to the specified record
+     * 
+     * @param {SalesforceId} id - Id of the record to attach file to
+     * @param {string} fileName - The name of the file
+     * @param {string[]} files - The files to attach (base 64)
+     * @returns {Promise<SFSuccessObject[]>} 
+     * @memberof WorkshopsService
+     */
     public async upload(id: string, fileName: string, files: string[]): Promise<SFSuccessObject[]> {
 
         const records = [];

@@ -1,4 +1,4 @@
-import { Response, HttpStatus } from '@nestjs/common';
+import { Response, HttpStatus, Inject } from '@nestjs/common';
 import { SalesforceService, LoggerService } from '../components';
 
 /**
@@ -14,7 +14,6 @@ export abstract class BaseController {
     /**
     * @desc A helper function to return an error response to the client.
     * 
-    * @protected
     * @param {Response} res - The express response from the calling route
     * @param {string} message - Log message
     * @param {*} error - An error object to be logged and returned as JSON
@@ -22,7 +21,7 @@ export abstract class BaseController {
     * @returns Response body is a JSON object with the error
     * @memberof BaseController
     */
-    protected handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
+    public handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
         if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
         if (error.message) error = { message: error.message };
 

@@ -2,12 +2,8 @@ import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService, LoggerService, SalesforceService } from '../../components';
-import {
-    MockLoggerFactory, MockLoggerInstance,
-    MockAuthServiceFactory, MockAuthServiceInstance,
-    MockExpressFactory, MockExpressInstance,
-    MockSalesforceServiceFactory, MockSalesforceServiceInstance
-} from '../../factories';
+import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockLoggerInstance } from '../../components/mock';
+import { MockExpressInstance, MockServiceFactory } from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -26,16 +22,16 @@ export class AuthControllerFixture {
 
     @Setup
     public Setup() {
-        this.mockAuthService = new MockAuthServiceFactory().getMockInstance();
-        this.mockSFService = new MockSalesforceServiceFactory().getMockInstance();
-        this.mockExpress = new MockExpressFactory().getMockInstance();
+        this.mockAuthService = MockServiceFactory.getMockInstance<MockAuthServiceInstance>(MockAuthServiceInstance);
+        this.mockSFService = MockServiceFactory.getMockInstance<MockSalesforceServiceInstance>(MockSalesforceServiceInstance);
+        this.mockExpress = MockServiceFactory.getMockInstance<MockExpressInstance>(MockExpressInstance);
 
         NestTest.createTestingModule({
             controllers: [AuthController],
             components: [
                 { provide: AuthService, useValue: this.mockAuthService },
                 { provide: SalesforceService, useValue: this.mockSFService },
-                { provide: LoggerService, useValue: new MockLoggerFactory().getMockInstance() }
+                { provide: LoggerService, useValue: MockServiceFactory.getMockInstance<MockLoggerInstance>(MockLoggerInstance) }
             ]
         });
     }

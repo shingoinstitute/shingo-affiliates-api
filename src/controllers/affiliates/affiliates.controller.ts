@@ -28,9 +28,11 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get()
-    public async readAll( @Response() res, @Query('isPublic') isPublicQ, @Headers('x-is-public') isPublicH, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async readAll( @Response() res, @Session() session, @Query('isPublic') isPublicQ, @Headers('x-is-public') isPublicH, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
         const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
         const forceRefresh = refresh === 'true';
+
+        if (!isPublic && (!session.user || session.user.role.name !== 'Affiliate Manager')) return this.handleError(res, 'Error in AffiliatesController.readAll(): ', { error: 'NOT_AFFILIATE_MANAGER' }, HttpStatus.FORBIDDEN);
 
         try {
             const affiliates: Affiliate[] = await this.affService.getAll(isPublic, forceRefresh);
@@ -130,7 +132,7 @@ export class AffiliatesController extends BaseController {
     @Post()
     public async create( @Response() res, @Body() body): Promise<Response> {
         const required = checkRequired(body, ['Name']);
-        if (!required.valid) this.handleError(res, 'Error in AffiliatesController.create(): ', { error: 'MISSING_FIELDS', fields: required.missing }, HttpStatus.BAD_REQUEST);
+        if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.create(): ', { error: 'MISSING_FIELDS', fields: required.missing }, HttpStatus.BAD_REQUEST);
         try {
             const sfSuccess = await this.affService.create(body);
             return res.status(HttpStatus.CREATED).json(sfSuccess);
@@ -148,7 +150,7 @@ export class AffiliatesController extends BaseController {
      */
     @Post(':id/map')
     public async map( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             await this.affService.map(id);

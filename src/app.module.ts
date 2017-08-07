@@ -6,6 +6,7 @@ import {
     WorkshopsService, FacilitatorsService, AffiliatesService,
     UserService, LoggerService
 } from './components';
+import { MulterFactory } from './factories';
 
 /**
  * The NestJS application module ties together the controllers and components. It also configures any nest middleware.
@@ -17,15 +18,15 @@ import {
     controllers: [WorkshopsController, AuthController, FacilitatorsController, AffiliatesController],
     components: [
         AuthMiddleware,
-        SalesforceService,
+        LoggerService,
         CacheService,
+        UserService,
+        SalesforceService,
         AuthService,
         WorkshopsService,
         FacilitatorsService,
         AffiliatesService,
-        UserService,
-        { provide: 'logOptions', useValue: undefined },
-        LoggerService
+        MulterFactory
     ]
 })
 export class ApplicationModule {

@@ -2,11 +2,8 @@ import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { WorkshopsController } from './workshops.controller';
 import { WorkshopsService, LoggerService } from '../../components';
-import {
-    MockLoggerFactory, MockLoggerInstance,
-    MockWorkshopsFactory, MockWorkshopsServiceInstance,
-    MockExpressFactory, MockExpressInstance
-} from '../../factories';
+import { MockWorkshopsServiceInstance, MockLoggerInstance } from '../../components/mock';
+import { MockExpressInstance, MockMulterInstance, MockServiceFactory, MulterFactory } from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -20,23 +17,26 @@ function getController() {
 export class WorkshopsControllerFixture {
 
     private mockWorkshopsService: MockWorkshopsServiceInstance;
+    private mockMulter: MockMulterInstance;
     private mockExpress: MockExpressInstance;
 
     @Setup
     public Setup() {
-        this.mockWorkshopsService = new MockWorkshopsFactory().getMockInstance();
-        this.mockExpress = new MockExpressFactory().getMockInstance();
+        this.mockWorkshopsService = MockServiceFactory.getMockInstance<MockWorkshopsServiceInstance>(MockWorkshopsServiceInstance);
+        this.mockMulter = MockServiceFactory.getMockInstance<MockMulterInstance>(MockMulterInstance);
+        this.mockExpress = MockServiceFactory.getMockInstance<MockExpressInstance>(MockExpressInstance);
 
         NestTest.createTestingModule({
             controllers: [WorkshopsController],
             components: [
                 { provide: WorkshopsService, useValue: this.mockWorkshopsService },
-                { provide: LoggerService, useValue: new MockLoggerFactory().getMockInstance() }
+                { provide: MulterFactory, useValue: this.mockMulter },
+                { provide: LoggerService, useValue: MockServiceFactory.getMockInstance<MockLoggerInstance>(MockLoggerInstance) }
             ]
         });
     }
 
-    @Test('Controller initilized correctly')
+    @Test('Controller initialized correctly')
     public initialized() {
         const { controller } = getController();
 
@@ -150,7 +150,6 @@ export class WorkshopsControllerFixture {
             // Because we "stubbed" the handleError, res.status never gets called
             Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
         }
-
     }
 
     @TestCase('', false)
@@ -429,6 +428,46 @@ export class WorkshopsControllerFixture {
 
             // Because we "stubbed" the handleError, res.status never gets called
             Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
+        }
+    }
+
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('a1Sg0000001jXbg', true)
+    @AsyncTest('Upload Attendee File')
+    public async uploadAttendeeFile(id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.uploadAttendeeFile(this.mockExpress.req, this.mockExpress.res, id);
+
+        if (isValid) {
+            setTimeout(() => {
+                Expect(this.mockMulter.getUploadFunction).toHaveBeenCalledWith('attendeeList').exactly(1).times;
+                Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.ACCEPTED).exactly(1).times;
+                Expect(this.mockExpress.res.json).toHaveBeenCalledWith().exactly(1).times;
+            }, 1000);
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(this.mockExpress.res, 'Error in WorkshopsController.uploadAttendeeFile(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
+        }
+    }
+
+    @TestCase('', false)
+    @TestCase('not a sf id', false)
+    @TestCase('a1Sg0000001jXbg', true)
+    @AsyncTest('Upload Evaluation files')
+    public async uploadEvaluationFiles(id: string, isValid: boolean) {
+        const { controller, handleError } = getController();
+
+        await controller.uploadEvaluations(this.mockExpress.req, this.mockExpress.res, id);
+
+        if (isValid) {
+            setTimeout(() => {
+                Expect(this.mockMulter.getUploadFunction).toHaveBeenCalledWith('evaluationFiles').exactly(1).times;
+                Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.ACCEPTED).exactly(1).times;
+                Expect(this.mockExpress.res.json).toHaveBeenCalledWith().exactly(1).times;
+            }, 1000);
+        } else {
+            Expect(handleError).toHaveBeenCalledWith(this.mockExpress.res, 'Error in WorkshopsController.uploadEvaluations(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
         }
     }
 

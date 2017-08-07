@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, User,
     SFQueryObject, LoggerService
@@ -14,17 +14,10 @@ import * as _ from 'lodash';
 @Component()
 export class FacilitatorsService {
 
-    private sfService: SalesforceService;
-    private authService: AuthService;
-    private cache: CacheService;
-    private log: LoggerService;
-
-    constructor() {
-        this.sfService = new SalesforceService();
-        this.authService = new AuthService();
-        this.cache = new CacheService();
-        this.log = new LoggerService();
-    }
+    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
+        @Inject('AuthService') private authService: AuthService = new AuthService(),
+        @Inject('CacheService') private cache: CacheService = new CacheService(),
+        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
 
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>

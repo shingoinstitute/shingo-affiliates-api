@@ -2,11 +2,8 @@ import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { FacilitatorsController } from './facilitators.controller';
 import { FacilitatorsService, LoggerService } from '../../components';
-import {
-    MockLoggerFactory, MockLoggerInstance,
-    MockFacilitatorsFactory, MockFacilitatorsServiceInstance,
-    MockExpressFactory, MockExpressInstance, MockServiceFactory
-} from '../../factories';
+import { MockFacilitatorsServiceInstance, MockLoggerInstance } from '../../components/mock';
+import { MockExpressInstance, MockServiceFactory } from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -24,14 +21,14 @@ export class FacilitatorsControllerFixture {
 
     @Setup
     public Setup() {
-        this.mockFacilitatorsService = new MockFacilitatorsFactory().getMockInstance();
-        this.mockExpress = new MockExpressFactory().getMockInstance();
+        this.mockFacilitatorsService = MockServiceFactory.getMockInstance<MockFacilitatorsServiceInstance>(MockFacilitatorsServiceInstance);
+        this.mockExpress = MockServiceFactory.getMockInstance<MockExpressInstance>(MockExpressInstance);
 
         NestTest.createTestingModule({
             controllers: [FacilitatorsController],
             components: [
                 { provide: FacilitatorsService, useValue: this.mockFacilitatorsService },
-                { provide: LoggerService, useValue: new MockLoggerFactory().getMockInstance() }
+                { provide: LoggerService, useValue: MockServiceFactory.getMockInstance<MockLoggerInstance>(MockLoggerInstance) }
             ]
         });
     }
