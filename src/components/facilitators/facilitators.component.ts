@@ -93,7 +93,7 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async describe(refresh: boolean = false): Promise<any> {
-        const key = 'describeContacts';
+        const key = 'describeContact';
 
         if (!this.cache.isCached(key) || refresh) {
             const describeObject = await this.sfService.describe('Contact');
@@ -129,12 +129,11 @@ export class FacilitatorsService {
      * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name, Email')
      * @param {string} [affiliate=''] - The SF Id to filter results for (or '' for no filter)
-     * @param {boolean} [isAfMan=false] - Is request coming from an Affiliate Manager
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @returns {Promise<any>} 
      * @memberof FacilitatorsService
      */
-    public async search(search: string, retrieve: string, affiliate: string = '', isAfMan: boolean = false, refresh: boolean = false): Promise<any> {
+    public async search(search: string, retrieve: string, affiliate: string = '', refresh: boolean = false): Promise<any> {
         // Generate the data parameter for the RPC call
         if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
         if (!retrieve.includes('RecordType.Name')) retrieve += ', RecordType.Name';
@@ -163,6 +162,7 @@ export class FacilitatorsService {
 
                 facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
             }
+
 
             this.cache.cache(data, facilitators);
 
@@ -234,6 +234,8 @@ export class FacilitatorsService {
         }
 
         const record = (await this.sfService.retrieve(data))[0];
+        if (record === undefined) return Promise.reject({ error: 'CONTACT_NOT_FOUND' });
+
         if (record.RecordTypeId !== '012A0000000zpqrIAA') {
             record.RecordTypeId = '012A0000000zpqrIAA';
             const updateData = {
@@ -243,7 +245,6 @@ export class FacilitatorsService {
             const successObject = (await this.sfService.update(updateData))[0];
         }
 
-        if (!record) Promise.reject({ error: 'CONTACT_NOT_FOUND' });
         return this.createOrMapAuth(id, user);
     }
 
@@ -301,7 +302,7 @@ export class FacilitatorsService {
     public async mapCurrentAuth(userEmail: string, roleId: number, extId: string): Promise<any> {
         const user = await this.authService.getUser(`user.email='${userEmail}'`);
 
-        if (user === undefined) Promise.reject({ error: 'USER_NOT_FOUND' });
+        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
 
         user.extId = extId;
         user.services = (user.services === '' ? 'affiliate-portal' : user.services + ', affiliate-portal');
@@ -411,7 +412,7 @@ export class FacilitatorsService {
         else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', '');
 
         const updated = await this.authService.updateUser(user);
-        return Promise.resolve(updated && updated.resolve);
+        return Promise.resolve(updated && updated.response);
     }
 
     /**
@@ -427,7 +428,7 @@ export class FacilitatorsService {
 
         if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
 
-        const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; });
+        const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; })[0];
 
         const set = { userEmail: user.email, roleId };
         if (currentRole !== undefined) {

@@ -7,6 +7,7 @@ export class MockAuthServiceInstance extends MockInstance {
         super();
         this.login.andReturn({ services: 'affiliate-portal', roles: [{ name: 'Facilitator', service: 'affiliate-portal' }] });
         this.getRoles.andReturn({ roles: [] });
+        this.getUsers.andReturn({ users: [] });
     }
 
     getUsers: FunctionSpy = createFunctionSpy();

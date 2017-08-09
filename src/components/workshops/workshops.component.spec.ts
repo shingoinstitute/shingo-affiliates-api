@@ -211,6 +211,7 @@ export class WorkshopsServiceFixture {
 
         Expect(actual).toEqual(expected);
     }
+
     @TestCase('a1Sg0000001jXbg')
     @AsyncTest('Delete a Workshop')
     public async delete(id: string) {

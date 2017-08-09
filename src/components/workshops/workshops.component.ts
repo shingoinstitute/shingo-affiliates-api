@@ -298,6 +298,7 @@ export class WorkshopsService {
      * 
      * @param {SalesforceId} id - Id of the record to attach file to
      * @param {string} fileName - The name of the file
+     * 
      * @param {string[]} files - The files to attach (base 64)
      * @returns {Promise<SFSuccessObject[]>} 
      * @memberof WorkshopsService
