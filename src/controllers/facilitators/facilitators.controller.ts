@@ -38,7 +38,7 @@ export class FacilitatorsController extends BaseController {
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
 
         try {
-            const facilitators = await this.facilitatorsService.getAll(session.user, refresh === 'true', (isAfMan ? xAffiliate : session.affiliate));
+            const facilitators = await this.facilitatorsService.getAll(refresh === 'true', (isAfMan ? xAffiliate : session.affiliate));
             return res.status(HttpStatus.OK).json(facilitators);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
