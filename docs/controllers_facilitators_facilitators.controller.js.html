@@ -97,7 +97,6 @@ const common_1 = require("@nestjs/common");
 const components_1 = require("../../components");
 const base_controller_1 = require("../base.controller");
 const objKeyValidator_1 = require("../../validators/objKeyValidator");
-const _ = require("lodash");
 /**
  * @desc Controller of the REST API logic for Facilitators
  *
@@ -112,20 +111,20 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
     }
     ;
     /**
-     * @desc &lt;h5>GET: /facilitators&lt;/h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given &lt;code>'x-affiliate' || req.session.affilaite&lt;/code>
+     * @desc &lt;h5>GET: /facilitators&lt;/h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given &lt;code>'x-affiliate' || session.affilaite&lt;/code>
      *
      * @param {Header} [xAffiliate=''] - Header 'x-affiliate' Used by the 'Affiliate Manager' role to specify the affiliate to query facilitators for ('' queries all affiliates).
      * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
      * @returns {Promise&lt;Response>} Response body is JSON Array of objects of type &lt;code>{&lt;em>queried fields&lt;/em>}&lt;/code>
      * @memberof FacilitatorsController
      */
-    readAll(req, res, xAffiliate = '', refresh = 'false') {
+    readAll(res, session, xAffiliate = '', refresh = 'false') {
         return __awaiter(this, void 0, void 0, function* () {
-            let isAfMan = req.session.user &amp;&amp; req.session.user.role.name === 'Affiliate Manager';
-            if (!isAfMan &amp;&amp; !req.session.affiliate)
+            let isAfMan = session.user &amp;&amp; session.user.role.name === 'Affiliate Manager';
+            if (!isAfMan &amp;&amp; !session.affiliate)
                 return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, common_1.HttpStatus.FORBIDDEN);
             try {
-                const facilitators = yield this.facilitatorsService.getAll(req.session.user, refresh === 'true', (isAfMan ? xAffiliate : req.session.affiliate));
+                const facilitators = yield this.facilitatorsService.getAll(refresh === 'true', (isAfMan ? xAffiliate : session.affiliate));
                 return res.status(common_1.HttpStatus.OK).json(facilitators);
             }
             catch (error) {
@@ -161,16 +160,16 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
      * @returns {Promise&lt;Response>} Response body is a JSON Array of objects of type {&lt;em>retrieve fields&lt;/em>}
      * @memberof FacilitatorsController
      */
-    search(req, res, search, retrieve, refresh = 'false') {
+    search(res, session, search, retrieve, refresh = 'false') {
         return __awaiter(this, void 0, void 0, function* () {
-            let isAfMan = req.session.user.role.name === 'Affiliate Manager';
-            if (!isAfMan &amp;&amp; !req.session.affiliate)
-                return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, common_1.HttpStatus.BAD_REQUEST);
+            let isAfMan = session.user.role.name === 'Affiliate Manager';
+            if (!isAfMan &amp;&amp; !session.affiliate)
+                return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'SESSION_EXPIRED' }, common_1.HttpStatus.FORBIDDEN);
             // Check for required fields
             if (!search || !retrieve)
                 return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, common_1.HttpStatus.BAD_REQUEST);
             try {
-                const searchRecords = yield this.facilitatorsService.search(search, retrieve, (isAfMan ? '' : req.session.affiliate), refresh === 'true');
+                const searchRecords = yield this.facilitatorsService.search(search, retrieve, (isAfMan ? '' : session.affiliate), refresh === 'true');
                 return res.status(common_1.HttpStatus.OK).json(searchRecords);
             }
             catch (error) {
@@ -188,7 +187,7 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
     read(res, id) {
         return __awaiter(this, void 0, void 0, function* () {
             // Check the id
-            if (!id.match(/[\w\d]{15,17}/))
+            if (!id.match(/[\w\d]{15,18}/))
                 return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const facilitator = yield this.facilitatorsService.get(id);
@@ -208,11 +207,11 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
      */
     create(res, body) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!body.AccountId.match(/[\w\d]{15,17}/))
-                return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             const required = objKeyValidator_1.checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email', 'password']);
             if (!required.valid)
                 return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, common_1.HttpStatus.BAD_REQUEST);
+            if (!body.AccountId.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const result = yield this.facilitatorsService.create(body);
                 return res.status(common_1.HttpStatus.CREATED).json(result);
@@ -258,7 +257,7 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
         return __awaiter(this, void 0, void 0, function* () {
             if (!id.match(/[\w\d]{15,17}/))
                 return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
-            if (!_.omit(body, ["Id"]) || !body.Id)
+            if (!body.Id || body.Id !== id)
                 return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const result = yield this.facilitatorsService.update(body);
@@ -325,7 +324,7 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
     unamp(res, id) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!id.match(/[\w\d]{15,17}/))
-                return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+                return this.handleError(res, 'Error in FacilitatorsController.unmap(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const unmaped = yield this.facilitatorsService.unmapAuth(id);
                 return res.status(common_1.HttpStatus.OK).json({ unmaped });
@@ -359,7 +358,7 @@ let FacilitatorsController = class FacilitatorsController extends base_controlle
 };
 __decorate([
     common_1.Get(''),
-    __param(0, common_1.Request()), __param(1, common_1.Response()), __param(2, common_1.Headers('x-affiliate')), __param(3, common_1.Headers('x-force-refresh')),
+    __param(0, common_1.Response()), __param(1, common_1.Session()), __param(2, common_1.Headers('x-affiliate')), __param(3, common_1.Headers('x-force-refresh')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object, Object, Object]),
     __metadata("design:returntype", Promise)
@@ -373,7 +372,7 @@ __decorate([
 ], FacilitatorsController.prototype, "describe", null);
 __decorate([
     common_1.Get('/search'),
-    __param(0, common_1.Request()), __param(1, common_1.Response()), __param(2, common_1.Headers('x-search')), __param(3, common_1.Headers('x-retrieve')), __param(4, common_1.Headers('x-force-refresh')),
+    __param(0, common_1.Response()), __param(1, common_1.Session()), __param(2, common_1.Headers('x-search')), __param(3, common_1.Headers('x-retrieve')), __param(4, common_1.Headers('x-force-refresh')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
     __metadata("design:returntype", Promise)
@@ -484,7 +483,7 @@ exports.FacilitatorsController = FacilitatorsController;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Thu Aug 3rd 2017
+		on Fri Aug 11th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

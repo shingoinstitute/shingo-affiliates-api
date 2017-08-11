@@ -95,9 +95,9 @@ var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _argument
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@nestjs/common");
 const components_1 = require("../../components");
+const factories_1 = require("../../factories");
 const base_controller_1 = require("../base.controller");
 const objKeyValidator_1 = require("../../validators/objKeyValidator");
-const multer = require("multer");
 /**
  * @desc Controller of the REST API logic for Workshops
  *
@@ -106,9 +106,10 @@ const multer = require("multer");
  * @extends {BaseController}
  */
 let WorkshopsController = class WorkshopsController extends base_controller_1.BaseController {
-    constructor(workshopsService, logger) {
+    constructor(workshopsService, multer, logger) {
         super(logger);
         this.workshopsService = workshopsService;
+        this.multer = multer;
     }
     ;
     /**
@@ -126,7 +127,7 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
             const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
             const forceRefresh = refresh === 'true';
             if (!session.user &amp;&amp; !isPublic)
-                return this.handleError(res, 'Error in WorkshopsController.readAll()', { error: "SESSION_EXPIRED" }, common_1.HttpStatus.FORBIDDEN);
+                return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, common_1.HttpStatus.FORBIDDEN);
             try {
                 const workshops = yield this.workshopsService.getAll(isPublic, forceRefresh, session.user);
                 return res.status(common_1.HttpStatus.OK).json(workshops);
@@ -210,7 +211,7 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
         return __awaiter(this, void 0, void 0, function* () {
             // Check the id
             if (!id.match(/a[\w\d]{14,17}/))
-                this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+                return this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             try {
                 const facilitators = yield this.workshopsService.facilitators(id);
                 return res.status(common_1.HttpStatus.OK).json(facilitators);
@@ -234,16 +235,13 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
             // Check required parameters
             this.log.debug('Trying to create workshop:\n%j', body);
             let valid = objKeyValidator_1.checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
-            if (!session.affiliate || !valid.valid) {
-                if (!session.affiliate)
-                    return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'SESSION_EXPIRED' }, common_1.HttpStatus.FORBIDDEN);
+            if (!valid.valid)
                 return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, common_1.HttpStatus.BAD_REQUEST);
-            }
             // Check for valid SF ID on Organizing_Affiliate\__c
             if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/))
                 return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
             // Check can create for Organizing_Affiliate\__c
-            if (session.affiliate !== 'ALL' &amp;&amp; session.affiliate !== body.Organizing_Affiliate__c)
+            if (session.user.role.name !== 'Affiliate Manager' &amp;&amp; session.affiliate !== body.Organizing_Affiliate__c)
                 return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'PERM_DENIDED', message: `You are not allowed to post workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, common_1.HttpStatus.FORBIDDEN);
             try {
                 const sfSuccess = yield this.workshopsService.create(body);
@@ -267,20 +265,15 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
         return __awaiter(this, void 0, void 0, function* () {
             // Check required parameters
             let required = objKeyValidator_1.checkRequired(body, ['Id', 'Organizing_Affiliate__c']);
-            if (!session.affiliate || !required.valid) {
-                if (!session.affiliate)
-                    return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'SESSION_EXPIRED' }, common_1.HttpStatus.FORBIDDEN);
+            if (!required.valid)
                 return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'MISSING_FIELD', fields: required.missing }, common_1.HttpStatus.BAD_REQUEST);
-            }
             // Check the id
-            const pattern = /[\w\d]{15,17}/;
-            if (!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id || !pattern.test(body.Organizing_Affiliate__c)) {
+            const pattern = /[\w\d]{15,18}/;
+            if (!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id || !pattern.test(body.Organizing_Affiliate__c))
                 return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} or ${id} or ${body.Id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
-            }
             // Check can update for Organizing_Affiliate\__c
-            if (session.affiliate !== 'ALL' &amp;&amp; session.affiliate !== body.Organizing_Affiliate__c) {
+            if (session.user.role.name !== 'Affiliate Manager' &amp;&amp; session.affiliate !== body.Organizing_Affiliate__c)
                 return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'PERM_DENIDED', message: `You are not allowed to update workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, common_1.HttpStatus.FORBIDDEN);
-            }
             try {
                 const result = yield this.workshopsService.update(body);
                 return res.status(common_1.HttpStatus.OK).json(result);
@@ -290,30 +283,44 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
             }
         });
     }
+    /**
+     * @desc &lt;h5>POST: /workshops/&lt;em>:id&lt;/em>/attendee_file&lt;/h5> Calls {@link WorkshopsService#upload} to upload a file (containing the Attendee List) as an attachment to the Workshop\__c record in Salesforce
+     * &lt;br>NOTE: Expecting attached file to be in the field attendeeList and &lt;= 25MB in size
+     * @param {SalesforceId} id - The record Id of the Workshop to attach the file to
+     * @returns {Promise&lt;Response>}
+     * @memberof WorkshopsController
+     */
     uploadAttendeeFile(req, res, id) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!id.match(/a[\w\d]{14,17}/))
                 return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
-            const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1000 * 1000 * 25 } }).single('attendeeList');
+            const upload = this.multer.getUploadFunction('attendeeList');
             return upload(req, res, error => {
                 if (error)
                     return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
                 try {
                     const ext = req.file.originalname.split('.').pop();
                     this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
+                    return res.status(common_1.HttpStatus.ACCEPTED).json();
                 }
                 catch (error) {
                     return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
                 }
-                return res.status(common_1.HttpStatus.ACCEPTED).json();
             });
         });
     }
+    /**
+     * @desc &lt;h5>POST: /workshops/&lt;em>:id&lt;/em>/evaluation_files&lt;/h5> Calls {@link WorkshopsService#upload} to upload an array of files (containing workshop evaluations) as attachments to the Workshop\__c record in Salesforce
+     *
+     * @param {SalesforceId} id - The record Id of the Workshop to attach the files to
+     * @returns {Promise&lt;Response>}
+     * @memberof WorkshopsController
+     */
     uploadEvaluations(req, res, id) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!id.match(/a[\w\d]{14,17}/))
                 return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
-            const upload = multer({ storage: multer.memoryStorage() }).array('evaluationFiles', 30);
+            const upload = this.multer.getUploadFunction('evaluationFiles', 'array');
             return upload(req, res, error => {
                 if (error)
                     return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
@@ -321,11 +328,11 @@ let WorkshopsController = class WorkshopsController extends base_controller_1.Ba
                 const ext = req.files[0].originalname.split('.').pop();
                 try {
                     this.workshopsService.upload(id, `evaluation.${ext}`, files);
+                    return res.status(common_1.HttpStatus.ACCEPTED).json();
                 }
                 catch (error) {
                     return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
                 }
-                return res.status(common_1.HttpStatus.ACCEPTED).json();
             });
         });
     }
@@ -423,7 +430,7 @@ __decorate([
 ], WorkshopsController.prototype, "delete", null);
 WorkshopsController = __decorate([
     common_1.Controller('workshops'),
-    __metadata("design:paramtypes", [components_1.WorkshopsService, components_1.LoggerService])
+    __metadata("design:paramtypes", [components_1.WorkshopsService, factories_1.MulterFactory, components_1.LoggerService])
 ], WorkshopsController);
 exports.WorkshopsController = WorkshopsController;
 </pre>
@@ -471,7 +478,7 @@ exports.WorkshopsController = WorkshopsController;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Thu Aug 3rd 2017
+		on Fri Aug 11th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

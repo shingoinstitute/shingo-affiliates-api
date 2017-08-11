@@ -81,6 +81,9 @@ var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, targ
 var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this &amp;&amp; this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -100,11 +103,11 @@ const _ = require("lodash");
  * @class FacilitatorsService
  */
 let FacilitatorsService = class FacilitatorsService {
-    constructor() {
-        this.sfService = new _1.SalesforceService();
-        this.authService = new _1.AuthService();
-        this.cache = new _1.CacheService();
-        this.log = new _1.LoggerService();
+    constructor(sfService = new _1.SalesforceService(), authService = new _1.AuthService(), cache = new _1.CacheService(), log = new _1.LoggerService()) {
+        this.sfService = sfService;
+        this.authService = authService;
+        this.cache = cache;
+        this.log = log;
     }
     /**
      * @desc Get all facilitators for the affiliate specified. All if &lt;code>affiliate === ''&lt;/code>. The queried fields from Salesforce are as follows:&lt;br>&lt;br>
@@ -122,15 +125,13 @@ let FacilitatorsService = class FacilitatorsService {
      *  &amp;emsp;"Biography\__c"&lt;br>
      * ]&lt;/code>
      *
-     * @param {User} user - Requires &lt;code>user.permissions[]&lt;/code> and &lt;code>user.roles[].permissions[]&lt;/code>
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @param {string} [affiliate] - SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
      * @returns {Promise&lt;any[]>}
      * @memberof FacilitatorsService
      */
-    getAll(user, refresh = false, affiliate) {
+    getAll(refresh = false, affiliate) {
         return __awaiter(this, void 0, void 0, function* () {
-            let isAfMan = user.role.name === 'Affiliate Manager';
             let query = {
                 action: "SELECT",
                 fields: [
@@ -179,7 +180,7 @@ let FacilitatorsService = class FacilitatorsService {
      */
     describe(refresh = false) {
         return __awaiter(this, void 0, void 0, function* () {
-            const key = 'describeContacts';
+            const key = 'describeContact';
             if (!this.cache.isCached(key) || refresh) {
                 const describeObject = yield this.sfService.describe('Contact');
                 this.cache.cache(key, describeObject);
@@ -213,12 +214,11 @@ let FacilitatorsService = class FacilitatorsService {
      * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name, Email')
      * @param {string} [affiliate=''] - The SF Id to filter results for (or '' for no filter)
-     * @param {boolean} [isAfMan=false] - Is request coming from an Affiliate Manager
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @returns {Promise&lt;any>}
      * @memberof FacilitatorsService
      */
-    search(search, retrieve, affiliate = '', isAfMan = false, refresh = false) {
+    search(search, retrieve, affiliate = '', refresh = false) {
         return __awaiter(this, void 0, void 0, function* () {
             // Generate the data parameter for the RPC call
             if (!retrieve.includes('AccountId'))
@@ -319,6 +319,8 @@ let FacilitatorsService = class FacilitatorsService {
                 ids: [id]
             };
             const record = (yield this.sfService.retrieve(data))[0];
+            if (record === undefined)
+                return Promise.reject({ error: 'CONTACT_NOT_FOUND' });
             if (record.RecordTypeId !== '012A0000000zpqrIAA') {
                 record.RecordTypeId = '012A0000000zpqrIAA';
                 const updateData = {
@@ -327,8 +329,6 @@ let FacilitatorsService = class FacilitatorsService {
                 };
                 const successObject = (yield this.sfService.update(updateData))[0];
             }
-            if (!record)
-                Promise.reject({ error: 'CONTACT_NOT_FOUND' });
             return this.createOrMapAuth(id, user);
         });
     }
@@ -385,7 +385,7 @@ let FacilitatorsService = class FacilitatorsService {
         return __awaiter(this, void 0, void 0, function* () {
             const user = yield this.authService.getUser(`user.email='${userEmail}'`);
             if (user === undefined)
-                Promise.reject({ error: 'USER_NOT_FOUND' });
+                return Promise.reject({ error: 'USER_NOT_FOUND' });
             user.extId = extId;
             user.services = (user.services === '' ? 'affiliate-portal' : user.services + ', affiliate-portal');
             yield this.authService.updateUser(user);
@@ -498,7 +498,7 @@ let FacilitatorsService = class FacilitatorsService {
             else if (user.services.includes('affiliate-portal, '))
                 user.services = user.services.replace('affiliate-portal', '');
             const updated = yield this.authService.updateUser(user);
-            return Promise.resolve(updated &amp;&amp; updated.resolve);
+            return Promise.resolve(updated &amp;&amp; updated.response);
         });
     }
     /**
@@ -514,7 +514,7 @@ let FacilitatorsService = class FacilitatorsService {
             const user = yield this.authService.getUser(`user.extId='${extId}'`);
             if (user === undefined)
                 return Promise.reject({ error: 'USER_NOT_FOUND' });
-            const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; });
+            const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; })[0];
             const set = { userEmail: user.email, roleId };
             if (currentRole !== undefined) {
                 yield this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id });
@@ -526,7 +526,14 @@ let FacilitatorsService = class FacilitatorsService {
 };
 FacilitatorsService = __decorate([
     common_1.Component(),
-    __metadata("design:paramtypes", [])
+    __param(0, common_1.Inject('SalesforceService')),
+    __param(1, common_1.Inject('AuthService')),
+    __param(2, common_1.Inject('CacheService')),
+    __param(3, common_1.Inject('LoggerService')),
+    __metadata("design:paramtypes", [_1.SalesforceService,
+        _1.AuthService,
+        _1.CacheService,
+        _1.LoggerService])
 ], FacilitatorsService);
 exports.FacilitatorsService = FacilitatorsService;
 </pre>
@@ -574,7 +581,7 @@ exports.FacilitatorsService = FacilitatorsService;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Thu Aug 3rd 2017
+		on Fri Aug 11th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

@@ -81,6 +81,9 @@ var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, targ
 var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this &amp;&amp; this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -99,13 +102,12 @@ const _1 = require("../");
  * @class AffiliatesService
  */
 let AffiliatesService = class AffiliatesService {
-    constructor() {
-        this.sfService = new _1.SalesforceService();
-        this.authService = new _1.AuthService();
-        this.cache = new _1.CacheService();
-        this.log = new _1.LoggerService();
+    constructor(sfService = new _1.SalesforceService(), authService = new _1.AuthService(), cache = new _1.CacheService(), log = new _1.LoggerService()) {
+        this.sfService = sfService;
+        this.authService = authService;
+        this.cache = cache;
+        this.log = log;
     }
-    ;
     /**
      * @desc Get all AFfiliates (minus McKinsey if &lt;code>isPublic&lt;/code>). Queries the following fields:&lt;br>&lt;br>
      * &lt;code>[&lt;br>
@@ -308,7 +310,7 @@ let AffiliatesService = class AffiliatesService {
      *  }&lt;/code>
      *
      * @param {Affiliate} affiliate - Affiliate's fields to update
-     * @returns {Promise&lt;any>}
+     * @returns {Promise&lt;SFSuccessObject>}
      * @memberof AffiliatesService
      */
     update(affiliate) {
@@ -336,41 +338,81 @@ let AffiliatesService = class AffiliatesService {
      */
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Create the data parameter for the RPC call
-            const retrieveData = {
-                object: 'Account',
-                ids: [id]
-            };
-            const result = (yield this.sfService.retrieve(retrieveData))[0];
+            const result = yield this.get(id);
             result.RecordTypeId = '012A0000000zprfIAA';
-            const query = {
-                action: "SELECT",
-                fields: ["Id"],
-                table: "Contact",
-                clauses: `AccountId='${result.Id}' AND RecordType.Name='Affiliate Instructor'`
-            };
+            yield this.deletePermissions(result.Id);
+            yield this.deleteRoles(result.Id);
+            yield this.deleteFacilitators(result.Id);
+            const update = yield this.update(result);
+            return Promise.resolve(update);
+        });
+    }
+    /**
+     * @desc Delete the associated permissions of an Affiliate from the Auth API. Namely 'workshops -- ID' and 'affiliate -- ID'
+     *
+     * @private
+     * @param {SalesforceId} id - The Affilaite's Salesforce Id
+     * @returns {Promise&lt;void>}
+     * @memberof AffiliatesService
+     */
+    deletePermissions(id) {
+        return __awaiter(this, void 0, void 0, function* () {
             for (const level of [0, 1, 2]) {
                 yield this.authService.deletePermission(`workshops -- ${id}`, level);
                 yield this.authService.deletePermission(`affiliate -- ${id}`, level);
             }
+            return Promise.resolve();
+        });
+    }
+    /**
+     * @desc Delete the Affiliate specific roles from the Auth API. Namely, 'Course Manager -- ID'
+     *
+     * @private
+     * @param {SalesforceId} id - The Affiliate's Salesforce Id
+     * @returns {Promise&lt;void>}
+     * @memberof AffiliatesService
+     */
+    deleteRoles(id) {
+        return __awaiter(this, void 0, void 0, function* () {
             const cm = yield this.authService.getRole(`role.name='Course Manager -- ${id}'`);
             yield this.authService.deleteRole(cm);
+            return Promise.resolve();
+        });
+    }
+    /**
+     * @desc Delete the Affiliate's Facilitators logins from the Auth API.
+     *
+     * @private
+     * @param {SalseforceId} id - The Affiliate's SalesforceId
+     * @returns {Promise&lt;void>}
+     * @memberof AffiliatesService
+     */
+    deleteFacilitators(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = {
+                action: "SELECT",
+                fields: ["Id"],
+                table: "Contact",
+                clauses: `Facilitator_For__c='${id}' AND RecordType.Name='Affiliate Instructor'`
+            };
             const facilitators = (yield this.sfService.query(query)).records;
             for (const facilitator of facilitators) {
                 yield this.authService.deleteUser({ extId: facilitator.Id });
             }
-            const updateData = {
-                object: 'Account',
-                records: [{ content: JSON.stringify(result) }]
-            };
-            const update = (yield this.sfService.update(updateData))[0];
-            return Promise.resolve(update);
+            return Promise.resolve();
         });
     }
 };
 AffiliatesService = __decorate([
     common_1.Component(),
-    __metadata("design:paramtypes", [])
+    __param(0, common_1.Inject('SalesforceService')),
+    __param(1, common_1.Inject('AuthService')),
+    __param(2, common_1.Inject('CacheService')),
+    __param(3, common_1.Inject('LoggerService')),
+    __metadata("design:paramtypes", [_1.SalesforceService,
+        _1.AuthService,
+        _1.CacheService,
+        _1.LoggerService])
 ], AffiliatesService);
 exports.AffiliatesService = AffiliatesService;
 </pre>
@@ -418,7 +460,7 @@ exports.AffiliatesService = AffiliatesService;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Thu Aug 3rd 2017
+		on Fri Aug 11th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

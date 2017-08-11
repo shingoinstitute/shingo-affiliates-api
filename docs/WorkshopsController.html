@@ -333,7 +333,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-159">line 159</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-160">line 160</a>
 			</li>
 		</ul>
 	</dd>
@@ -495,7 +495,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-266">line 266</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-273">line 273</a>
 			</li>
 		</ul>
 	</dd>
@@ -677,7 +677,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-73">line 73</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-74">line 74</a>
 			</li>
 		</ul>
 	</dd>
@@ -839,7 +839,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-136">line 136</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-137">line 137</a>
 			</li>
 		</ul>
 	</dd>
@@ -896,7 +896,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
             
 <hr>
 <dt>
-    <h4 class="name" id="handleError"><span class="type-signature">&lt;protected> </span>handleError(res, message, error [, errorCode])</h4>
+    <h4 class="name" id="handleError"><span class="type-signature"></span>handleError(res, message, error [, errorCode])</h4>
     
     
 </dt>
@@ -1138,7 +1138,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_base.controller.js.html">controllers/base.controller.js</a>,
-				 <a href="controllers_base.controller.js.html#sunlight-1-line-39">line 39</a>
+				 <a href="controllers_base.controller.js.html#sunlight-1-line-38">line 38</a>
 			</li>
 		</ul>
 	</dd>
@@ -1287,7 +1287,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-115">line 115</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-116">line 116</a>
 			</li>
 		</ul>
 	</dd>
@@ -1577,7 +1577,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-51">line 51</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-52">line 52</a>
 			</li>
 		</ul>
 	</dd>
@@ -1831,7 +1831,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-94">line 94</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-95">line 95</a>
 			</li>
 		</ul>
 	</dd>
@@ -2041,7 +2041,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 		<ul class="dummy">
 			<li>
 				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
-				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-193">line 193</a>
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-191">line 191</a>
 			</li>
 		</ul>
 	</dd>
@@ -2073,6 +2073,323 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
     <p>Response is a JSON Object from the resulting Salesforce operation</p>
 </div>
 
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Response></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="uploadAttendeeFile"><span class="type-signature"></span>uploadAttendeeFile(id)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p><h5>POST: /workshops/<em>:id</em>/attendee_file</h5> Calls <a href="WorkshopsService.html#upload"><code>WorkshopsService#upload</code></a> to upload a file (containing the Attendee List) as an attachment to the Workshop__c record in Salesforce
+<br>NOTE: Expecting attached file to be in the field attendeeList and &lt;= 25MB in size</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">SalesforceId</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The record Id of the Workshop to attach the file to</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-220">line 220</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Response></span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="uploadEvaluations"><span class="type-signature"></span>uploadEvaluations(id)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p><h5>POST: /workshops/<em>:id</em>/evaluation_files</h5> Calls <a href="WorkshopsService.html#upload"><code>WorkshopsService#upload</code></a> to upload an array of files (containing workshop evaluations) as attachments to the Workshop__c record in Salesforce</p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">SalesforceId</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The record Id of the Workshop to attach the files to</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="controllers_workshops_workshops.controller.js.html">controllers/workshops/workshops.controller.js</a>,
+				 <a href="controllers_workshops_workshops.controller.js.html#sunlight-1-line-246">line 246</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
 
 
 <dl>
@@ -2148,7 +2465,7 @@ NOTE: <code>&quot;facilitators&quot;</code> is exptected to be of type <code>[{&
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Thu Aug 3rd 2017
+		on Fri Aug 11th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
