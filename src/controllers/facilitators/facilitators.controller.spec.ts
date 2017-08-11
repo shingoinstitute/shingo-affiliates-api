@@ -66,7 +66,7 @@ export class FacilitatorsControllerFixture {
         await controller.readAll(this.mockExpress.res, session, xAffiliate, refresh);
 
         if (isValid) {
-            Expect(this.mockFacilitatorsService.getAll).toHaveBeenCalledWith(session.user, refresh === 'true', (isAfMan ? xAffiliate : session.affiliate)).exactly(1).times;
+            Expect(this.mockFacilitatorsService.getAll).toHaveBeenCalledWith(refresh === 'true', (isAfMan ? xAffiliate : session.affiliate)).exactly(1).times;
             Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
             Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
         } else {
