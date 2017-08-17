@@ -103,11 +103,12 @@ const lodash_1 = require("lodash");
  * @class WorkshopsService
  */
 let WorkshopsService = class WorkshopsService {
-    constructor(sfService = new _1.SalesforceService(), authService = new _1.AuthService(), cache = new _1.CacheService(), userService = new _1.UserService()) {
+    constructor(sfService = new _1.SalesforceService(), authService = new _1.AuthService(), cache = new _1.CacheService(), userService = new _1.UserService(), log = new _1.LoggerService()) {
         this.sfService = sfService;
         this.authService = authService;
         this.cache = cache;
         this.userService = userService;
+        this.log = log;
     }
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:&lt;br>&lt;br>
@@ -212,8 +213,11 @@ let WorkshopsService = class WorkshopsService {
     get(id) {
         return __awaiter(this, void 0, void 0, function* () {
             // Create the data parameter for the RPC call
-            let workshop = (yield this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }));
-            workshop.facilitators = yield this.facilitators(id);
+            let workshop = (yield this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0];
+            workshop.facilitators = (yield this.facilitators(id)).map(f => f['Instructor__r']) || [];
+            workshop.Course_Manager__r = (yield this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+            this.log.debug('got cm: %j', workshop.Course_Manager__r);
+            this.log.debug(`getting workshop ${id} => %j`, workshop);
             return Promise.resolve(workshop);
         });
     }
@@ -307,6 +311,8 @@ let WorkshopsService = class WorkshopsService {
                     "Instructor__r.Id",
                     "Instructor__r.FirstName",
                     "Instructor__r.LastName",
+                    "Instructor__r.Name",
+                    "Instructor__r.AccountId",
                     "Instructor__r.Email",
                     "Instructor__r.Title"
                 ],
@@ -314,6 +320,14 @@ let WorkshopsService = class WorkshopsService {
                 clauses: `Workshop__c='${id}'`
             };
             const facilitators = (yield this.sfService.query(query)).records || [];
+            const ids = facilitators.map(fac => `'${fac.Id}'`);
+            const auths = (yield this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            for (let fac of facilitators) {
+                let auth = auths.filter(auth => auth.extId === fac.Id)[0];
+                if (auth)
+                    fac.id = auth.id;
+            }
+            this.log.debug('Got facilitators => %j', facilitators);
             return Promise.resolve(facilitators);
         });
     }
@@ -361,12 +375,17 @@ let WorkshopsService = class WorkshopsService {
                 object: 'Workshop__c',
                 records: [{ contents: JSON.stringify(lodash_1._.omit(workshop, ['facilitators'])) }]
             };
+            this.log.debug('updating sf with: %j', data);
             const result = (yield this.sfService.update(data))[0];
             const currFacilitators = yield this.facilitators(workshop.Id);
-            const removeFacilitators = lodash_1._.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other &amp;&amp; val.Instructor__r.Id === other.Id; });
-            workshop.facilitators = lodash_1._.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other &amp;&amp; val.Id === other.Instructor__r.Id; });
+            const removeFacilitators = lodash_1._.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other &amp;&amp; val.Id === other.Id; });
+            workshop.facilitators = lodash_1._.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other &amp;&amp; val.Id === other.Id; });
+            this.log.debug('removeFacilitators: %j', removeFacilitators);
+            this.log.debug('addFacilitators: %j', workshop.facilitators);
             yield this.grantPermissions(workshop);
+            this.log.debug('granted new permissions');
             yield this.removePermissions(workshop, removeFacilitators);
+            this.log.debug('returning result: %j', result);
             return Promise.resolve(result);
         });
     }
@@ -451,7 +470,7 @@ let WorkshopsService = class WorkshopsService {
      *
      * @private
      * @param {Workshop} workshop - Requires [ 'Id', 'facilitators' ]
-     * @param {any[]} remove - Requires [ 'Instructor__r'.'Id' ]
+     * @param {any[]} remove - Requires [ 'Id', 'Email' ]
      * @returns {Promise&lt;void>}
      * @memberof WorkshopsService
      */
@@ -460,10 +479,10 @@ let WorkshopsService = class WorkshopsService {
             const resource = `/workshops/${workshop.Id}`;
             const ids = remove.map(facilitator => { return facilitator.Id; });
             yield this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids });
-            const emails = remove.map(facilitator => { return `'${facilitator.Instructor__r.Email}'`; });
-            if (!emails.length)
+            const instructors = remove.map(facilitator => { return `'${facilitator.Instructor__r.Id}'`; });
+            if (!instructors.length)
                 return Promise.resolve();
-            const users = yield this.authService.getUsers(`user.email IN (${emails.join()})`);
+            const users = yield this.authService.getUsers(`user.extId IN (${instructors.join()})`);
             for (const user in users) {
                 yield this.authService.revokePermissionFromUser(resource, 2, user['id']);
             }
@@ -477,10 +496,12 @@ WorkshopsService = __decorate([
     __param(1, common_1.Inject('AuthService')),
     __param(2, common_1.Inject('CacheService')),
     __param(3, common_1.Inject('UserService')),
+    __param(4, common_1.Inject('LoggerService')),
     __metadata("design:paramtypes", [_1.SalesforceService,
         _1.AuthService,
         _1.CacheService,
-        _1.UserService])
+        _1.UserService,
+        _1.LoggerService])
 ], WorkshopsService);
 exports.WorkshopsService = WorkshopsService;
 </pre>
@@ -528,7 +549,7 @@ exports.WorkshopsService = WorkshopsService;
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
 	
-		on Fri Aug 11th 2017
+		on Thu Aug 17th 2017
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
