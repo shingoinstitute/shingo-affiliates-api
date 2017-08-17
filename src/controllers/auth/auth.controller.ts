@@ -58,10 +58,9 @@ export class AuthController extends BaseController {
             }
             const contact = (await this.sfService.query(query as SFQueryObject)).records[0];
             req.session.user = _.omit(user, ['password', 'roles']);
-            req.session.user = _.merge(req.session.user, _.omit(contact, ['Email']));
+            req.session.user = _.merge(contact, _.omit(req.session.user, [ 'email' ]));
             req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
             req.session.affiliate = contact['AccountId'];
-
 
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
