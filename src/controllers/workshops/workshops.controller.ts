@@ -108,6 +108,7 @@ export class WorkshopsController extends BaseController {
 
         try {
             const workshop: Workshop = await this.workshopsService.get(id);
+            this.log.debug(`GET: /workshops/${id} => %j`, workshop);
             return res.status(HttpStatus.OK).json(workshop);
         } catch (error) {
             return this.handleError(res, 'Error in WorkshopsController.read(): ', error);

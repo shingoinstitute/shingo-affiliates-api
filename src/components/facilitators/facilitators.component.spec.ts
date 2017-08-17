@@ -54,20 +54,16 @@ export class FacilitatorsServiceFixture {
         Expect(service.unmapAuth).toBeDefined();
     }
 
-    @TestCase({ role: { name: 'Affiliate Manager' } }, false, '')
-    @TestCase({ role: { name: 'Affiliate Manager' } }, false, '0a00002340222')
-    @TestCase({ role: { name: 'Affiliate Manager' } }, true, '')
-    @TestCase({ role: { name: 'Affiliate Manager' } }, true, '0a00002340222')
-    @TestCase({ role: { name: 'Facilitator' } }, false, '')
-    @TestCase({ role: { name: 'Facilitator' } }, false, '0a00002340222')
-    @TestCase({ role: { name: 'Facilitator' } }, true, '')
-    @TestCase({ role: { name: 'Facilitator' } }, true, '0a00002340222')
+    @TestCase(false, '')
+    @TestCase(false, '0a00002340222')
+    @TestCase(true, '')
+    @TestCase(true, '0a00002340222')
     @AsyncTest('Get all Facilitators')
-    public async getAll(user: any, refresh: boolean, affiliate: string) {
+    public async getAll(refresh: boolean, affiliate: string) {
         const service = getService();
 
         let expected;
-        const actual = await service.getAll(user, refresh, affiliate);
+        const actual = await service.getAll(refresh, affiliate);
 
         Expect(this.mockCache.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
 

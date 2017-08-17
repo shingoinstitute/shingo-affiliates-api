@@ -226,10 +226,10 @@ export class AffiliatesService {
      *  }</code>
      * 
      * @param {Affiliate} affiliate - Affiliate's fields to update
-     * @returns {Promise<any>} 
+     * @returns {Promise<SFSuccessObject>} 
      * @memberof AffiliatesService
      */
-    public async update(affiliate: Affiliate): Promise<any> {
+    public async update(affiliate: Affiliate): Promise<SFSuccessObject> {
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Account',
@@ -252,41 +252,73 @@ export class AffiliatesService {
      * @returns {Promise<any>} 
      * @memberof AffiliatesService
      */
-    public async delete(id: string): Promise<any> {
-        // Create the data parameter for the RPC call
-        const retrieveData = {
-            object: 'Account',
-            ids: [id]
-        }
-        const result: Affiliate = (await this.sfService.retrieve(retrieveData))[0];
+    public async delete(id: string): Promise<SFSuccessObject> {
+        const result: Affiliate = await this.get(id);
         result.RecordTypeId = '012A0000000zprfIAA';
 
-        const query: SFQueryObject = {
-            action: "SELECT",
-            fields: ["Id"],
-            table: "Contact",
-            clauses: `AccountId='${result.Id}' AND RecordType.Name='Affiliate Instructor'`
-        }
+        await this.deletePermissions(result.Id);
 
+        await this.deleteRoles(result.Id);
+
+        await this.deleteFacilitators(result.Id);
+
+        const update: SFSuccessObject = await this.update(result);
+
+        return Promise.resolve(update);
+    }
+
+    /**
+     * @desc Delete the associated permissions of an Affiliate from the Auth API. Namely 'workshops -- ID' and 'affiliate -- ID'
+     * 
+     * @private
+     * @param {SalesforceId} id - The Affilaite's Salesforce Id
+     * @returns {Promise<void>}
+     * @memberof AffiliatesService
+     */
+    private async deletePermissions(id: string): Promise<void> {
         for (const level of [0, 1, 2]) {
             await this.authService.deletePermission(`workshops -- ${id}`, level as 0 | 1 | 2);
             await this.authService.deletePermission(`affiliate -- ${id}`, level as 0 | 1 | 2);
         }
 
+        return Promise.resolve();
+    }
+
+    /**
+     * @desc Delete the Affiliate specific roles from the Auth API. Namely, 'Course Manager -- ID'
+     * 
+     * @private
+     * @param {SalesforceId} id - The Affiliate's Salesforce Id
+     * @returns {Promise<void>} 
+     * @memberof AffiliatesService
+     */
+    private async deleteRoles(id: string): Promise<void> {
         const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`);
         await this.authService.deleteRole(cm);
 
+        return Promise.resolve();
+    }
+
+    /**
+     * @desc Delete the Affiliate's Facilitators logins from the Auth API.
+     * 
+     * @private
+     * @param {SalseforceId} id - The Affiliate's SalesforceId
+     * @returns {Promise<void>} 
+     * @memberof AffiliatesService
+     */
+    private async deleteFacilitators(id: string): Promise<void> {
+        const query: SFQueryObject = {
+            action: "SELECT",
+            fields: ["Id"],
+            table: "Contact",
+            clauses: `Facilitator_For__c='${id}' AND RecordType.Name='Affiliate Instructor'`
+        }
         const facilitators = (await this.sfService.query(query)).records as any;
         for (const facilitator of facilitators) {
             await this.authService.deleteUser({ extId: facilitator.Id });
         }
 
-        const updateData = {
-            object: 'Account',
-            records: [{ content: JSON.stringify(result) }]
-        }
-        const update: SFSuccessObject = (await this.sfService.update(updateData))[0];
-
-        return Promise.resolve(update);
+        return Promise.resolve();
     }
 }

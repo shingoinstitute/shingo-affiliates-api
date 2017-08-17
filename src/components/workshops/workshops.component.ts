@@ -1,7 +1,8 @@
 import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, UserService,
-    SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError
+    SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError,
+    LoggerService
 } from '../';
 import { Workshop } from './workshop'
 import { _ } from 'lodash';
@@ -20,7 +21,8 @@ export class WorkshopsService {
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
         @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('UserService') private userService: UserService = new UserService()) { }
+        @Inject('UserService') private userService: UserService = new UserService(),
+        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -124,8 +126,11 @@ export class WorkshopsService {
      */
     public async get(id: string): Promise<Workshop> {
         // Create the data parameter for the RPC call
-        let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] })) as Workshop;
-        workshop.facilitators = await this.facilitators(id);
+        let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
+        workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
+        workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+        this.log.debug('got cm: %j', workshop.Course_Manager__r);
+        this.log.debug(`getting workshop ${id} => %j`, workshop)
         return Promise.resolve(workshop);
     }
 
@@ -224,6 +229,8 @@ export class WorkshopsService {
                 "Instructor__r.Id",
                 "Instructor__r.FirstName",
                 "Instructor__r.LastName",
+                "Instructor__r.Name",
+                "Instructor__r.AccountId",
                 "Instructor__r.Email",
                 "Instructor__r.Title"
             ],
@@ -231,7 +238,14 @@ export class WorkshopsService {
             clauses: `Workshop__c='${id}'`
         }
 
-        const facilitators: object[] = (await this.sfService.query(query)).records || [];
+        const facilitators: any[] = (await this.sfService.query(query)).records || [];
+        const ids = facilitators.map(fac => `'${fac.Id}'`)
+        const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+        for (let fac of facilitators) {
+            let auth = auths.filter(auth => auth.extId === fac.Id)[0];
+            if (auth) fac.id = auth.id;
+        }
+        this.log.debug('Got facilitators => %j', facilitators);
         return Promise.resolve(facilitators);
     }
 
@@ -281,15 +295,21 @@ export class WorkshopsService {
             records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }]
         }
 
+        this.log.debug('updating sf with: %j', data);
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
         const currFacilitators = await this.facilitators(workshop.Id);
-        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Instructor__r.Id === other.Id });
-        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Instructor__r.Id });
+        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Id === other.Id });
+        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Id });
+
+        this.log.debug('removeFacilitators: %j', removeFacilitators);
+        this.log.debug('addFacilitators: %j', workshop.facilitators);
 
         await this.grantPermissions(workshop);
+        this.log.debug('granted new permissions');
         await this.removePermissions(workshop, removeFacilitators);
 
+        this.log.debug('returning result: %j', result)
         return Promise.resolve(result);
     }
 
@@ -378,7 +398,7 @@ export class WorkshopsService {
      * 
      * @private
      * @param {Workshop} workshop - Requires [ 'Id', 'facilitators' ]
-     * @param {any[]} remove - Requires [ 'Instructor__r'.'Id' ]
+     * @param {any[]} remove - Requires [ 'Id', 'Email' ]
      * @returns {Promise<void>} 
      * @memberof WorkshopsService
      */
@@ -389,9 +409,9 @@ export class WorkshopsService {
 
         await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids });
 
-        const emails = remove.map(facilitator => { return `'${facilitator.Instructor__r.Email}'` });
-        if (!emails.length) return Promise.resolve();
-        const users = await this.authService.getUsers(`user.email IN (${emails.join()})`);
+        const instructors = remove.map(facilitator => { return `'${facilitator.Instructor__r.Id}'` });
+        if (!instructors.length) return Promise.resolve();
+        const users = await this.authService.getUsers(`user.extId IN (${instructors.join()})`);
         for (const user in users) {
             await this.authService.revokePermissionFromUser(resource, 2, user['id']);
         }

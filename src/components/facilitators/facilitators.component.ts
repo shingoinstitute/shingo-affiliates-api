@@ -35,15 +35,12 @@ export class FacilitatorsService {
      *  &emsp;"Biography\__c"<br>
      * ]</code>
      * 
-     * @param {User} user - Requires <code>user.permissions[]</code> and <code>user.roles[].permissions[]</code>
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @param {string} [affiliate] - SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
      * @returns {Promise<any[]>} 
      * @memberof FacilitatorsService
      */
-    public async getAll(user: User, refresh: boolean = false, affiliate?: string): Promise<any[]> {
-        let isAfMan = user.role.name === 'Affiliate Manager';
-
+    public async getAll(refresh: boolean = false, affiliate?: string): Promise<any[]> {
         let query = {
             action: "SELECT",
             fields: [
