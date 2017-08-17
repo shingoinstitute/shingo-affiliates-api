@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Shingo Affiliate Portal Source: controllers/affiliates/affiliates.controller.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.lumen.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html"><img class="branding-logo" src="./Shingo_Logo.png"
+		alt="logo"/>Shingo Affiliate Portal</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="AffiliatesController.html">AffiliatesController</a></li><li><a href="AffiliatesService.html">AffiliatesService</a></li><li><a href="ApplicationModule.html">ApplicationModule</a></li><li><a href="AuthController.html">AuthController</a></li><li><a href="AuthMiddleware.html">AuthMiddleware</a></li><li><a href="AuthService.html">AuthService</a></li><li><a href="BaseController.html">BaseController</a></li><li><a href="CacheService.html">CacheService</a></li><li><a href="FacilitatorsController.html">FacilitatorsController</a></li><li><a href="FacilitatorsService.html">FacilitatorsService</a></li><li><a href="InitService.html">InitService</a></li><li><a href="IsAFManMiddleware.html">IsAFManMiddleware</a></li><li><a href="IsValidMiddleware.html">IsValidMiddleware</a></li><li><a href="LoggerService.html">LoggerService</a></li><li><a href="RouteLoggerMiddleware.html">RouteLoggerMiddleware</a></li><li><a href="SalesforceService.html">SalesforceService</a></li><li><a href="UserService.html">UserService</a></li><li><a href="WorkshopsController.html">WorkshopsController</a></li><li><a href="WorkshopsService.html">WorkshopsService</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+        
+            <div class="col-sm-3 col-md-3">
+                <form class="navbar-form" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                        <div class="input-group-btn">
+                            <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-12">
+	
+		<div id="main">
+			
+
+		<h1 class="page-title">Source: controllers/affiliates/affiliates.controller.js</h1>
+    
+<section>
+    <article>
+        <pre
+            class="sunlight-highlight-javascript linenums">"use strict";
+var __decorate = (this &amp;&amp; this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c &lt; 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" &amp;&amp; typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c &lt; 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 &amp;&amp; r &amp;&amp; Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this &amp;&amp; this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" &amp;&amp; typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this &amp;&amp; this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const common_1 = require("@nestjs/common");
+const components_1 = require("../../components");
+const base_controller_1 = require("../base.controller");
+const objKeyValidator_1 = require("../../validators/objKeyValidator");
+/**
+ * @desc Controller of the REST API logic for Affiliates
+ *
+ * @export
+ * @class AffiliatesController
+ * @extends {BaseController}
+ */
+let AffiliatesController = class AffiliatesController extends base_controller_1.BaseController {
+    constructor(affService, logger) {
+        super(logger);
+        this.affService = affService;
+    }
+    ;
+    /**
+     * @desc &lt;h5>GET: /affiliates&lt;/h5> Calls {@link AffiliatesService#getAll} to get a list of affiliates
+     *
+     * @param {Query} isPublicQ - Query parameter &lt;code>'isPublic'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Alias &lt;code>headers['x-force-refesh']&lt;/code>; Returns public affiliates
+     * @param {Header} isPublicH - Header &lt;code>'x-is-public'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Alias &lt;code>query['isPublic']&lt;/code>; Returns public affiliates
+     * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    readAll(res, session, isPublicQ, isPublicH, refresh = 'false') {
+        return __awaiter(this, void 0, void 0, function* () {
+            const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
+            const forceRefresh = refresh === 'true';
+            if (!isPublic &amp;&amp; (!session.user || session.user.role.name !== 'Affiliate Manager'))
+                return this.handleError(res, 'Error in AffiliatesController.readAll(): ', { error: 'NOT_AFFILIATE_MANAGER' }, common_1.HttpStatus.FORBIDDEN);
+            try {
+                const affiliates = yield this.affService.getAll(isPublic, forceRefresh);
+                return res.status(common_1.HttpStatus.OK).json(affiliates);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.readAll(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>GET: /affiliates/describe&lt;/h5> Calls {@link AffiliatesService#describe} to describe the Account Object
+     *
+     * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    describe(res, refresh = 'false') {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const describeObject = yield this.affService.describe(refresh === 'true');
+                return res.status(common_1.HttpStatus.OK).json(describeObject);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.describe(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>GET: /affiliates/search&lt;/h5> Calls {@link AffiliatesService#search}. Returns an array of affiliates that match search criteria
+     *
+     * @param {Header} search - Header &lt;code>'x-search'&lt;/code>. SOSL search expression (i.e. '*Test*').
+     * @param {Header} retrieve - Header &lt;code>'x-retrieve'&lt;/code>. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
+     * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    search(res, search, retrieve, refresh = 'false') {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check for required fields
+            if (!search || !retrieve)
+                return this.handleError(res, 'Error in AffiliatesController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search &amp;&amp; !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const affiliates = yield this.affService.search(search, retrieve, refresh === 'true');
+                return res.status(common_1.HttpStatus.OK).json(affiliates);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.search(): ', error);
+            }
+        });
+    }
+    /**
+     * Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
+     *
+     * @param {SalesforceId} id - The Salesforce Id of the affiliate
+     * @param {Header} search - Header &lt;code>'x-search'&lt;/code>. SOSL search expression (i.e. 'User*').
+     * @param {Header} retrieve - Header &lt;code>'x-retrieve'&lt;/code>. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name')
+     * @param {Header} [refresh='false'] - Header &lt;code>'x-force-refresh'&lt;/code>; Expected values &lt;code>[ 'true', 'false' ]&lt;/code>; Forces cache refresh
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    searchCMS(res, id, search, retrieve, refresh = 'false') {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            if (!search || !retrieve)
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search &amp;&amp; !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const cms = yield this.affService.searchCM(id, search, retrieve, refresh === 'true');
+                return res.status(common_1.HttpStatus.OK).json(cms);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>GET: /affiliates/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
+     *
+     * @param {SalesforceId} id - Account id. match &lt;code>/[\w\d]{15,17}/&lt;/code>
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    read(res, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const affiliate = yield this.affService.get(id);
+                return res.status(common_1.HttpStatus.OK).json(affiliate);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.read(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>POST: /affiliates&lt;/h5> Calls {@link AffiliatesService#create} to create a new Affiliate
+     *
+     * @param {Body} body - Required fields &lt;code>[ "Name" ]&lt;/code>
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    create(res, body) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const required = objKeyValidator_1.checkRequired(body, ['Name']);
+            if (!required.valid)
+                return this.handleError(res, 'Error in AffiliatesController.create(): ', { error: 'MISSING_FIELDS', fields: required.missing }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const sfSuccess = yield this.affService.create(body);
+                return res.status(common_1.HttpStatus.CREATED).json(sfSuccess);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.create(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>POST: /affiliates/&lt;em>:id&lt;/em>/map&lt;/h5> Calls {@link AffiliatesService#map} to create permissions for a Licensed Affiliate Account
+     *
+     * @param {SalesforceId} id - Account id. match &lt;code>/[\w\d]{15,17}/&lt;/code>
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    map(res, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in AffiliatesController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                yield this.affService.map(id);
+                return res.status(common_1.HttpStatus.OK).json({ mapped: true });
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.map(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>PUT: /affiliates/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link AffiliatesService#update} to update an Affiliate
+     *
+     * @param {Body} body - Required fields &lt;code>[ "Id" ]&lt;/code>
+     * @param {SalesforceId} id - Account id. match &lt;code>/[\w\d]{15,17}/&lt;/code>
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    update(res, body, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/) || id !== body.Id)
+                return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            let required = objKeyValidator_1.checkRequired(body, ['Id']);
+            if (!required.valid)
+                return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: "MISSING_FIELDS", fields: required.missing }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const result = yield this.affService.update(body);
+                return res.status(common_1.HttpStatus.OK).json(result);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.update(): ', error);
+            }
+        });
+    }
+    /**
+     * @desc &lt;h5>DELETE: /affiliates/&lt;em>:id&lt;/em>&lt;/h5> Calls {@link AffiliatesService#delete} to "delete" an Affiliate
+     *
+     * @param {SalesforceId} id - Account id. match &lt;code>/[\w\d]{15,17}/&lt;/code>
+     * @returns {Promise&lt;Response>}
+     * @memberof AffiliatesController
+     */
+    delete(res, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!id.match(/[\w\d]{15,17}/))
+                return this.handleError(res, 'Error in AffiliatesController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, common_1.HttpStatus.BAD_REQUEST);
+            try {
+                const result = yield this.affService.delete(id);
+                return res.status(common_1.HttpStatus.OK).json(result);
+            }
+            catch (error) {
+                return this.handleError(res, 'Error in AffiliatesController.delete(): ', error);
+            }
+        });
+    }
+};
+__decorate([
+    common_1.Get(),
+    __param(0, common_1.Response()), __param(1, common_1.Session()), __param(2, common_1.Query('isPublic')), __param(3, common_1.Headers('x-is-public')), __param(4, common_1.Headers('x-force-refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "readAll", null);
+__decorate([
+    common_1.Get('/describe'),
+    __param(0, common_1.Response()), __param(1, common_1.Headers('x-force-refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "describe", null);
+__decorate([
+    common_1.Get('/search'),
+    __param(0, common_1.Response()), __param(1, common_1.Headers('x-search')), __param(2, common_1.Headers('x-retrieve')), __param(3, common_1.Headers('x-force-refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "search", null);
+__decorate([
+    common_1.Get('/:id/coursemanagers'),
+    __param(0, common_1.Response()), __param(1, common_1.Param('id')), __param(2, common_1.Headers('x-search')), __param(3, common_1.Headers('x-retrieve')), __param(4, common_1.Headers('x-force-refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "searchCMS", null);
+__decorate([
+    common_1.Get(':id'),
+    __param(0, common_1.Response()), __param(1, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "read", null);
+__decorate([
+    common_1.Post(),
+    __param(0, common_1.Response()), __param(1, common_1.Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "create", null);
+__decorate([
+    common_1.Post(':id/map'),
+    __param(0, common_1.Response()), __param(1, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "map", null);
+__decorate([
+    common_1.Put(':id'),
+    __param(0, common_1.Response()), __param(1, common_1.Body()), __param(2, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "update", null);
+__decorate([
+    common_1.Delete(':id'),
+    __param(0, common_1.Response()), __param(1, common_1.Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AffiliatesController.prototype, "delete", null);
+AffiliatesController = __decorate([
+    common_1.Controller('affiliates'),
+    __metadata("design:paramtypes", [components_1.AffiliatesService, components_1.LoggerService])
+], AffiliatesController);
+exports.AffiliatesController = AffiliatesController;
+</pre>
+    </article>
+</section>
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+
+</div>
+</div>
+
+
+    <div class="modal fade" id="searchResults">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Search results</h4>
+          </div>
+          <div class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div>
+
+
+<footer>
+
+
+	<span class="copyright">
+	Shingo Affiliates Portal Copyright © 2017 Shingo Institute.
+	</span>
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.3</a>
+	
+		on Fri Aug 11th 2017
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+
+    <script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre, pre.prettyprint.source" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : true,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			return $( heading ).attr( "id" ) || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            SearcherDisplay.init();
+        });
+    </script>
+
+
+</body>
+</html>

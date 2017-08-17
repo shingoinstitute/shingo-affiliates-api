@@ -62,7 +62,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 })
                 .then(response => {
                     let contact = response.records[0];
-                    req.session.user = _.merge(req.session.user, _.omit(contact, ['Email']));
+                    req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
                     req.session.affiliate = contact['AccountId'];
                     return next();
                 })
