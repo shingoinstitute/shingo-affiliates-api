@@ -299,8 +299,8 @@ export class WorkshopsService {
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
         const currFacilitators = await this.facilitators(workshop.Id);
-        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Id === other.Id });
-        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Id });
+        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Instructor__r.Id === other.Id });
+        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Instructor__r.Id });
 
         this.log.debug('removeFacilitators: %j', removeFacilitators);
         this.log.debug('addFacilitators: %j', workshop.facilitators);
@@ -382,6 +382,7 @@ export class WorkshopsService {
         }
 
         for (const facilitator of workshop.facilitators) {
+            this.log.warn('granting permissions to: %j', facilitator);
             const data = {
                 object: 'WorkshopFacilitatorAssociation__c',
                 records: [{ contents: JSON.stringify({ Workshop__c: workshop.Id, Instructor__c: facilitator['Id'] }) }]

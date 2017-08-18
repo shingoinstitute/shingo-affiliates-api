@@ -150,7 +150,7 @@ export class WorkshopsController extends BaseController {
     public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
         // Check required parameters
         this.log.debug('Trying to create workshop:\n%j', body);
-        let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'facilitators']);
+        let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'Course_Manager__c', 'facilitators']);
         if (!valid.valid)
             return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, HttpStatus.BAD_REQUEST);
 
