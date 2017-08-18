@@ -38,7 +38,8 @@ export class AuthMiddleware implements NestMiddleware {
 
             if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
 
-            return this.authService.canAccess(resource, 2, req.header['x-jwt'])
+            this.log.warn(`canAccess(${resource}, 2, <token>`);
+            return this.authService.canAccess(resource, 2, req.headers['x-jwt'])
                 .then(result => {
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                     else resource = '';

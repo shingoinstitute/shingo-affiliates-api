@@ -304,6 +304,7 @@ export class AuthService {
      * @memberof AuthService
      */
     public canAccess(resource: string, level: 1 | 2, jwt: string): Promise<any> {
+        console.log('jwt', jwt);
         return this.client.canAccessAsync({ resource, level, jwt });
     }
 

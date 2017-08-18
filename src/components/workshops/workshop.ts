@@ -10,6 +10,7 @@ export interface Workshop {
     Start_Date__c: string,
     End_Date__c: string,
     Organizing_Affiliate__c: string,
+    Organizing_Affiliate__r: object,
     facilitators?: object[],
     Course_Manager__c: string,
     Course_Manager__r: any

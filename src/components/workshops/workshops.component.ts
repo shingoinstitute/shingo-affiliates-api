@@ -129,6 +129,7 @@ export class WorkshopsService {
         let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
         workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
         workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+        workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
         this.log.debug('got cm: %j', workshop.Course_Manager__r);
         this.log.debug(`getting workshop ${id} => %j`, workshop)
         return Promise.resolve(workshop);
