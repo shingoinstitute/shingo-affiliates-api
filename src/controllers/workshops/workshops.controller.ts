@@ -35,19 +35,27 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Get()
-    public async readAll( @Response() res, @Session() session, @Query('isPublic') isPublicQ, @Headers('x-is-public') isPublicH, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
-        const forceRefresh = refresh === 'true';
-        if (!session.user && !isPublic) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
+    public async readAll( @Response() res, @Session() session): Promise<Response> {
+        if (!session.user) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
 
         try {
-            const workshops: Workshop[] = await this.workshopsService.getAll(isPublic, forceRefresh, session.user);
+            const workshops: Workshop[] = await this.workshopsService.getAll(false, true, session.user);
 
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
             return this.handleError(res, 'Error in WorkshopsController.readAll(): ', error);
         }
+    }
 
+    @Get('public')
+    public async readPublic( @Response() res, @Headers('x-force-refresh') refresh = 'false') {
+        try {
+            const workshops: Workshop[] = await this.workshopsService.getAll(true, refresh === 'true', null);
+
+            return res.status(HttpStatus.OK).json(workshops);
+        } catch (error) {
+            return this.handleError(res, 'Error in WorkshopsController.readPublic(): ', error);
+        }
     }
 
     /**
@@ -111,7 +119,7 @@ export class WorkshopsController extends BaseController {
             this.log.debug(`GET: /workshops/${id} => %j`, workshop);
             return res.status(HttpStatus.OK).json(workshop);
         } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.read(): ', error);
+            return this.handleError(res, '(114:48) Error in WorkshopsController.read(): ', error);
         }
     }
 
@@ -164,6 +172,7 @@ export class WorkshopsController extends BaseController {
 
         try {
             const sfSuccess = await this.workshopsService.create(body);
+            session.user.permissions.push({ resource: `/workshops/${sfSuccess.id}`, level: 2 });
             return res.status(HttpStatus.CREATED).json(sfSuccess);
         } catch (error) {
             return this.handleError(res, 'Error in WorkshopsController.create(): ', error);

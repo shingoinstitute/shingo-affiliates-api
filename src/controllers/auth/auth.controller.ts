@@ -91,6 +91,7 @@ export class AuthController extends BaseController {
         if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
         try {
             req.session.user.jwt = '';
+            req.session.user.email = req.session.user.Email;
             let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'password', 'role']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });

@@ -11,7 +11,8 @@ export interface Workshop {
     End_Date__c: string,
     Organizing_Affiliate__c: string,
     Organizing_Affiliate__r: object,
-    facilitators?: object[],
+    facilitators?: any[],
     Course_Manager__c: string,
-    Course_Manager__r: any
+    Course_Manager__r: any,
+    Instructors__r: { records: any[] }
 }

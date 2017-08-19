@@ -82,7 +82,7 @@ export class AffiliatesController extends BaseController {
     }
 
     /**
-     * Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
+     * @desc <h5>GET: /affiliates/<em>:id</em>/coursemanagers</h5> Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
      * 
      * @param {SalesforceId} id - The Salesforce Id of the affiliate
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. 'User*').

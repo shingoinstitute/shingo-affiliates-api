@@ -79,10 +79,14 @@ export class WorkshopsService {
             const ids = this.userService.getWorkshopIds(user);
             if (ids.length === 0) return Promise.resolve([]);
             query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
+            query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
         }
 
         if (!this.cache.isCached(query) || refresh) {
             let workshops: Workshop[] = (await this.sfService.query(query)).records as Workshop[];
+            for (const workshop of workshops) {
+                if (workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
+            }
 
             if (isPublic) this.cache.cache(query, workshops);
 
@@ -128,8 +132,9 @@ export class WorkshopsService {
         // Create the data parameter for the RPC call
         let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
         workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
-        workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
-        workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
+        this.log.warn('getting course manager for ', workshop.Course_Manager__c);
+        if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+        if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
         this.log.debug('got cm: %j', workshop.Course_Manager__r);
         this.log.debug(`getting workshop ${id} => %j`, workshop)
         return Promise.resolve(workshop);

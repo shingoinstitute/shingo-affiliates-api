@@ -27,7 +27,7 @@ export class RouteLoggerMiddleware implements NestMiddleware {
     public resolve() {
         return (req, res, next) => {
             // Log route info
-            let info = `${req.method} ${req.originalUrl}` + (req.session.user ? ` by ${req.session.user.email}` : '');
+            let info = `${req.method} ${req.originalUrl}` + (req.session.user ? ` by ${req.session.user.Email}` : '');
             this.log.verbose(info);
 
             // Log custom headers
