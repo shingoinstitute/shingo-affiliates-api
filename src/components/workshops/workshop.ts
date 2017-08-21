@@ -14,5 +14,6 @@ export interface Workshop {
     facilitators?: any[],
     Course_Manager__c: string,
     Course_Manager__r: any,
-    Instructors__r: { records: any[] }
+    Instructors__r: { records: any[] },
+    files: any[]
 }
