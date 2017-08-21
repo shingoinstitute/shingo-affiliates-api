@@ -132,12 +132,28 @@ export class WorkshopsService {
         // Create the data parameter for the RPC call
         let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
         workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
-        this.log.warn('getting course manager for ', workshop.Course_Manager__c);
+
         if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
         if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
-        this.log.debug('got cm: %j', workshop.Course_Manager__r);
-        this.log.debug(`getting workshop ${id} => %j`, workshop)
+
+        workshop['files'] = await this.getFiles(workshop.Id);
+
         return Promise.resolve(workshop);
+    }
+
+    private async getFiles(id: string): Promise<any[]> {
+        const query: SFQueryObject = {
+            action: 'SELECT',
+            fields: [
+                'Name',
+                'ParentId'
+            ],
+            table: 'Attachment',
+            clauses: `ParentId='${id}'`
+        }
+
+        const files = (await this.sfService.query(query)).records;
+        return Promise.resolve(files);
     }
 
     /**
