@@ -136,7 +136,7 @@ export class WorkshopsService {
         if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
         if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
 
-        workshop.files = await this.getFiles(workshop.Id);
+        workshop.files = await this.getFiles(workshop.Id) || [];
 
         this.log.warn('returning workshop.files: ', workshop.files);
 
