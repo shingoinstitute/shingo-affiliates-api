@@ -349,12 +349,12 @@ export class WorkshopsService {
      * @returns {Promise<SFSuccessObject[]>} 
      * @memberof WorkshopsService
      */
-    public async upload(id: string, fileName: string, files: string[]): Promise<SFSuccessObject[]> {
+    public async upload(id: string, fileName: string, files: string[], contentType: string = 'text/csv'): Promise<SFSuccessObject[]> {
 
         const records = [];
         let fileId = 0;
         for (const file of files) {
-            records.push({ contents: JSON.stringify({ ParentId: id, Name: `${fileId++}-${fileName}`, Body: file }) });
+            records.push({ contents: JSON.stringify({ ParentId: id, Name: `${fileId++}-${fileName}`, Body: file, ContentType: contentType }) });
         }
 
         const data = {

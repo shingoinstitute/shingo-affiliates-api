@@ -230,8 +230,9 @@ export class WorkshopsController extends BaseController {
 
             try {
                 const ext: string = req.file.originalname.split('.').pop();
+                this.log.warn('uploading file', req.file);
 
-                this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')]);
+                this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')], req.file.contentType);
 
                 return res.status(HttpStatus.ACCEPTED).json();
             } catch (error) {
