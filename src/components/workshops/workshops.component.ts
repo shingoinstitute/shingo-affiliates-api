@@ -148,7 +148,8 @@ export class WorkshopsService {
             action: 'SELECT',
             fields: [
                 'Name',
-                'ParentId'
+                'ParentId',
+                'ContentType'
             ],
             table: 'Attachment',
             clauses: `ParentId='${id}'`
