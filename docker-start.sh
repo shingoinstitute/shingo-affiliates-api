@@ -20,4 +20,6 @@ docker run -itd                     \
     --network shingo-dev-net        \
     --volume $(pwd):/code           \
     --publish 8080:80               \
+    -e EMAIL_PASS=${EMAIL_PASS}     \
+    -e CLIENT_HOST='http://localhost:4200' \
     shingo-affiliates-api:${TAG}
