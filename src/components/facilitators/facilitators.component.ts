@@ -326,7 +326,7 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async update(user): Promise<any> {
-        const contact = _.omit(user, ["password", "Id"]);
+        const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id"]);
 
         const data = {
             object: 'Contact',
