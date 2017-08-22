@@ -118,7 +118,7 @@ export class FacilitatorsController extends BaseController {
                 to: email,
                 subject: 'Password Reset -- Affiliate Portal',
                 text: `Hello,\n\nPlease follow this link to reset your password: \n\n\t${process.env.CLIENT_HOST}/resetpassword?token=${token}\n\nIf you did not request this password reset please ignore this message.\nnThank you,\n\nShingo Institute`,
-                html: `Hello,\n\nPlease follow this link to reset your password: \n\n\t<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a>\n\nIf you did not request this password reset please ignore this message.\nnThank you,\n\nShingo Institute`
+                html: `Hello,<br><br>Please follow this link to reset your password: <br><br>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a><br><br>If you did not request this password reset please ignore this message.<br><br>Thank you,<br><br>Shingo Institute`
             });
 
             this.log.warn('Message sent: %j', { messageId: result.messageId, email, response: result.response });
