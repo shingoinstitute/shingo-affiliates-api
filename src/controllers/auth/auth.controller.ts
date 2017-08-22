@@ -90,7 +90,7 @@ export class AuthController extends BaseController {
     public async logout( @Request() req, @Response() res): Promise<Response> {
         if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
         try {
-            req.session.user.jwt = '';
+            req.session.user.jwt = `${Math.random()}`;
             req.session.user.email = req.session.user.Email;
             let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'password', 'role']));
             req.session.user = null;

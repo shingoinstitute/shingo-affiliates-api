@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { SalesforceService, CacheService, AuthService, FacilitatorsService, LoggerService } from '../../components';
+import { SalesforceService, CacheService, AuthService, FacilitatorsService, LoggerService, MailerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
@@ -19,7 +19,7 @@ import * as _ from 'lodash';
 @Controller('facilitators')
 export class FacilitatorsController extends BaseController {
 
-    constructor(private facilitatorsService: FacilitatorsService, logger: LoggerService) {
+    constructor(private facilitatorsService: FacilitatorsService, private mailer: MailerService, logger: LoggerService) {
         super(logger);
     };
 
@@ -38,7 +38,7 @@ export class FacilitatorsController extends BaseController {
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
 
         try {
-            const facilitators = await this.facilitatorsService.getAll(refresh === 'true', (isAfMan ? xAffiliate : session.affiliate));
+            const facilitators = await this.facilitatorsService.getAll(true, (isAfMan ? xAffiliate : session.affiliate));
             return res.status(HttpStatus.OK).json(facilitators);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
@@ -105,6 +105,40 @@ export class FacilitatorsController extends BaseController {
             return res.status(HttpStatus.OK).json(facilitator);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.read(): ', error);
+        }
+    }
+
+
+    @Get('/resetpassword/:email')
+    public async resetPassword( @Response() res, @Param('email') email): Promise<Response> {
+        try {
+            const token = await this.facilitatorsService.generateReset(email);
+            // TODO: Send token to user in email
+            const result = await this.mailer.sendMail({
+                to: email,
+                subject: 'Password Reset -- Affiliate Portal',
+                text: `Hello,\n\nPlease follow this link to reset your password: \n\n\t${process.env.CLIENT_HOST}/resetpassword?token=${token}\n\nIf you did not request this password reset please ignore this message.\nnThank you,\n\nShingo Institute`,
+                html: `Hello,\n\nPlease follow this link to reset your password: \n\n\t<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a>\n\nIf you did not request this password reset please ignore this message.\nnThank you,\n\nShingo Institute`
+            });
+
+            this.log.warn('Message sent: %j', { messageId: result.messageId, email, response: result.response });
+
+            return res.status(HttpStatus.OK).json();
+        } catch (error) {
+            return this.handleError(res, 'Error in FacilitatorsController.resetPassword(): ', error);
+        }
+    }
+
+    @Post('/resetpassword/token')
+    public async changePassword( @Response() res, @Body() body): Promise<Response> {
+        const valid = checkRequired(body, ['password', 'token']);
+        if (!valid.valid) return this.handleError(res, 'Error in FacilitatorsController.changePassword(): ', { error: 'MISSING_FIELDS', fields: valid.missing }, HttpStatus.BAD_REQUEST);
+
+        try {
+            const user = await this.facilitatorsService.resetPassword(body.token, body.password);
+            return res.status(HttpStatus.OK).json({ id: user.id, email: user.email });
+        } catch (error) {
+            return this.handleError(res, 'Error in FacilitatorsController.changePassword(): ', error);
         }
     }
 
@@ -227,7 +261,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Delete('/:id/unmap')
-    public async unamp( @Response() res, @Param('id') id): Promise<Response> {
+    public async unmap( @Response() res, @Param('id') id): Promise<Response> {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.unmap(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -257,4 +291,5 @@ export class FacilitatorsController extends BaseController {
             return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', error);
         }
     }
+
 }

@@ -4,6 +4,7 @@ import {
     SFQueryObject, LoggerService
 } from '../';
 import * as _ from 'lodash';
+import * as jwt from 'jwt-simple';
 
 /**
  * @desc A service to provide functions for working with Facilitators
@@ -433,5 +434,34 @@ export class FacilitatorsService {
         }
         const added = await this.authService.addRoleToUser(set);
         return Promise.resolve(added && added.response);
+    }
+
+    public async generateReset(email: string): Promise<string> {
+        const user = await this.authService.getUser(`user.email='${email}'`);
+
+        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
+
+        const expires = Date.now() + 1000 * 60 * 60;
+        const token = jwt.encode({ expires, email }, process.env.JWT_SECRET || 'ilikedogges');
+
+        user.resetToken = token;
+
+        await this.authService.updateUser(user);
+
+        return Promise.resolve(token);
+    }
+
+    public async resetPassword(token: string, password: string): Promise<User> {
+        const user = await this.authService.getUser(`user.resetToken='${token}'`);
+
+        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
+
+        const decoded = jwt.decode(token, process.env.JWT_SECRET || 'ilikedogges');
+
+        if (new Date(decoded.expires) < new Date()) return Promise.reject({ error: 'RESET_TOKEN_EXPIRED' });
+
+        await this.authService.updateUser({ id: user.id, password } as User);
+
+        return Promise.resolve(user);
     }
 }
