@@ -6,7 +6,7 @@ import { LoggerService } from '../logger/logger.component';
  * Provides an abstraction of nodemailer.
  * 
  * @export
- * @class LoggerService
+ * @class MailerService
  */
 @Component()
 export class MailerService {
@@ -27,6 +27,7 @@ export class MailerService {
             },
             debug: true
         }
+        this.log.debug('creating mailer with transport: %j', transport);
         this.transporter = createTransport(transport)
     }
 
