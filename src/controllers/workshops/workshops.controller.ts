@@ -261,7 +261,7 @@ export class WorkshopsController extends BaseController {
             const ext: string = req.files[0].originalname.split('.').pop();
 
             try {
-                this.workshopsService.upload(id, `evaluation.${ext}`, files);
+                this.workshopsService.upload(id, `evaluation.${ext}`, files, req.files[0].mimetype);
 
                 return res.status(HttpStatus.ACCEPTED).json();
             } catch (error) {
