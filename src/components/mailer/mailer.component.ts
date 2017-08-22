@@ -31,8 +31,8 @@ export class MailerService {
         this.transporter = createTransport(transport)
     }
 
-    public async sendMail(options: { to: string, subject: string, text: string, html?: string }) {
-        options['from'] = 'shingo.it@usu.edu';
+    public async sendMail(options: { from?: string, to: string, subject: string, text: string, html?: string }) {
+        options.from = 'shingo.it@usu.edu';
         return await this.transporter.sendMail(options);
     }
 
