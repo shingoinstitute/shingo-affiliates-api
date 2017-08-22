@@ -43,8 +43,10 @@ export class ApplicationModule {
 
         // Protect all routes that must have a user logged in
         consumer.apply(IsValidMiddleware)
-            .forRoutes(FacilitatorsController,
-            { path: '/workshops', method: RequestMethod.ALL },
+            .forRoutes(
+            { path: '/facilitators', method: RequestMethod.ALL },
+            { path: '/facilitators/0*', method: RequestMethod.ALL },
+            { path: '/facilitators/' },
             { path: '/workshops/a*', method: RequestMethod.ALL },
             { path: '/workshops/search', method: RequestMethod.ALL },
             { path: '/workshops/describe', method: RequestMethod.ALL },
@@ -59,12 +61,14 @@ export class ApplicationModule {
         consumer.apply(AuthMiddleware)
             .with(1, 'affiliate -- ')
             .forRoutes({ path: '/facilitators', method: RequestMethod.GET },
-            { path: '/facilitators/*', method: RequestMethod.GET },
+            { path: '/facilitators/0*', method: RequestMethod.GET },
             { path: '/affiliates/*', method: RequestMethod.GET });
 
         // Protect all routes that require the user to be an Affiliate Manager
         consumer.apply(IsAFManMiddleware)
-            .forRoutes({ path: '/facilitators*', method: RequestMethod.POST },
+            .forRoutes(
+            { path: '/facilitators', method: RequestMethod.POST },
+            { path: '/facilitators/*', method: RequestMethod.POST },
             { path: '/facilitators*', method: RequestMethod.PUT },
             { path: '/facilitators*', method: RequestMethod.DELETE },
             { path: '/affiliates*', method: RequestMethod.POST },
