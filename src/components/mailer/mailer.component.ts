@@ -32,6 +32,7 @@ export class MailerService {
     }
 
     public async sendMail(options: { to: string, subject: string, text: string, html?: string }) {
+        options['from'] = 'shingo.it@usu.edu';
         return await this.transporter.sendMail(options);
     }
 
