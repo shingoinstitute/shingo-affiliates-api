@@ -92,7 +92,7 @@ export class AuthController extends BaseController {
         if (!body.password) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'MISSING_FIELDS', fields: ['password'] }, HttpStatus.BAD_REQUEST);
 
         try {
-            req.sesion.user.password = body.password;
+            req.session.user.password = body.password;
 
             let user = await this.authService.updateUser(_.pick(req.session.user, ['Id', 'id', 'password', 'Email']));
             return res.status(HttpStatus.OK).json({ message: 'PASSWORD_UPDATED' });
