@@ -161,7 +161,7 @@ export class FacilitatorsController extends BaseController {
             body.password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
             const result = await this.facilitatorsService.create(body);
 
-            this.mailer.sendMail({
+            await this.mailer.sendMail({
                 to: (process.env.NODE_ENV === 'development' ? 'dustin.e.homan@usu.edu,craig.blackburn@usu.edu' : 'shingo.coord@usu.edu'),
                 subject: 'New Shingo Affiliate Portal Account',
                 text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
