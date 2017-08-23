@@ -43,16 +43,22 @@ export class AuthController extends BaseController {
             if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
             if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
 
-            const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
-            req.session.user = _.omit(user, ['password', 'roles']);
-            req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
-            req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
-            req.session.affiliate = contact['AccountId'];
+            req.session.user = await this.getSessionUser(user);
+            req.session.affiliate = req.session.user['AccountId'];
 
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
+    }
+
+    private async getSessionUser(user): Promise<any> {
+        const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
+        let sessionUser = _.omit(user, ['password', 'roles']);
+        sessionUser = _.merge(contact, _.omit(sessionUser, ['email']));
+        sessionUser = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
+
+        return sessionUser;
     }
 
 
@@ -94,8 +100,13 @@ export class AuthController extends BaseController {
         try {
             req.session.user.password = body.password;
 
-            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']));
-            return res.status(HttpStatus.OK).json({ message: 'PASSWORD_UPDATED' });
+            const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']));
+            if (!updated || !updated.updated) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'PASSWORD_NOT_CHANGED' });
+
+            req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`);
+            req.session.user = await this.getSessionUser(req.session.user);
+
+            return res.status(HttpStatus.OK).json({ jwt: req.session.user.jwt });
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.changePassword', error);
         }
