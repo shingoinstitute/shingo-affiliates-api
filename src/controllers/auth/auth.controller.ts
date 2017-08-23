@@ -56,7 +56,7 @@ export class AuthController extends BaseController {
         const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
         let sessionUser = _.omit(user, ['password', 'roles']);
         sessionUser = _.merge(contact, _.omit(sessionUser, ['email']));
-        sessionUser = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
+        sessionUser.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
 
         return sessionUser;
     }
