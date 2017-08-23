@@ -79,7 +79,7 @@ export class AuthController extends BaseController {
         try {
             req.session.user.jwt = `${Math.random()}`;
             req.session.user.email = req.session.user.Email;
-            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'Id', 'jwt']));
+            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {
