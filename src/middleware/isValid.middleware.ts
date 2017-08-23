@@ -30,6 +30,7 @@ export class IsValidMiddleware implements NestMiddleware {
      */
     public resolve() {
         return (req, res, next) => {
+            if (req.path.match(/.*resetpassword.*/gi)) return next();
             if (req.path === '/workshops' && (req.query.isPublic || req.headers['x-is-public'])) return next();
             if (!req.headers['x-jwt'] && !req.session.user) return res.status(HttpStatus.BAD_REQUEST).json({ error: 'HEADER_NOT_SET', header: 'x-jwt' });
             return this.authService.isValid(req.headers['x-jwt'] || req.session.user.jwt)
