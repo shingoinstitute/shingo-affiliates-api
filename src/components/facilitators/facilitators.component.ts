@@ -424,7 +424,7 @@ export class FacilitatorsService {
     public async changeRole(extId: string, roleId): Promise<boolean> {
         const user = await this.authService.getUser(`user.extId='${extId}'`);
 
-        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
+        if (user.id === 0) return Promise.reject({ error: 'USER_NOT_FOUND' });
 
         const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; })[0];
 
@@ -439,7 +439,7 @@ export class FacilitatorsService {
     public async generateReset(email: string): Promise<string> {
         const user = await this.authService.getUser(`user.email='${email}'`);
 
-        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
+        if (user.id === 0) return Promise.reject({ error: 'USER_NOT_FOUND' });
 
         const expires = Date.now() + 1000 * 60 * 60;
         const token = jwt.encode({ expires, email }, process.env.JWT_SECRET || 'ilikedogges');
@@ -454,7 +454,7 @@ export class FacilitatorsService {
     public async resetPassword(token: string, password: string): Promise<User> {
         const user = await this.authService.getUser(`user.resetToken='${token}'`);
 
-        if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' });
+        if (user.id === 0) return Promise.reject({ error: 'USER_NOT_FOUND' });
 
         const decoded = jwt.decode(token, process.env.JWT_SECRET || 'ilikedogges');
 
