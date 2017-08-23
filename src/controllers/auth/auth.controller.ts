@@ -101,7 +101,6 @@ export class AuthController extends BaseController {
             req.session.user.password = body.password;
 
             const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']));
-            if (!updated || !updated.updated) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'PASSWORD_NOT_CHANGED' });
 
             req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`);
             req.session.user = await this.getSessionUser(req.session.user);
