@@ -46,23 +46,10 @@ export class IsValidMiddleware implements NestMiddleware {
                     req.session.user = _.omit(user, ['password', 'roles']);
                     req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
 
-                    const query = {
-                        action: 'SELECT',
-                        fields: [
-                            'Id',
-                            'Name',
-                            'FirstName',
-                            'LastName',
-                            'AccountId',
-                            'Email'
-                        ],
-                        table: 'Contact',
-                        clauses: `Email='${user.email}' AND RecordType.Name='Affiliate Instructor'`
-                    }
-                    return this.sfService.query(query as SFQueryObject);
+                    return this.sfService.retrieve({ object: 'Contact', ids: [user.extId] });
                 })
                 .then(response => {
-                    let contact = response.records[0];
+                    let contact = response[0];
                     req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
                     req.session.affiliate = contact['AccountId'];
                     return next();

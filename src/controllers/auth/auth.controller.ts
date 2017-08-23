@@ -43,20 +43,7 @@ export class AuthController extends BaseController {
             if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
             if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
 
-            const query = {
-                action: 'SELECT',
-                fields: [
-                    'Id',
-                    'Name',
-                    'FirstName',
-                    'LastName',
-                    'AccountId',
-                    'Email'
-                ],
-                table: 'Contact',
-                clauses: `Email='${body.email}' AND RecordType.Name='Affiliate Instructor'`
-            }
-            const contact = (await this.sfService.query(query as SFQueryObject)).records[0];
+            const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
             req.session.user = _.omit(user, ['password', 'roles']);
             req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
             req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
