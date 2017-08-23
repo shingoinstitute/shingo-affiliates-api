@@ -8,6 +8,7 @@ import { SalesforceService, CacheService, AuthService, FacilitatorsService, Logg
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
+import * as generator from 'generate-password';
 
 /**
  * @desc Controller of the REST API logic for Facilitators
@@ -157,7 +158,25 @@ export class FacilitatorsController extends BaseController {
         if (!body.AccountId.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
+            body.password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
             const result = await this.facilitatorsService.create(body);
+
+            this.mailer.sendMail({
+                to: (process.env.NODE_ENV === 'development' ? 'dustin.e.homan@usu.edu,craig.blackburn@usu.edu' : 'shingo.coord@usu.edu'),
+                subject: 'New Shingo Affiliate Portal Account',
+                text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
+                html: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`
+            })
+
+            await this.mailer.sendMail({
+                to: body.Email,
+                subject: 'New Shingo Affiliate Portal Account',
+                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYou will recieve an email shortly to reset your password.\n\nThank you,\n\nShingo Institute`,
+                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>You will recieve an email shortly to reset your password.<br><br>Thank you,<br><br>Shingo Institute`
+            })
+
+            await this.resetPassword(res, body.Email);
+
             return res.status(HttpStatus.CREATED).json(result);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.create(): ', error);
