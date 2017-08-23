@@ -37,7 +37,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 .then(valid => {
                     if (valid && !valid.response) throw { error: 'ACCESS_FORBIDDEN' };
 
-                    if (req.session.user && req.session.user.AccountId && req.session.user.jwt === req.headers['x-jwt']) throw new Error('SESSION_ALIVE');
+                    if (req.session.user && req.session.user.AccountId && req.session.user.jwt === req.headers['x-jwt'] && req.headers['x-force-refresh'] !== 'true') throw new Error('SESSION_ALIVE');
 
                     return this.authService.getUser(`user.jwt='${req.headers['x-jwt']}'`);
                 })
