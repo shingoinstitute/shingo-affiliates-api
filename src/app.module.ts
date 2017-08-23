@@ -43,7 +43,7 @@ export class ApplicationModule {
 
         // Protect all routes that must have a user logged in
         consumer.apply(IsValidMiddleware)
-            .forRoutes(FacilitatorsController
+            .forRoutes(FacilitatorsController,
             { path: '/workshops/a*', method: RequestMethod.ALL },
             { path: '/workshops/search', method: RequestMethod.ALL },
             { path: '/workshops/describe', method: RequestMethod.ALL },
