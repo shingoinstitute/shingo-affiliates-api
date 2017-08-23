@@ -87,4 +87,18 @@ export class AuthController extends BaseController {
         }
     }
 
+    @Post('/changepassword')
+    public async changePassword( @Request() req, @Response() res, @Body() body): Promise<Response> {
+        if (!body.password) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'MISSING_FIELDS', fields: ['password'] }, HttpStatus.BAD_REQUEST);
+
+        try {
+            req.sesion.user.password = body.password;
+
+            let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'role']));
+            return res.status(HttpStatus.OK).json({ message: 'PASSWORD_UPDATED' });
+        } catch (error) {
+            return this.handleError(res, 'Error in AuthController.changePassword', error);
+        }
+    }
+
 }

@@ -145,13 +145,13 @@ export class FacilitatorsController extends BaseController {
     /**
      * @desc <h5>POST: /facilitators</h5> Calls {@link FacilitatorsService#create} to create a new Facilitator
      * 
-     * @param {Body} body - Required fields: <code>[ 'AccountId', 'FirstName', 'LastName', 'Email', 'password' ]</code><br>Optional fields: <code>[ 'roleId' ]</code>
+     * @param {Body} body - Required fields: <code>[ 'AccountId', 'FirstName', 'LastName', 'Email' ]</code><br>Optional fields: <code>[ 'roleId' ]</code>
      * @returns {Promise<Response>} Response body is a JSON object.
      * @memberof FacilitatorsController
      */
     @Post()
     public async create( @Response() res, @Body() body): Promise<Response> {
-        const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email', 'password']);
+        const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
         if (!required.valid) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
         if (!body.AccountId.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);

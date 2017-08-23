@@ -49,6 +49,7 @@ export class ApplicationModule {
             { path: '/workshops/describe', method: RequestMethod.ALL },
             { path: '/auth/logout', method: RequestMethod.ALL },
             { path: '/auth/valid', method: RequestMethod.ALL },
+            { path: '/auth/changepassword', method: RequestMethod.ALL },
             { path: '/affiliates/*', method: RequestMethod.GET },
             { path: '/affiliates*', method: RequestMethod.POST },
             { path: '/affiliates*', method: RequestMethod.PUT },
