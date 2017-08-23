@@ -447,7 +447,7 @@ export class FacilitatorsService {
 
         user.resetToken = token;
 
-        await this.authService.updateUser(user);
+        await this.authService.updateUser(_.omit(user, ['password']));
 
         return Promise.resolve(token);
     }
