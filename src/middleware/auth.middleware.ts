@@ -29,6 +29,7 @@ export class AuthMiddleware implements NestMiddleware {
      */
     public resolve(level: number, resource?: string) {
         return (req, res, next) => {
+            if (req.path.match(/.*resetpassword.*/gi)) return next();
             let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
 
             if (isAfMan) return next();
