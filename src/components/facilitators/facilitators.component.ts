@@ -328,6 +328,7 @@ export class FacilitatorsService {
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id"]);
+        this.log.warn('updating sf contact %j', contact);
 
         const data = {
             object: 'Contact',
