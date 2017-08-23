@@ -79,7 +79,7 @@ export class AuthController extends BaseController {
         try {
             req.session.user.jwt = `${Math.random()}`;
             req.session.user.email = req.session.user.Email;
-            let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'password', 'role']));
+            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'Id', 'jwt']));
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {
@@ -94,7 +94,7 @@ export class AuthController extends BaseController {
         try {
             req.sesion.user.password = body.password;
 
-            let user = await this.authService.updateUser(_.omit(req.session.user, ['Id', 'FirstName', 'LastName', 'Email', 'AccountId', 'Name', 'role']));
+            let user = await this.authService.updateUser(_.pick(req.session.user, ['Id', 'id', 'password', 'Email']));
             return res.status(HttpStatus.OK).json({ message: 'PASSWORD_UPDATED' });
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.changePassword', error);
