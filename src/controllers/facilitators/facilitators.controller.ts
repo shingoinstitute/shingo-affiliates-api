@@ -166,16 +166,14 @@ export class FacilitatorsController extends BaseController {
                 subject: 'New Shingo Affiliate Portal Account',
                 text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
                 html: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`
-            })
+            });
 
             await this.mailer.sendMail({
                 to: body.Email,
                 subject: 'New Shingo Affiliate Portal Account',
-                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYou will recieve an email shortly to reset your password.\n\nThank you,\n\nShingo Institute`,
-                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>You will recieve an email shortly to reset your password.<br><br>Thank you,<br><br>Shingo Institute`
-            })
-
-            await this.resetPassword(res, body.Email);
+                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYour temporary password is ${body.password}, please change it when you first log in.\n\nThank you,\n\nShingo Institute`,
+                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>Your temporary password is ${body.password}, please change it when you first log in.<br><br>Thank you,<br><br>Shingo Institute`
+            });
 
             return res.status(HttpStatus.CREATED).json(result);
         } catch (error) {
