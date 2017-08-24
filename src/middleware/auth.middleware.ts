@@ -38,13 +38,13 @@ export class AuthMiddleware implements NestMiddleware {
 
             if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
 
-            this.log.warn(`canAccess(${resource}, 2, <token>`);
-            return this.authService.canAccess(resource, 2, req.headers['x-jwt'])
+            this.log.warn(`canAccess(${resource}, ${level}, <token>`);
+            return this.authService.canAccess(resource, level, req.headers['x-jwt'])
                 .then(result => {
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                     else resource = '';
                     if (result && result.response) return next();
-                    throw { error: 'ACCESS_FORBIDDEN' };
+                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.email : 'anonymous'}` };
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
