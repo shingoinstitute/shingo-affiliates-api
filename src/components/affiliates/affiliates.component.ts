@@ -314,7 +314,7 @@ export class AffiliatesService {
             table: "Contact",
             clauses: `Facilitator_For__c='${id}' AND RecordType.Name='Affiliate Instructor'`
         }
-        const facilitators = (await this.sfService.query(query)).records as any;
+        const facilitators = (await this.sfService.query(query)).records as any[] || [];
         for (const facilitator of facilitators) {
             await this.authService.deleteUser({ extId: facilitator.Id });
         }
