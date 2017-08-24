@@ -193,8 +193,13 @@ export class FacilitatorsService {
             ids: [id]
         }
 
-        const facilitator = (await this.sfService.retrieve(data))[0];
+        let facilitator = (await this.sfService.retrieve(data))[0];
+        facilitator['Account'] = await this.sfService.retrieve({ object: 'Account', ids: [facilitator.Id] });
         const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
+        if (user.id !== 0) {
+            facilitator['id'] = user.id;
+            facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
+        }
         return Promise.resolve(_.merge(facilitator, _.omit(user, ['email', 'password'])));
     }
 

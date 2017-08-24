@@ -32,6 +32,7 @@ export class AuthMiddleware implements NestMiddleware {
             let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
 
             if (isAfMan) return next();
+            this.log.warn('auth.middleware session: %j', req.session);
 
             if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
             else if (!resource) resource = `${req.path}`;
