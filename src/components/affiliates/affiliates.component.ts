@@ -61,9 +61,9 @@ export class AffiliatesService {
                 return Promise.resolve(affiliates);
             }
 
-            const affiliatePermissions = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
+            const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
 
-            const ids = new Set(affiliatePermissions.map(p => p.split('Course Manager -- ')[0]));
+            const ids = new Set(roles.map(role => role.name.split('Course Manager -- ')[0]));
 
             affiliates = affiliates.filter(aff => ids.has(aff.Id));
 
