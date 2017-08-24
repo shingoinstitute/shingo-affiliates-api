@@ -54,7 +54,13 @@ export class AffiliatesService {
         if (!isPublic) query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
 
         if (!this.cache.isCached(query) || refresh) {
-            const affiliates = (await this.sfService.query(query)).records as Affiliate[];
+            let affiliates = (await this.sfService.query(query)).records as Affiliate[];
+
+            const affiliatePermissions = (await this.authService.getRoles(`role.name LIKE 'affiliate -- %'`)).roles;
+
+            const ids = new Set(affiliatePermissions.map(p => p.split('affiliate -- ')[0]));
+
+            affiliates = affiliates.filter(aff => ids.has(aff.Id));
 
             if (isPublic) this.cache.cache(query, affiliates);
 
