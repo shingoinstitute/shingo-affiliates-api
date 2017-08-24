@@ -327,8 +327,13 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async update(user): Promise<any> {
-        const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id"]);
+        const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
         this.log.warn('updating sf contact %j', contact);
+
+        if (user.role) {
+            const role = await this.authService.getRole(`role.name='${user.role.name}'`);
+            await this.changeRole(user.Id, role.id);
+        }
 
         const data = {
             object: 'Contact',
