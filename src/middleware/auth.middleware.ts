@@ -42,6 +42,7 @@ export class AuthMiddleware implements NestMiddleware {
             this.log.warn(`canAccess(${resource}, ${level}, <token>`);
             return this.authService.canAccess(resource, level, req.headers['x-jwt'])
                 .then(result => {
+                    this.log.warn('canAccess result: %j', result)
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                     else resource = '';
                     if (result && result.response) return next();
