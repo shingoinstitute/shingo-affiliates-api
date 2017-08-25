@@ -77,7 +77,7 @@ export class FacilitatorsService {
                     facilitator.services = users[facilitator['Id']].services;
                 }
             }
-            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator.services && !facilitator.services.match(/.*affiliate-portal.*/gi); });
+            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator.services && !facilitator.services.includes('affiliate-portal'); });
 
             this.cache.cache(query, facilitators);
             return Promise.resolve(facilitators);
@@ -184,12 +184,12 @@ export class FacilitatorsService {
 
                 if (isMapped)
                     facilitators = facilitators.filter(facilitator => {
-                        return facilitator.services && facilitator.services.match(/.*affiliate-portal.*/gi);
+                        return facilitator.services && facilitator.services.includes('affiliate-portal');
                     });
                 else facilitators = facilitators.filter(facilitator => {
                     this.log.warn('filtering fac: %j', facilitator);
                     this.log.warn('filtering fac.services: %j', facilitator.services);
-                    return facilitator.services == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi)
+                    return facilitator.services == undefined || !facilitator.services.includes('affiliate-portal')
                 });
             }
 
@@ -221,7 +221,7 @@ export class FacilitatorsService {
         let facilitator = (await this.sfService.retrieve(data))[0];
         facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
         const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
-        if (!user.services || !user.services.match(/.*affiliate-portal.*/gi)) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
+        if (!user.services || !user.services.includes('affiliate-portal')) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
         if (user.id !== 0) {
             facilitator['id'] = user.id;
             facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
