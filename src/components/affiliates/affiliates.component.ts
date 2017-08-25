@@ -1,6 +1,7 @@
 import { Component, Inject } from '@nestjs/common';
 import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '../';
 import { Affiliate } from './affiliate';
+import * as _ from 'lodash';
 
 export { Affiliate };
 
@@ -269,7 +270,7 @@ export class AffiliatesService {
 
         await this.deleteFacilitators(result.Id);
 
-        const update: SFSuccessObject = await this.update(result);
+        const update: SFSuccessObject = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
 
         return Promise.resolve(update);
     }
