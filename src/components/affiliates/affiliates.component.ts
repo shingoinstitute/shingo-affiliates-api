@@ -199,7 +199,7 @@ export class AffiliatesService {
         }
 
         const result: SFSuccessObject = (await this.sfService.create(data))[0];
-        await this.map(result.id);
+        await this.map({ Id: result.id } as Affiliate);
 
         return Promise.resolve(result);
     }
@@ -211,17 +211,17 @@ export class AffiliatesService {
      * @returns {Promise<any>} 
      * @memberof AffiliatesService
      */
-    public async map(id: string): Promise<any> {
-        const cm = await this.authService.createRole({ name: `Course Manager -- ${id}`, service: 'affiliate-portal' });
+    public async map(affiliate: Affiliate): Promise<any> {
+        const cm = await this.authService.createRole({ name: `Course Manager -- ${affiliate.Id}`, service: 'affiliate-portal' });
         for (const level of [0, 1, 2]) {
-            const workshopPerm = await this.authService.createPermission({ resource: `workshops -- ${id}`, level });
+            const workshopPerm = await this.authService.createPermission({ resource: `workshops -- ${affiliate.Id}`, level });
             await this.authService.grantPermissionToRole(workshopPerm.resource, 2, cm.id);
 
-            const affiliatePerm = await this.authService.createPermission({ resource: `affiliate -- ${id}`, level });
+            const affiliatePerm = await this.authService.createPermission({ resource: `affiliate -- ${affiliate.Id}`, level });
             await this.authService.grantPermissionToRole(affiliatePerm.resource, 1, cm.id);
         }
 
-        const affiliate = { RecordTypeId: '012A0000000zpraIAA', Id: id };
+        affiliate.RecordTypeId = '012A0000000zpraIAA';
 
         await this.sfService.update({ object: 'Account', records: [{ contents: JSON.stringify(affiliate) }] });
 
