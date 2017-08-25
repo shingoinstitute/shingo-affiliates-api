@@ -268,14 +268,12 @@ export class FacilitatorsService {
         const record = (await this.sfService.retrieve(data))[0];
         if (record === undefined) return Promise.reject({ error: 'CONTACT_NOT_FOUND' });
 
-        if (record.RecordTypeId !== '012A0000000zpqrIAA') {
-            record.RecordTypeId = '012A0000000zpqrIAA';
-            const updateData = {
-                object: 'Contact',
-                records: [{ contents: JSON.stringify(_.merge(record, user)) }]
-            }
-            const successObject = (await this.sfService.update(updateData))[0];
+        record.RecordTypeId = '012A0000000zpqrIAA'
+        const updateData = {
+            object: 'Contact',
+            records: [{ contents: JSON.stringify(_.merge(record, user)) }]
         }
+        const successObject = (await this.sfService.update(updateData))[0];
 
         return this.createOrMapAuth(id, user);
     }
