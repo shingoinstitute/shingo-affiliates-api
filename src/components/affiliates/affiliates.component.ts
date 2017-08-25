@@ -211,7 +211,7 @@ export class AffiliatesService {
      * @returns {Promise<any>} 
      * @memberof AffiliatesService
      */
-    public async map(id: Affiliate): Promise<any> {
+    public async map(id: string): Promise<any> {
         const cm = await this.authService.createRole({ name: `Course Manager -- ${id}`, service: 'affiliate-portal' });
         for (const level of [0, 1, 2]) {
             const workshopPerm = await this.authService.createPermission({ resource: `workshops -- ${id}`, level });
