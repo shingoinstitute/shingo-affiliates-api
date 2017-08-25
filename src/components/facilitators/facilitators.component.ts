@@ -144,7 +144,7 @@ export class FacilitatorsService {
             retrieve: `Contact(${retrieve})`
         }
 
-        if (!this.cache.isCached(data) || refresh) {
+        if (!this.cache.isCached(data) || true) {
             let facilitators = (await this.sfService.search(data)).searchRecords || [];
             facilitators = facilitators.filter(result => {
                 if (affiliate === '' && filter) return result.RecordType.Name === 'Affiliate Instructor';
