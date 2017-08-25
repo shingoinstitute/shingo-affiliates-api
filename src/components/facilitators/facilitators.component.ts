@@ -134,7 +134,7 @@ export class FacilitatorsService {
      * @returns {Promise<any>} 
      * @memberof FacilitatorsService
      */
-    public async search(search: string, retrieve: string, affiliate: string = '', refresh: boolean = false): Promise<any> {
+    public async search(search: string, retrieve: string, filter?: boolean, affiliate: string = '', refresh: boolean = false): Promise<any> {
         // Generate the data parameter for the RPC call
         if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
         if (!retrieve.includes('RecordType.Name')) retrieve += ', RecordType.Name';
@@ -146,27 +146,28 @@ export class FacilitatorsService {
 
         if (!this.cache.isCached(data) || refresh) {
             let facilitators = (await this.sfService.search(data)).searchRecords || [];
-            facilitators = facilitators.filter(result => {
-                if (affiliate === '') return result.RecordType.Name === 'Affiliate Instructor';
-                else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
-            });
+            if (filter) {
+                facilitators = facilitators.filter(result => {
+                    if (affiliate === '') return result.RecordType.Name === 'Affiliate Instructor';
+                    else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
+                });
 
-            if (facilitators.length) {
-                const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
-                const users = _.keyBy(usersArr, 'extId');
+                if (facilitators.length) {
+                    const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
+                    const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                    const users = _.keyBy(usersArr, 'extId');
 
-                // Add the facilitator's auth id to the object
-                for (let facilitator of facilitators) {
-                    if (users[facilitator['Id']]) {
-                        facilitator['id'] = users[facilitator['Id']].id;
-                        facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
+                    // Add the facilitator's auth id to the object
+                    for (let facilitator of facilitators) {
+                        if (users[facilitator['Id']]) {
+                            facilitator['id'] = users[facilitator['Id']].id;
+                            facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
+                        }
                     }
+
+                    facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
                 }
-
-                facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
             }
-
 
             this.cache.cache(data, facilitators);
 
@@ -481,4 +482,5 @@ export class FacilitatorsService {
 
         return Promise.resolve(user);
     }
+
 }

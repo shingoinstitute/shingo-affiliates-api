@@ -74,7 +74,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false') {
+    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-filter') filter = 'false', @Headers('x-force-refresh') refresh = 'false') {
         let isAfMan = session.user.role.name === 'Affiliate Manager';
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
 
@@ -82,7 +82,7 @@ export class FacilitatorsController extends BaseController {
         if (!search || !retrieve) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, HttpStatus.BAD_REQUEST);
 
         try {
-            const searchRecords = await this.facilitatorsService.search(search, retrieve, (isAfMan ? '' : session.affiliate), refresh === 'true');
+            const searchRecords = await this.facilitatorsService.search(search, retrieve, isAfMan && filter === 'true', (isAfMan ? '' : session.affiliate), refresh === 'true');
             return res.status(HttpStatus.OK).json(searchRecords);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.search(): ', error);
