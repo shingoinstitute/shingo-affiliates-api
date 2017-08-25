@@ -186,7 +186,7 @@ export class FacilitatorsService {
                     facilitators = facilitators.filter(facilitator => {
                         return facilitator['services'] && facilitator['services'].match(/.*affiliate-portal.*/gi);
                     });
-                else facilitators = facilitators.filter(facilitator => !facilitator['services'] || !facilitators['services'].match(/.*affiliate-portal.*/gi));
+                else facilitators = facilitators.filter(facilitator => facilitator['services'] == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi));
             }
 
             this.cache.cache(data, facilitators);
