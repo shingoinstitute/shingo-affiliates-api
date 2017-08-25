@@ -186,7 +186,10 @@ export class FacilitatorsService {
                     facilitators = facilitators.filter(facilitator => {
                         return facilitator['services'] && facilitator['services'].match(/.*affiliate-portal.*/gi);
                     });
-                else facilitators = facilitators.filter(facilitator => facilitator['services'] == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi));
+                else facilitators = facilitators.filter(facilitator => {
+                    this.log.warn('filtering fac: %j', facilitator);
+                    return facilitator['services'] == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi)
+                });
             }
 
             this.cache.cache(data, facilitators);
