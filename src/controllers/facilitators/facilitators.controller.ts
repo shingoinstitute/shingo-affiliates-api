@@ -194,7 +194,7 @@ export class FacilitatorsController extends BaseController {
     public async map( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
         if (!id.match(/[\w\d]{15,18}/)) return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
-        const required = checkRequired(body, ['AccountId', 'Email', 'password']);
+        const required = checkRequired(body, ['AccountId', 'Email']);
         if (!required.valid) return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
         try {
