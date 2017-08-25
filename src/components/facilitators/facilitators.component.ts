@@ -146,27 +146,25 @@ export class FacilitatorsService {
 
         if (!this.cache.isCached(data) || refresh) {
             let facilitators = (await this.sfService.search(data)).searchRecords || [];
-            if (filter) {
-                facilitators = facilitators.filter(result => {
-                    if (affiliate === '') return result.RecordType.Name === 'Affiliate Instructor';
-                    else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
-                });
+            facilitators = facilitators.filter(result => {
+                if (affiliate === '' && filter) return result.RecordType.Name === 'Affiliate Instructor';
+                else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
+            });
 
-                if (facilitators.length) {
-                    const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-                    const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
-                    const users = _.keyBy(usersArr, 'extId');
+            if (facilitators.length) {
+                const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
+                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                const users = _.keyBy(usersArr, 'extId');
 
-                    // Add the facilitator's auth id to the object
-                    for (let facilitator of facilitators) {
-                        if (users[facilitator['Id']]) {
-                            facilitator['id'] = users[facilitator['Id']].id;
-                            facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
-                        }
+                // Add the facilitator's auth id to the object
+                for (let facilitator of facilitators) {
+                    if (users[facilitator['Id']]) {
+                        facilitator['id'] = users[facilitator['Id']].id;
+                        facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
                     }
-
-                    facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
                 }
+
+                if (filter) facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
             }
 
             this.cache.cache(data, facilitators);
