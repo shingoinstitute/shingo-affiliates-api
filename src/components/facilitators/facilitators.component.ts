@@ -215,7 +215,7 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async create(user): Promise<any> {
-        let contact = _.omit(user, ["Id", "password", "roleId"]);
+        let contact = _.omit(user, ["Id", "password", "roleId", "role"]);
 
         // Create the contact in Salesforce
         contact.RecordTypeId = '012A0000000zpqrIAA';
