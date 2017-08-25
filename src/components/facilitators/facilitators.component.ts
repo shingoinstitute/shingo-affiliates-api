@@ -194,7 +194,7 @@ export class FacilitatorsService {
         }
 
         let facilitator = (await this.sfService.retrieve(data))[0];
-        facilitator['Account'] = await this.sfService.retrieve({ object: 'Account', ids: [facilitator.Id] });
+        facilitator['Account'] = await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] });
         const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
         if (user.id !== 0) {
             facilitator['id'] = user.id;
