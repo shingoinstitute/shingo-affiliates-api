@@ -271,7 +271,7 @@ export class FacilitatorsService {
         record.RecordTypeId = '012A0000000zpqrIAA'
         const updateData = {
             object: 'Contact',
-            records: [{ contents: JSON.stringify(_.merge(record, user)) }]
+            records: [{ contents: JSON.stringify(_.merge(record, _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]))) }]
         }
         const successObject = (await this.sfService.update(updateData))[0];
 
