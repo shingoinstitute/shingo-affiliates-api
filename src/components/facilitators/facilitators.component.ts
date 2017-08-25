@@ -64,7 +64,7 @@ export class FacilitatorsService {
         if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
 
         if (!this.cache.isCached(query) || refresh) {
-            let facilitators = (await this.sfService.query(query as SFQueryObject)).records;
+            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any;
             const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
             const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
             const users = _.keyBy(usersArr, 'extId');
@@ -74,10 +74,10 @@ export class FacilitatorsService {
                 if (users[facilitator['Id']]) {
                     facilitator['id'] = users[facilitator['Id']].id;
                     facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
-                    facilitator['services'] = users[facilitator['Id']].services;
+                    facilitator.services = users[facilitator['Id']].services;
                 }
             }
-            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator['services'] && !facilitator['services'].match(/.*affiliate-portal.*/gi); });
+            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator.services && !facilitator.services.match(/.*affiliate-portal.*/gi); });
 
             this.cache.cache(query, facilitators);
             return Promise.resolve(facilitators);
@@ -166,7 +166,7 @@ export class FacilitatorsService {
                     if (users[facilitator['Id']]) {
                         facilitator['id'] = users[facilitator['Id']].id;
                         facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
-                        facilitator['services'] = users[facilitator['Id']].services;
+                        facilitator.services = users[facilitator['Id']].services;
                     }
                 }
 
@@ -184,11 +184,12 @@ export class FacilitatorsService {
 
                 if (isMapped)
                     facilitators = facilitators.filter(facilitator => {
-                        return facilitator['services'] && facilitator['services'].match(/.*affiliate-portal.*/gi);
+                        return facilitator.services && facilitator.services.match(/.*affiliate-portal.*/gi);
                     });
                 else facilitators = facilitators.filter(facilitator => {
                     this.log.warn('filtering fac: %j', facilitator);
-                    return facilitator['services'] == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi)
+                    this.log.warn('filtering fac.services: %j', facilitator.services);
+                    return facilitator.services == undefined || !facilitators['services'].match(/.*affiliate-portal.*/gi)
                 });
             }
 
