@@ -77,7 +77,7 @@ export class FacilitatorsService {
                     facilitator['services'] = users[facilitator['Id']].services;
                 }
             }
-            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || !facilitator['services'].match(/.*affiliate-portal.*/gi); });
+            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator['services'] && !facilitator['services'].match(/.*affiliate-portal.*/gi); });
 
             this.cache.cache(query, facilitators);
             return Promise.resolve(facilitators);
@@ -213,7 +213,7 @@ export class FacilitatorsService {
         let facilitator = (await this.sfService.retrieve(data))[0];
         facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
         const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
-        if (!user.services.match(/.*affiliate-portal.*/gi)) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
+        if (!user.services || !user.services.match(/.*affiliate-portal.*/gi)) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
         if (user.id !== 0) {
             facilitator['id'] = user.id;
             facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
