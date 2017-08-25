@@ -149,7 +149,8 @@ export class FacilitatorsService {
             let facilitators = (await this.sfService.search(data)).searchRecords || [];
             facilitators = facilitators.filter(result => {
                 if (affiliate === '' && filter) return result.RecordType.Name === 'Affiliate Instructor';
-                else return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
+                else if (affiliate !== '') return result.AccountId === affiliate && result.RecordType.Name === 'Affiliate Instructor';
+                else return result;
             });
 
             if (facilitators.length) {
