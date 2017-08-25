@@ -74,7 +74,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-filter') filter = 'true', @Headers('x-force-refresh') refresh = 'false') {
+    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-is-mapped') filter = 'true', @Headers('x-force-refresh') refresh = 'false') {
         let isAfMan = session.user.role.name === 'Affiliate Manager';
         if (!isAfMan) filter = 'true';
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
