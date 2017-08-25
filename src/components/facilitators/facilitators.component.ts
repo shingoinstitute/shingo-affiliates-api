@@ -172,7 +172,7 @@ export class FacilitatorsService {
                     action: 'SELECT',
                     fields: ['Id', 'Name'],
                     table: 'Account',
-                    clauses: `Id IN (${accountIds.join()}`
+                    clauses: `Id IN (${accountIds.join()})`
                 }
                 const affiliates = _.keyBy((await this.sfService.query(query)).records || [], 'Id');
 
