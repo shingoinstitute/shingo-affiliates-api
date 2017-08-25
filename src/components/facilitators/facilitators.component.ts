@@ -161,7 +161,7 @@ export class FacilitatorsService {
                 const accountIds = [];
                 // Add the facilitator's auth id to the object
                 for (let facilitator of facilitators) {
-                    accountIds.push(`'${accountIds}'`);
+                    if (facilitator.AccountId) accountIds.push(`'${facilitator.AccountId}'`);
                     if (users[facilitator['Id']]) {
                         facilitator['id'] = users[facilitator['Id']].id;
                         facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
