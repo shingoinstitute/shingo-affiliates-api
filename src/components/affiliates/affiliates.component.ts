@@ -192,7 +192,6 @@ export class AffiliatesService {
      * @memberof AffiliatesService
      */
     public async create(affiliate: Affiliate): Promise<any> {
-        affiliate.RecordTypeId = '012A0000000zpraIAA'
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Account',
@@ -212,7 +211,7 @@ export class AffiliatesService {
      * @returns {Promise<any>} 
      * @memberof AffiliatesService
      */
-    public async map(id: string): Promise<any> {
+    public async map(id: Affiliate): Promise<any> {
         const cm = await this.authService.createRole({ name: `Course Manager -- ${id}`, service: 'affiliate-portal' });
         for (const level of [0, 1, 2]) {
             const workshopPerm = await this.authService.createPermission({ resource: `workshops -- ${id}`, level });
@@ -221,6 +220,10 @@ export class AffiliatesService {
             const affiliatePerm = await this.authService.createPermission({ resource: `affiliate -- ${id}`, level });
             await this.authService.grantPermissionToRole(affiliatePerm.resource, 1, cm.id);
         }
+
+        const affiliate = { RecordTypeId: '012A0000000zpraIAA', Id: id };
+
+        await this.sfService.update({ object: 'Account', records: [{ contents: JSON.stringify(affiliate) }] });
 
         return Promise.resolve();
     }
