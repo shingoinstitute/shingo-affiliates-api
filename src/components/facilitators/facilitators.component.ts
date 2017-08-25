@@ -182,7 +182,12 @@ export class FacilitatorsService {
                     facilitator['Account'] = affiliates[facilitator['AccountId']] || undefined;
                 }
 
-                if (filter) facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || !facilitator['services'].match(/.*affiliate-portal.*/gi); });
+                if (filter)
+                    facilitators = facilitators.filter(facilitator => {
+                        return facilitator['services'] && facilitator['services'].match(/.*affiliate-portal.*/gi);
+                    });
+                else
+                    facilitators = facilitators.filter(facilitator => facilitator['id'] === null);
             }
 
             this.cache.cache(data, facilitators);
