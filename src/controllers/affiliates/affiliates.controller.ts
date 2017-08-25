@@ -150,7 +150,7 @@ export class AffiliatesController extends BaseController {
      */
     @Post(':id/map')
     public async map( @Response() res, @Param('id') id, @Body() affiliate): Promise<Response> {
-        if (!id.match(/[\w\d]{15,18}/) || !affiliate.match(/[\w\d]{15,18}/)) return this.handleError(res, 'Error in AffiliatesController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,18}/) || !affiliate.Id.match(/[\w\d]{15,18}/) || id !== affiliate.Id) return this.handleError(res, 'Error in AffiliatesController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             await this.affService.map(affiliate);
