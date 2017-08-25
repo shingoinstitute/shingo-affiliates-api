@@ -156,12 +156,26 @@ export class FacilitatorsService {
                 const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
                 const users = _.keyBy(usersArr, 'extId');
 
+                const accountIds = [];
                 // Add the facilitator's auth id to the object
                 for (let facilitator of facilitators) {
+                    accountIds.push(`'${accountIds}'`);
                     if (users[facilitator['Id']]) {
                         facilitator['id'] = users[facilitator['Id']].id;
                         facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
                     }
+                }
+
+                const query: SFQueryObject = {
+                    action: 'SELECT',
+                    fields: ['Id', 'Name'],
+                    table: 'Account',
+                    clauses: `Id IN (${accountIds.join()}`
+                }
+                const affiliates = _.keyBy((await this.sfService.query(query)).records || [], 'Id');
+
+                for (let facilitator of facilitators) {
+                    facilitator['Account'] = affiliates[facilitator['AccountId']] || undefined;
                 }
 
                 if (filter) facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined; });
