@@ -11,7 +11,7 @@ const port = process.env.PORT || 3000
 const log = new LoggerService();
 
 // Set up CORS whitelist
-let whitelist = ['https://affiliates.shingo.org', 'http:/affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
+let whitelist = ['https://affiliates.shingo.org', 'http://affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
 if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'http://172.18.0.5']);
 
 // Set up ExpressJS Server
