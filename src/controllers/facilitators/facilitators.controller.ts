@@ -172,8 +172,8 @@ export class FacilitatorsController extends BaseController {
             await this.mailer.sendMail({
                 to: body.Email,
                 subject: 'New Shingo Affiliate Portal Account',
-                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYour temporary password is ${body.password}, please change it when you first log in.\n\nThank you,\n\nShingo Institute`,
-                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>Your temporary password is ${body.password}, please change it when you first log in.<br><br>Thank you,<br><br>Shingo Institute`
+                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYour temporary password is:\n\t${body.password}\nPlease change it when you first log in.\n\nThank you,\n\nShingo Institute`,
+                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>Your temporary password is:<br>&emsp;${body.password}<br>Please change it when you first log in.<br><br>Thank you,<br><br>Shingo Institute`
             });
 
             return res.status(HttpStatus.CREATED).json(result);
