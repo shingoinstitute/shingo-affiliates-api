@@ -20,8 +20,12 @@ const server = express();
 // Add CORS Headers
 server.use((req, res, next) => {
     res.header("Access-Control-Allow-Credentials", `true`);
-    if (whitelist.indexOf(req.headers.origin) > -1)
+    if (whitelist.indexOf(req.headers.origin) > -1) {
+        log.info('Setting \'Access-Control-Allow-Origin\' to %s', req.headers.origin);
         res.header("Access-Control-Allow-Origin", `${req.headers.origin}`);
+    } else {
+        log.warn(`${req.headers.origin} was not in the whitelist: %j`, whitelist);
+    }
     next();
 });
 
