@@ -17,20 +17,33 @@ if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http:/
 // Set up ExpressJS Server
 const server = express();
 
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) > -1) {
+            log.info('Setting \'Access-Control-Allow-Origin\' to %s', origin);
+            callback(null, true);
+        } else {
+            log.warn(`${origin} was not in the whitelist: %j`, whitelist);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}
+
 // Add CORS Headers
-server.use((req, res, next) => {
-    res.header("Access-Control-Allow-Credentials", `true`);
-    if (whitelist.indexOf(req.headers.origin) > -1) {
-        log.info('Setting \'Access-Control-Allow-Origin\' to %s', req.headers.origin);
-        res.header("Access-Control-Allow-Origin", `${req.headers.origin}`);
-    } else {
-        log.warn(`${req.headers.origin} was not in the whitelist: %j`, whitelist);
-    }
-    next();
-});
+// server.use((req, res, next) => {
+//     res.header("Access-Control-Allow-Credentials", `true`);
+//     if (whitelist.indexOf(req.headers.origin) > -1) {
+//         log.info('Setting \'Access-Control-Allow-Origin\' to %s', req.headers.origin);
+//         res.header("Access-Control-Allow-Origin", `${req.headers.origin}`);
+//     } else {
+//         log.warn(`${req.headers.origin} was not in the whitelist: %j`, whitelist);
+//     }
+//     next();
+// });
 
 // Set up CORS using specified options
-server.use(cors());
+server.use(cors(corsOptions));
 
 // Set up bodyParser to handle json and urlencoded bodies
 server.use(bodyParser.json());
