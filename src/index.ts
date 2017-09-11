@@ -11,7 +11,8 @@ const port = process.env.PORT || 3000
 const log = new LoggerService();
 
 // Set up CORS whitelist
-let whitelist = '*';
+let whitelist = ['https://affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
+if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'http://172.18.0.5']);
 
 // Set up ExpressJS Server
 const server = express();
@@ -19,7 +20,8 @@ const server = express();
 // Add CORS Headers
 server.use((req, res, next) => {
     res.header("Access-Control-Allow-Credentials", `true`);
-    res.header("Access-Control-Allow-Origin", `${whitelist}`);
+    if (whitelist.indexOf(req.headers.origin) > -1)
+        res.header("Access-Control-Allow-Origin", `${req.headers.origin}`);
     next();
 });
 
