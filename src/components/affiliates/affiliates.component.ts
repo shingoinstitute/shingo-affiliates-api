@@ -147,7 +147,7 @@ export class AffiliatesService {
         // If no cached result, use the shingo-sf-api to get result
         if (!this.cache.isCached(data) || refresh) {
             let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[] || [];
-            affiliates = affiliates.filter(aff => { return aff.RecordType.Name === 'Licensed Affiliate'; });
+            affiliates = affiliates.filter(aff => { return aff.RecordType && aff.RecordType.Name === 'Licensed Affiliate'; });
 
             // Cache results
             this.cache.cache(data, affiliates);
