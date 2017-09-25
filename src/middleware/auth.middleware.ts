@@ -32,17 +32,14 @@ export class AuthMiddleware implements NestMiddleware {
             let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
 
             if (isAfMan) return next();
-            this.log.warn('auth.middleware session: %j', req.session);
 
             if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
             else if (!resource) resource = `${req.path}`;
 
             if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
 
-            this.log.warn(`canAccess(${resource}, ${level}, <token>`);
             return this.authService.canAccess(resource, level, req.headers['x-jwt'])
                 .then(result => {
-                    this.log.warn('canAccess result: %j', result)
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                     else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
                     else resource = '';

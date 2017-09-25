@@ -27,7 +27,6 @@ export class MailerService {
             },
             debug: true
         }
-        this.log.debug('creating mailer with transport: %j', transport);
         this.transporter = createTransport(transport)
     }
 
