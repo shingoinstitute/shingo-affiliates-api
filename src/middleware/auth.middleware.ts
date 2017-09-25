@@ -44,6 +44,7 @@ export class AuthMiddleware implements NestMiddleware {
                 .then(result => {
                     this.log.warn('canAccess result: %j', result)
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
+                    else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
                     else resource = '';
                     if (result && result.response) return next();
                     throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.email : 'anonymous'}` };
