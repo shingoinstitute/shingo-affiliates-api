@@ -300,6 +300,8 @@ export class FacilitatorsService {
             auth = await this.mapCurrentAuth(user.Email, roleId, id);
         }
 
+        await this.authService.addRoleToUser({ userEmail: user.Email, roleId });
+
         await this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, auth.id);
         await this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, auth.id);
 
@@ -319,7 +321,6 @@ export class FacilitatorsService {
      */
     public async createNewAuth(email: string, password: string, roleId: number, extId: string): Promise<any> {
         const user = await this.authService.createUser({ email, password, services: 'affiliate-portal', extId });
-        await this.authService.addRoleToUser({ userEmail: email, roleId });
         return Promise.resolve({ jwt: user.jwt, id: user.id });
     }
 
@@ -340,7 +341,6 @@ export class FacilitatorsService {
         user.extId = extId;
         user.services = (user.services === '' ? 'affiliate-portal' : user.services + ', affiliate-portal');
         await this.authService.updateUser(user);
-        await this.authService.addRoleToUser({ userEmail, roleId });
 
         return Promise.resolve({ jwt: user.jwt, id: user.id });
     }

@@ -1,10 +1,10 @@
 import { Module, MiddlewaresConsumer, RequestMethod, OnModuleInit } from '@nestjs/common';
-import { WorkshopsController, AuthController, FacilitatorsController, AffiliatesController } from './controllers';
+import { WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController } from './controllers';
 import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddleware } from './middleware'
 import {
     SalesforceService, CacheService, AuthService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService, LoggerService, MailerService
+    UserService, LoggerService, MailerService, SupportService
 } from './components';
 import { MulterFactory } from './factories';
 
@@ -15,7 +15,7 @@ import { MulterFactory } from './factories';
  * @class ApplicationModule
  */
 @Module({
-    controllers: [WorkshopsController, AuthController, FacilitatorsController, AffiliatesController],
+    controllers: [WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController],
     components: [
         AuthMiddleware,
         LoggerService,
@@ -27,7 +27,8 @@ import { MulterFactory } from './factories';
         FacilitatorsService,
         AffiliatesService,
         MailerService,
-        MulterFactory
+        MulterFactory,
+        SupportService
     ]
 })
 export class ApplicationModule {
