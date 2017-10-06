@@ -24,7 +24,7 @@ export class SupportController extends BaseController {
         super(logger);
     };
 
-    @Get('')
+    @Get()
     public async readAll( @Response() res, @Session() session, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
         let role = 'Anonymous';
         if (session.user && session.user.role)
@@ -35,6 +35,20 @@ export class SupportController extends BaseController {
             return res.status(HttpStatus.OK).json(pages);
         } catch (error) {
             return this.handleError(res, 'Error in SupportController.readAll(): ', error);
+        }
+    }
+
+    @Get('/:id')
+    public async read( @Response() res, @Session() session, @Param('id') id, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+        let role = 'Anonymous';
+        if (session.user && session.user.role)
+            role = session.user.role.name + "s";
+
+        try {
+            const page = await this.supportService.get(id, role, refresh === 'true');
+            return res.status(HttpStatus.OK).json(page);
+        } catch (error) {
+            return this.handleError(res, 'Error in SupportController.read(): ', error);
         }
     }
 

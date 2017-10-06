@@ -43,4 +43,21 @@ export class SupportService {
 
         return Promise.resolve(pages);
     }
+
+    public async get(id: string, role: string, refresh: boolean = false): Promise<any> {
+        let request = {
+            object: 'Support_Page__c',
+            ids: [id]
+        }
+
+        let page;
+        if (!this.cache.isCached(request) || refresh) {
+            page = (await this.sfService.retrieve(request))[0] as any;
+            this.cache.cache(request, page);
+        } else {
+            page = this.cache.getCache(request);
+        }
+
+        return Promise.resolve(page);
+    }
 }
