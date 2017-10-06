@@ -53,21 +53,6 @@ export class SupportController extends BaseController {
         }
     }
 
-    @Get('/:id')
-    public async read( @Response() res, @Session() session, @Param('id') id, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let role = 'Anonymous';
-        if (session.user && session.user.role)
-            role = session.user.role.name + "s";
-
-        try {
-            const page = await this.supportService.get(id, refresh === 'true');
-            if (!page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
-            return res.status(HttpStatus.OK).json(page);
-        } catch (error) {
-            return this.handleError(res, 'Error in SupportController.read(): ', error);
-        }
-    }
-
     @Get('/search')
     public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
 
@@ -85,6 +70,21 @@ export class SupportController extends BaseController {
             return this.handleError(res, 'Error in SupportController.search(): ', error);
         }
 
+    }
+
+    @Get('/:id')
+    public async read( @Response() res, @Session() session, @Param('id') id, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+        let role = 'Anonymous';
+        if (session.user && session.user.role)
+            role = session.user.role.name + "s";
+
+        try {
+            const page = await this.supportService.get(id, refresh === 'true');
+            if (!page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
+            return res.status(HttpStatus.OK).json(page);
+        } catch (error) {
+            return this.handleError(res, 'Error in SupportController.read(): ', error);
+        }
     }
 
 }
