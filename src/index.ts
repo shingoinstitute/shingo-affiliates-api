@@ -6,6 +6,9 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as session from 'express-session';
 import * as cors from 'cors';
+import * as connectRedis from 'connect-redis';
+
+const RedisStore = connectRedis(session);
 
 const port = process.env.PORT || 3000
 const log = new LoggerService();
@@ -30,18 +33,6 @@ const corsOptions = {
     credentials: true
 }
 
-// Add CORS Headers
-// server.use((req, res, next) => {
-//     res.header("Access-Control-Allow-Credentials", `true`);
-//     if (whitelist.indexOf(req.headers.origin) > -1) {
-//         log.info('Setting \'Access-Control-Allow-Origin\' to %s', req.headers.origin);
-//         res.header("Access-Control-Allow-Origin", `${req.headers.origin}`);
-//     } else {
-//         log.warn(`${req.headers.origin} was not in the whitelist: %j`, whitelist);
-//     }
-//     next();
-// });
-
 // Set up CORS using specified options
 server.use(cors(corsOptions));
 
@@ -51,12 +42,20 @@ server.use(bodyParser.urlencoded({ extended: false }));
 
 // Set up express-session
 // TODO: Setup redis store
-server.use(session({
+let options: any = {
     secret: process.env.SESSION_SECRET || 'ilikedogz',
     resave: true,
     saveUninitialized: true,
     proxy: true
-}))
+}
+
+if (process.env.SHINGO_REDIS)
+    options.store = new RedisStore({
+        host: process.env.SHINGO_REDIS,
+        port: 6379
+    });
+
+server.use(session(options));
 
 // Initialize the NestJS application and start the server
 InitService.init()
