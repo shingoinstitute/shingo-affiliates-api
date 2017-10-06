@@ -59,6 +59,8 @@ export class SupportController extends BaseController {
         // Check for required fields
         if (!search || !retrieve) return this.handleError(res, 'Error in SupportController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
 
+        if (!retrieve.includes("Restricted_To__c")) retrieve += ",Restricted_To__c";
+
         let role = 'Anonymous';
         if (session.user && session.user.role)
             role = session.user.role.name + "s";
