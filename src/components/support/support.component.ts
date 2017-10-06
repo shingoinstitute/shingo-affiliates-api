@@ -44,7 +44,7 @@ export class SupportService {
         return Promise.resolve(pages);
     }
 
-    public async get(id: string, role: string, refresh: boolean = false): Promise<any> {
+    public async get(id: string, refresh: boolean = false): Promise<any> {
         let request = {
             object: 'Support_Page__c',
             ids: [id]

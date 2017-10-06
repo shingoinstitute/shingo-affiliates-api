@@ -60,7 +60,8 @@ export class SupportController extends BaseController {
             role = session.user.role.name + "s";
 
         try {
-            const page = await this.supportService.get(id, role, refresh === 'true');
+            const page = await this.supportService.get(id, refresh === 'true');
+            if (!page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
             return res.status(HttpStatus.OK).json(page);
         } catch (error) {
             return this.handleError(res, 'Error in SupportController.read(): ', error);
