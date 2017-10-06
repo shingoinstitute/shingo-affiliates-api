@@ -60,4 +60,30 @@ export class SupportService {
 
         return Promise.resolve(page);
     }
+
+    public async search(search: string, retrieve: string, role: string, refresh: boolean = false): Promise<any[]> {
+        // Generate the data parameter for the RPC call
+        const data = {
+            search: `{${search}}`,
+            retrieve: `Support_Page__c(${retrieve})`
+        }
+
+        // If no cached result, use the shingo-sf-api to get result
+        let pages;
+        if (!this.cache.isCached(data) || refresh) {
+            pages = (await this.sfService.search(data)).searchRecords as any[] || [];
+
+            // Cache results
+            this.cache.cache(data, pages);
+
+        }
+        // else return the cached result
+        else {
+            pages = this.cache.getCache(data);
+        }
+
+        pages = pages.filter(page => page.Restricted_To__c.includes(role));
+
+        return Promise.resolve(pages);
+    }
 }

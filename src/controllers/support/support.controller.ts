@@ -68,4 +68,23 @@ export class SupportController extends BaseController {
         }
     }
 
+    @Get('/search')
+    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+
+        // Check for required fields
+        if (!search || !retrieve) return this.handleError(res, 'Error in SupportController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
+
+        let role = 'Anonymous';
+        if (session.user && session.user.role)
+            role = session.user.role.name + "s";
+
+        try {
+            const pages = await this.supportService.search(search, retrieve, role, refresh === 'true');
+            return res.status(HttpStatus.OK).json(pages);
+        } catch (error) {
+            return this.handleError(res, 'Error in SupportController.search(): ', error);
+        }
+
+    }
+
 }
