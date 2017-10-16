@@ -125,7 +125,7 @@ export class FacilitatorsController extends BaseController {
 
             this.log.warn('Message sent: %j', { messageId: result.messageId, email, response: result.response });
 
-            return res.status(HttpStatus.OK).json();
+            return res.status(HttpStatus.OK).json({ success: true });
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.resetPassword(): ', error);
         }
