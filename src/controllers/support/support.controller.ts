@@ -53,6 +53,23 @@ export class SupportController extends BaseController {
         }
     }
 
+    /**
+     * @desc <h5>GET: /support/describe</h5> Calls {@link SupportService#describe} to describe Support_Page__c
+     * 
+     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
+     * @returns {Promise<Response>} Response body is a JSON object with the describe result
+     * @memberof FacilitatorsController
+     */
+    @Get('/describe')
+    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+        try {
+            const describeObject = await this.supportService.describe(refresh === 'true');
+            return res.status(HttpStatus.OK).json(describeObject);
+        } catch (error) {
+            return this.handleError(res, 'Error in FacilitatorsController.describe(): ', error);
+        }
+    }
+
     @Get('/search')
     public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
 

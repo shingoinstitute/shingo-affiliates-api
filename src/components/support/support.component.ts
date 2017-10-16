@@ -61,6 +61,27 @@ export class SupportService {
         return Promise.resolve(page);
     }
 
+    /**
+     * @desc Uses the Salesforce REST API to describe the Support_Page__c object. See the Salesforce documentation for more about 'describe'
+     * 
+     * @param {boolean} [refresh=false] - Force the refresh of the cache
+     * @returns {Promise<any>} 
+     * @memberof SupportService
+     */
+    public async describe(refresh: boolean = false): Promise<any> {
+        const key = 'describeSupportPage';
+
+        if (!this.cache.isCached(key) || refresh) {
+            const describeObject = await this.sfService.describe('Support_Page__c');
+
+            this.cache.cache(key, describeObject);
+
+            return Promise.resolve(describeObject);
+        } else {
+            return Promise.resolve(this.cache.getCache(key));
+        }
+    }
+
     public async search(search: string, retrieve: string, role: string, refresh: boolean = false): Promise<any[]> {
         // Generate the data parameter for the RPC call
         const data = {
