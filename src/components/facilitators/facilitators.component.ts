@@ -15,6 +15,8 @@ import * as jwt from 'jwt-simple';
 @Component()
 export class FacilitatorsService {
 
+    private getAllKey = 'FacilitatorsService.getAll';
+
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
         @Inject('CacheService') private cache: CacheService = new CacheService(),
@@ -42,28 +44,29 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async getAll(refresh: boolean = false, affiliate?: string): Promise<any[]> {
-        let query = {
-            action: "SELECT",
-            fields: [
-                "Id",
-                "FirstName",
-                "LastName",
-                "Email",
-                "Title",
-                "Account.Id",
-                "Account.Name",
-                "Facilitator_For__r.Id",
-                "Facilitator_For__r.Name",
-                "Photograph__c",
-                "Biography__c"
-            ],
-            table: "Contact",
-            clauses: `RecordType.Name='Affiliate Instructor'`
-        }
 
-        if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
+        if (!this.cache.isCached(this.getAllKey)) {
+            let query = {
+                action: "SELECT",
+                fields: [
+                    "Id",
+                    "FirstName",
+                    "LastName",
+                    "Email",
+                    "Title",
+                    "Account.Id",
+                    "Account.Name",
+                    "Facilitator_For__r.Id",
+                    "Facilitator_For__r.Name",
+                    "Photograph__c",
+                    "Biography__c"
+                ],
+                table: "Contact",
+                clauses: `RecordType.Name='Affiliate Instructor'`
+            }
 
-        if (!this.cache.isCached(query) || refresh) {
+            if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
+
             let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any;
             const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
             const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
@@ -80,11 +83,12 @@ export class FacilitatorsService {
             }
             facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator.services && !facilitator.services.includes('affiliate-portal'); });
 
-            this.cache.cache(query, facilitators);
+            this.cache.cache(this.getAllKey, facilitators);
             return Promise.resolve(facilitators);
         } else {
-            return Promise.resolve(this.cache.getCache(query));
+            return Promise.resolve(this.cache.getCache(this.getAllKey));
         }
+
 
     }
 
@@ -213,22 +217,31 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async get(id: string): Promise<any> {
-        // Create the data parameter for the RPC call
-        const data = {
-            object: 'Contact',
-            ids: [id]
-        }
+        if (this.cache.isCached(id)) {
+            // Create the data parameter for the RPC call
+            const data = {
+                object: 'Contact',
+                ids: [id]
+            }
 
-        let facilitator = (await this.sfService.retrieve(data))[0];
-        facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
-        const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
-        if (!user.services || !user.services.includes('affiliate-portal')) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
-        if (user.id !== 0) {
-            facilitator['id'] = user.id;
-            facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
-            facilitator['lastLogin'] = user.lastLogin;
+            let facilitator = (await this.sfService.retrieve(data))[0];
+            facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
+            const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
+            if (!user.services || !user.services.includes('affiliate-portal')) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
+            if (user.id !== 0) {
+                facilitator['id'] = user.id;
+                facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
+                facilitator['lastLogin'] = user.lastLogin;
+            }
+
+            facilitator = _.merge(facilitator, _.omit(user, ['email', 'password']));
+
+            this.cache.cache(id, facilitator);
+
+            return Promise.resolve(facilitator);
+        } else {
+            return Promise.resolve(this.cache.getCache(id));
         }
-        return Promise.resolve(_.merge(facilitator, _.omit(user, ['email', 'password'])));
     }
 
     /**
@@ -252,6 +265,8 @@ export class FacilitatorsService {
             records: [{ contents: JSON.stringify(contact) }]
         }
         const record = (await this.sfService.create(data))[0];
+
+        this.cache.invalidate(this.getAllKey);
 
         return this.createOrMapAuth(record.id, user);
     }
@@ -279,6 +294,8 @@ export class FacilitatorsService {
             records: [{ contents: JSON.stringify(_.merge(_.omit(record, ['Name']), user)) }]
         }
         const successObject = (await this.sfService.update(updateData))[0];
+
+        this.cache.invalidate(this.getAllKey);
 
         return this.createOrMapAuth(id, user);
     }
@@ -311,6 +328,7 @@ export class FacilitatorsService {
         await this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, auth.id);
         await this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, auth.id);
 
+        this.cache.invalidate(this.getAllKey);
 
         return Promise.resolve({ id: id, ...auth });
     }
@@ -327,6 +345,9 @@ export class FacilitatorsService {
      */
     public async createNewAuth(email: string, password: string, roleId: number, extId: string): Promise<any> {
         const user = await this.authService.createUser({ email, password, services: 'affiliate-portal', extId });
+
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve({ jwt: user.jwt, id: user.id });
     }
 
@@ -347,6 +368,8 @@ export class FacilitatorsService {
         user.extId = extId;
         user.services = (user.services === '' ? 'affiliate-portal' : user.services + ', affiliate-portal');
         await this.authService.updateUser(user);
+
+        this.cache.invalidate(this.getAllKey);
 
         return Promise.resolve({ jwt: user.jwt, id: user.id });
     }
@@ -385,6 +408,9 @@ export class FacilitatorsService {
             return Promise.resolve({ salesforce: true, auth: await this.updateAuth(user, record.id), record });
         }
 
+        this.cache.invalidate(user.Id);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve({ salesforce: true, auth: false, record });
     }
 
@@ -402,6 +428,10 @@ export class FacilitatorsService {
         if (user.password) set['password'] = user.password;
 
         const updated = await this.authService.updateUser(set as User);
+
+        this.cache.invalidate(extId);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve((updated && updated.response));
     }
 
@@ -425,6 +455,10 @@ export class FacilitatorsService {
             ids: [id]
         }
         const record = (await this.sfService.delete(data))[0];
+
+        this.cache.invalidate(id);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve(record);
     }
 
@@ -437,6 +471,10 @@ export class FacilitatorsService {
      */
     public async deleteAuth(extId: string): Promise<boolean> {
         const deleted = await this.authService.deleteUser({ extId });
+
+        this.cache.invalidate(extId);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve(deleted && deleted.response);
     }
 
@@ -457,6 +495,10 @@ export class FacilitatorsService {
         else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', '');
 
         const updated = await this.authService.updateUser(user);
+
+        this.cache.invalidate(extId);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve(updated && updated.response);
     }
 
@@ -480,6 +522,10 @@ export class FacilitatorsService {
             await this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id });
         }
         const added = await this.authService.addRoleToUser(set);
+
+        this.cache.invalidate(extId);
+        this.cache.invalidate(this.getAllKey);
+
         return Promise.resolve(added && added.response);
     }
 
