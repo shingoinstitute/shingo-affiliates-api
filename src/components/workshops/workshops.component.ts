@@ -52,6 +52,7 @@ export class WorkshopsService {
      * @memberof WorkshopsService
      */
     public async getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
+        let key = 'getAll';
         const query: SFQueryObject = {
             action: 'SELECT',
             fields: [
@@ -80,19 +81,21 @@ export class WorkshopsService {
             if (ids.length === 0) return Promise.resolve([]);
             query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
             query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
+        } else {
+            key += '_public';
         }
 
-        if (!this.cache.isCached(query) || refresh) {
+        if (!this.cache.isCached(key) || refresh) {
             let workshops: Workshop[] = (await this.sfService.query(query)).records as Workshop[];
             for (const workshop of workshops) {
                 if (workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
             }
 
-            if (isPublic) this.cache.cache(query, workshops);
+            this.cache.cache(key, workshops);
 
             return Promise.resolve(workshops);
         } else {
-            return Promise.resolve(this.cache.getCache(query));
+            return Promise.resolve(this.cache.getCache(key));
         }
     }
 
@@ -130,17 +133,22 @@ export class WorkshopsService {
      */
     public async get(id: string): Promise<Workshop> {
         // Create the data parameter for the RPC call
-        let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
-        workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
 
-        if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
-        if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
+        if (!this.cache.isCached(id)) {
+            let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
+            workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
 
-        workshop.files = await this.getFiles(workshop.Id) || [];
+            if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+            if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
 
-        this.log.warn('returning workshop.files: ', workshop.files);
+            workshop.files = await this.getFiles(workshop.Id) || [];
 
-        return Promise.resolve(workshop);
+            this.cache.cache(id, workshop);
+
+            return Promise.resolve(workshop);
+        } else {
+            return Promise.resolve(this.cache.getCache(id));
+        }
     }
 
     private async getFiles(id: string): Promise<any[]> {
@@ -248,31 +256,37 @@ export class WorkshopsService {
      * @memberof WorkshopsService
      */
     public async facilitators(id: string): Promise<object[]> {
-        let query: SFQueryObject = {
-            action: "SELECT",
-            fields: [
-                "Id",
-                "Instructor__r.Id",
-                "Instructor__r.FirstName",
-                "Instructor__r.LastName",
-                "Instructor__r.Name",
-                "Instructor__r.AccountId",
-                "Instructor__r.Email",
-                "Instructor__r.Title"
-            ],
-            table: "WorkshopFacilitatorAssociation__c",
-            clauses: `Workshop__c='${id}'`
-        }
+        if (!this.cache.isCached(id + '_facilitators')) {
+            let query: SFQueryObject = {
+                action: "SELECT",
+                fields: [
+                    "Id",
+                    "Instructor__r.Id",
+                    "Instructor__r.FirstName",
+                    "Instructor__r.LastName",
+                    "Instructor__r.Name",
+                    "Instructor__r.AccountId",
+                    "Instructor__r.Email",
+                    "Instructor__r.Title"
+                ],
+                table: "WorkshopFacilitatorAssociation__c",
+                clauses: `Workshop__c='${id}'`
+            }
 
-        const facilitators: any[] = (await this.sfService.query(query)).records || [];
-        const ids = facilitators.map(fac => `'${fac.Id}'`)
-        const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
-        for (let fac of facilitators) {
-            let auth = auths.filter(auth => auth.extId === fac.Id)[0];
-            if (auth) fac.id = auth.id;
+            const facilitators: any[] = (await this.sfService.query(query)).records || [];
+            const ids = facilitators.map(fac => `'${fac.Id}'`)
+            const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            for (let fac of facilitators) {
+                let auth = auths.filter(auth => auth.extId === fac.Id)[0];
+                if (auth) fac.id = auth.id;
+            }
+
+            this.cache.cache(id + '_facilitators', facilitators);
+
+            return Promise.resolve(facilitators);
+        } else {
+            return Promise.resolve(this.cache.getCache(id + '_facilitators'));
         }
-        this.log.debug('Got facilitators => %j', facilitators);
-        return Promise.resolve(facilitators);
     }
 
     /**
@@ -299,6 +313,8 @@ export class WorkshopsService {
 
         await this.grantPermissions(workshop);
 
+        this.cache.invalidate('getAll');
+
         return Promise.resolve(result);
     }
 
@@ -320,22 +336,19 @@ export class WorkshopsService {
             object: 'Workshop__c',
             records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }]
         }
-
-        this.log.debug('updating sf with: %j', data);
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
         const currFacilitators = await this.facilitators(workshop.Id);
         const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Instructor__r.Id === other.Id });
         workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Instructor__r.Id });
 
-        this.log.debug('removeFacilitators: %j', removeFacilitators);
-        this.log.debug('addFacilitators: %j', workshop.facilitators);
-
         await this.grantPermissions(workshop);
-        this.log.debug('granted new permissions');
         await this.removePermissions(workshop, removeFacilitators);
 
-        this.log.debug('returning result: %j', result)
+        this.cache.invalidate(workshop.Id);
+        this.cache.invalidate(`${workshop.Id}_facilitators`);
+        this.cache.invalidate('getAll');
+
         return Promise.resolve(result);
     }
 
@@ -363,6 +376,8 @@ export class WorkshopsService {
         }
 
         const result: SFSuccessObject[] = await this.sfService.create(data);
+
+        this.cache.invalidate(id);
         return Promise.resolve(result);
     }
 
@@ -388,6 +403,11 @@ export class WorkshopsService {
         for (const level of [0, 1, 2])
             await this.authService.deletePermission(`/workshops/${id}`, level as 0 | 1 | 2);
 
+        this.cache.invalidate(id);
+        this.cache.invalidate(`${id}_facilitators`);
+        this.cache.invalidate('getAll');
+        this.cache.invalidate('getAll_public');
+
         return Promise.resolve(result);
     }
 
@@ -403,6 +423,11 @@ export class WorkshopsService {
             records: [{ contents: JSON.stringify({ Title: 'Reasons for Cancelling', Body: reason, ParentId: id }) }]
         }
         const note: SFSuccessObject = (await this.sfService.create(noteData))[0];
+
+        this.cache.invalidate(id);
+        this.cache.invalidate('getAll');
+        this.cache.invalidate('getAll_public');
+
         return Promise.resolve(note);
     }
 

@@ -64,6 +64,14 @@ export class CacheService {
         return this.theCache.get(key) !== undefined;
     }
 
+    public invalidate(obj: object | string): void {
+        let key = obj;
+        if (typeof obj !== 'string') key = this.getKey(obj);
+
+        const count = this.theCache.del(key);
+        if (count < 1) this.log.error('Did not invalidate cache for key: %j', key);
+    }
+
     /**
      * @desc Caches the value based on the resulting key. Logs error if not successfully.
      * 
