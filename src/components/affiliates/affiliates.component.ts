@@ -37,6 +37,7 @@ export class AffiliatesService {
      * @memberof AffiliatesService
      */
     public async getAll(isPublic: boolean = false, refresh: boolean = false): Promise<Affiliate[]> {
+        let key = 'AffiliatesService.getAll';
         const query: SFQueryObject = {
             action: "SELECT",
             fields: [
@@ -52,24 +53,29 @@ export class AffiliatesService {
             clauses: "RecordType.Name='Licensed Affiliate'"
         }
 
-        if (!isPublic) query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
-
-        if (!this.cache.isCached(query) || refresh) {
-            let affiliates = (await this.sfService.query(query)).records as Affiliate[];
-
-            if (isPublic) {
-                this.cache.cache(query, affiliates);
-                return Promise.resolve(affiliates);
-            }
-
-            const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
-
-            affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
-
-            return Promise.resolve(affiliates);
-        } else {
-            return Promise.resolve(this.cache.getCache(query));
+        if (isPublic) {
+            key += '_public';
+            query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
         }
+
+        let affiliates = [];
+        if (!this.cache.isCached(key) || refresh) {
+            affiliates = (await this.sfService.query(query)).records as Affiliate[];
+
+            this.cache.cache(key, affiliates);
+        } else {
+            affiliates = this.cache.getCache(key);
+        }
+
+        if (isPublic) {
+            return Promise.resolve(affiliates);
+        }
+
+        const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
+
+        affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
+
+        return Promise.resolve(affiliates);
     }
 
     /**
@@ -83,8 +89,12 @@ export class AffiliatesService {
      * @memberof AffiliatesService
      */
     public async get(id: string): Promise<Affiliate> {
-        const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
-        return Promise.resolve(affiliate);
+        if (!this.cache.isCached(id)) {
+            const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
+            return Promise.resolve(affiliate);
+        } else {
+            return Promise.resolve(this.cache.getCache(id));
+        }
     }
 
     /**
@@ -201,6 +211,8 @@ export class AffiliatesService {
         const result: SFSuccessObject = (await this.sfService.create(data))[0];
         await this.map({ Id: result.id } as Affiliate);
 
+        this.cache.invalidate('AffiliatesService.getAll');
+
         return Promise.resolve(result);
     }
 
@@ -225,6 +237,8 @@ export class AffiliatesService {
 
         await this.sfService.update({ object: 'Account', records: [{ contents: JSON.stringify(affiliate) }] });
 
+        this.cache.invalidate('AffiliatesService.getAll');
+
         return Promise.resolve();
     }
 
@@ -248,6 +262,10 @@ export class AffiliatesService {
         }
 
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
+
+        this.cache.invalidate(affiliate.Id);
+        this.cache.invalidate('AffiliatesService.getAll');
+
         return Promise.resolve(result);
     }
 
@@ -274,6 +292,11 @@ export class AffiliatesService {
         await this.deleteFacilitators(result.Id);
 
         const update: SFSuccessObject = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
+
+
+        this.cache.invalidate(id);
+        this.cache.invalidate('AffiliatesService.getAll');
+        this.cache.invalidate('AffiliatesService.getAll_public');
 
         return Promise.resolve(update);
     }

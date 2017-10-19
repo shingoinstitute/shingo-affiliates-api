@@ -237,10 +237,8 @@ export class FacilitatorsService {
             _.merge(facilitator, _.omit(user, ['email', 'password']));
 
             this.cache.cache(id, facilitator);
-            this.log.warn('sending back facilitator', facilitator);
             return Promise.resolve(facilitator);
         } else {
-            this.log.warn('sending back cached facilitator', this.cache.getCache(id));
             return Promise.resolve(this.cache.getCache(id));
         }
     }
