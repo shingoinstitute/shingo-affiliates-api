@@ -217,7 +217,7 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async get(id: string): Promise<any> {
-        if (this.cache.isCached(id)) {
+        if (!this.cache.isCached(id)) {
             // Create the data parameter for the RPC call
             const data = {
                 object: 'Contact',
