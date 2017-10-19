@@ -394,13 +394,13 @@ export class WorkshopsService {
     public async cancel(id: string, reason: string): Promise<any> {
         const updateData = {
             object: 'Workshop__c',
-            records: [{ contents: `{Id: ${id}, Status__c: 'Cancelled'}` }]
+            records: [{ contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) }]
         }
         const update: SFSuccessObject = (await this.sfService.update(updateData))[0];
 
         const noteData = {
             object: 'Note',
-            records: [{ contents: `{Title: 'Reasons for Cancelling', Body: ${reason}, ParentId: ${id}}` }]
+            records: [{ contents: JSON.stringify({ Title: 'Reasons for Cancelling', Body: reason, ParentId: id }) }]
         }
         const note: SFSuccessObject = (await this.sfService.create(noteData))[0];
         return Promise.resolve(note);
