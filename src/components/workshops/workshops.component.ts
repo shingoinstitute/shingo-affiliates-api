@@ -51,8 +51,8 @@ export class WorkshopsService {
      * @returns {Promise<Workshop[]>} 
      * @memberof WorkshopsService
      */
-    public async getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
-        let key = 'getAll';
+    public async WorkshopsService.getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
+        let key = 'WorkshopsService.getAll';
         const query: SFQueryObject = {
             action: 'SELECT',
             fields: [
@@ -313,7 +313,7 @@ export class WorkshopsService {
 
         await this.grantPermissions(workshop);
 
-        this.cache.invalidate('getAll');
+        this.cache.invalidate('WorkshopsService.getAll');
 
         return Promise.resolve(result);
     }
@@ -347,7 +347,7 @@ export class WorkshopsService {
 
         this.cache.invalidate(workshop.Id);
         this.cache.invalidate(`${workshop.Id}_facilitators`);
-        this.cache.invalidate('getAll');
+        this.cache.invalidate('WorkshopsService.getAll');
 
         return Promise.resolve(result);
     }
@@ -405,8 +405,8 @@ export class WorkshopsService {
 
         this.cache.invalidate(id);
         this.cache.invalidate(`${id}_facilitators`);
-        this.cache.invalidate('getAll');
-        this.cache.invalidate('getAll_public');
+        this.cache.invalidate('WorkshopsService.getAll');
+        this.cache.invalidate('WorkshopsService.getAll_public');
 
         return Promise.resolve(result);
     }
@@ -425,8 +425,8 @@ export class WorkshopsService {
         const note: SFSuccessObject = (await this.sfService.create(noteData))[0];
 
         this.cache.invalidate(id);
-        this.cache.invalidate('getAll');
-        this.cache.invalidate('getAll_public');
+        this.cache.invalidate('WorkshopsService.getAll');
+        this.cache.invalidate('WorkshopsService.getAll_public');
 
         return Promise.resolve(note);
     }
