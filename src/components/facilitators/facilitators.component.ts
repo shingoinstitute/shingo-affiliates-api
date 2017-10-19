@@ -234,7 +234,7 @@ export class FacilitatorsService {
                 facilitator['lastLogin'] = user.lastLogin;
             }
 
-            facilitator = _.merge(facilitator, _.omit(user, ['email', 'password']));
+            _.merge(facilitator, _.omit(user, ['email', 'password']));
 
             this.cache.cache(id, facilitator);
 
