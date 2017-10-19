@@ -74,6 +74,7 @@ export class FacilitatorsService {
                 if (users[facilitator['Id']]) {
                     facilitator['id'] = users[facilitator['Id']].id;
                     facilitator['role'] = users[facilitator['Id']].roles.filter(role => role.service === 'affiliate-portal')[0];
+                    facilitator['lastLogin'] = users[facilitator['Id']].lastLogin;
                     facilitator.services = users[facilitator['Id']].services;
                 }
             }
@@ -225,6 +226,7 @@ export class FacilitatorsService {
         if (user.id !== 0) {
             facilitator['id'] = user.id;
             facilitator['role'] = user.roles.filter(role => role.service === 'affiliate-portal')[0];
+            facilitator['lastLogin'] = user.lastLogin;
         }
         return Promise.resolve(_.merge(facilitator, _.omit(user, ['email', 'password'])));
     }
