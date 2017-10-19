@@ -291,7 +291,7 @@ export class WorkshopsController extends BaseController {
         }
     }
 
-    @Post('/:id/cancel')
+    @Put('/:id/cancel')
     public async cancel( @Response() res, @Param('id') id, @Body() body): Promise<Response> {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.cancel(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 

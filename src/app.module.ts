@@ -87,7 +87,9 @@ export class ApplicationModule {
         // Protect all routes that require write permissions for a workshop
         consumer.apply(AuthMiddleware)
             .with(2)
-            .forRoutes({ path: '/workshops/a*', method: RequestMethod.PUT },
+            .forRoutes(
+            { path: '/workshops/a*', method: RequestMethod.POST },
+            { path: '/workshops/a*', method: RequestMethod.PUT },
             { path: '/workshops/a*', method: RequestMethod.DELETE });
     }
 
