@@ -290,14 +290,11 @@ export class FacilitatorsService {
      * @memberof FacilitatorsService
      */
     public async createOrMapAuth(id: string, user): Promise<any> {
-        this.log.warn('creating user: %j', user);
         let roleId = global['facilitatorId'];
         if (user.role) {
             const role = await this.authService.getRole(`name='${user.role.name}'`);
-            this.log.warn('found role: %j', role);
             if (role.id > 0) roleId = role.id;
         }
-        this.log.warn('set roleId to %d', roleId);
 
         let auth = await this.authService.getUser(`user.email='${user.Email}'`);
 

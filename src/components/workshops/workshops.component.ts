@@ -391,6 +391,21 @@ export class WorkshopsService {
         return Promise.resolve(result);
     }
 
+    public async cancel(id: string, reason: string): Promise<any> {
+        const updateData = {
+            object: 'Workshop__c',
+            records: [{ contents: `{Id: ${id}, Status__c: 'Cancelled'}` }]
+        }
+        const update: SFSuccessObject = (await this.sfService.update(updateData))[0];
+
+        const noteData = {
+            object: 'Note',
+            records: [{ contents: `{Title: 'Reasons for Cancelling', Body: ${reason}, ParentId: ${id}}` }]
+        }
+        const note: SFSuccessObject = (await this.sfService.create(noteData))[0];
+        return Promise.resolve(note);
+    }
+
     /**
      * @desc Helper method to grant permissions to the appropraite roles and users in the Auth API.
      * 
