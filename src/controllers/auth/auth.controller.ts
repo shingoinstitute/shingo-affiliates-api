@@ -39,6 +39,7 @@ export class AuthController extends BaseController {
 
         try {
             const user = await this.authService.login(body);
+            this.log.error('Got user for login: ', user);
 
             if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
             if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
@@ -48,6 +49,7 @@ export class AuthController extends BaseController {
 
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
+            this.log.error('Caught error in login: ', error);
             return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
     }
