@@ -88,6 +88,7 @@ message User {
     string password = 8;
     string extId = 9;
     string resetToken = 10;
+    string lastLogin = 11;
 }
 
 message AccessRequest {
