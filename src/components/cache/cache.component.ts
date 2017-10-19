@@ -13,7 +13,7 @@ import * as hash from 'object-hash';
 export class CacheService {
 
     constructor( @Inject('LoggerService') private log: LoggerService = new LoggerService()) {
-        this.theCache = new NodeCache({ stdTTL: 1800, checkperiod: 900 });
+        this.theCache = new NodeCache({ stdTTL: 60 * 60, checkperiod: 60 * 15 }); // sec * minutes = time
     }
 
     /**
