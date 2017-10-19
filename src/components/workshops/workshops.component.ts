@@ -51,7 +51,7 @@ export class WorkshopsService {
      * @returns {Promise<Workshop[]>} 
      * @memberof WorkshopsService
      */
-    public async WorkshopsService.getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
+    public async getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
         let key = 'WorkshopsService.getAll';
         const query: SFQueryObject = {
             action: 'SELECT',
