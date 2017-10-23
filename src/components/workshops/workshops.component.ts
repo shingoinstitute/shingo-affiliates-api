@@ -94,7 +94,7 @@ export class WorkshopsService {
             this.cache.cache(key, workshops);
 
             for (let workshop of workshops) {
-                this.get(workshop.Id);
+                process.nextTick(this.get, workshop.Id);
             }
 
             return Promise.resolve(workshops);
