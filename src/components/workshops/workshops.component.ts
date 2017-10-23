@@ -457,7 +457,6 @@ export class WorkshopsService {
         }
 
         for (const facilitator of workshop.facilitators) {
-            this.log.warn('granting permissions to: %j', facilitator);
             const data = {
                 object: 'WorkshopFacilitatorAssociation__c',
                 records: [{ contents: JSON.stringify({ Workshop__c: workshop.Id, Instructor__c: facilitator['Id'] }) }]

@@ -192,8 +192,6 @@ export class FacilitatorsService {
                         return facilitator.services && facilitator.services.includes('affiliate-portal');
                     });
                 else facilitators = facilitators.filter(facilitator => {
-                    this.log.warn('filtering fac: %j', facilitator);
-                    this.log.warn('filtering fac.services: %j', facilitator.services);
                     return facilitator.services == undefined || !facilitator.services.includes('affiliate-portal')
                 });
             }
@@ -391,7 +389,6 @@ export class FacilitatorsService {
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-        this.log.warn('updating sf contact %j', contact);
 
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);

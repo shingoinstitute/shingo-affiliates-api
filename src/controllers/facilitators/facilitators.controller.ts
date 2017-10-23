@@ -123,8 +123,6 @@ export class FacilitatorsController extends BaseController {
                 html: `Hello,<br><br>Please follow this link to reset your password: <br><br>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a><br><br>If you did not request this password reset please ignore this message.<br><br>Thank you,<br><br>Shingo Institute`
             });
 
-            this.log.warn('Message sent: %j', { messageId: result.messageId, email, response: result.response });
-
             return res.status(HttpStatus.OK).json({ success: true });
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.resetPassword(): ', error);
