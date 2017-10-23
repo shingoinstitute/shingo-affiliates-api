@@ -94,13 +94,18 @@ export class WorkshopsService {
             this.cache.cache(key, workshops);
 
             for (let workshop of workshops) {
-                process.nextTick(() => this.get(workshop.Id));
+                this.lazyLoad(workshop.Id, () => this.log.debug('Lazy loaded %s', workshop.Id));
             }
 
             return Promise.resolve(workshops);
         } else {
             return Promise.resolve(this.cache.getCache(key));
         }
+    }
+
+    private lazyLoad(id: string, callback) {
+        this.get(id);
+        callback();
     }
 
     /**
