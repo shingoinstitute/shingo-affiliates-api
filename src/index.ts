@@ -23,7 +23,7 @@ const server = express();
 const corsOptions = {
     origin: function (origin, callback) {
         if (whitelist.indexOf(origin) > -1) {
-            log.info('Setting \'Access-Control-Allow-Origin\' to %s', origin);
+            log.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
             callback(null, true);
         } else {
             log.warn(`${origin} was not in the whitelist: %j`, whitelist);
