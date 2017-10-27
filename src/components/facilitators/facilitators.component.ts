@@ -490,6 +490,7 @@ export class FacilitatorsService {
         else if (user.services.includes(', affiliate-portal')) user.services = user.services.replace(', affiliate-portal', '');
         else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', '');
 
+        this.log.warn('Disabling %j', user);
         const updated = await this.authService.updateUser(user);
 
         this.cache.invalidate(extId);
