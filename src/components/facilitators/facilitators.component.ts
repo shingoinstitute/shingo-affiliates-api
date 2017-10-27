@@ -486,9 +486,9 @@ export class FacilitatorsService {
 
         if (user === undefined) return Promise.reject({ error: 'USER_NOT_FOUND' })
 
-        if (user.services === 'affiliate-portal') user.services = '';
-        else if (user.services.includes(', affiliate-portal')) user.services = user.services.replace(', affiliate-portal', '');
-        else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', '');
+        if (user.services === 'affiliate-portal') user.services = 'af-p-disabled';
+        else if (user.services.includes(', affiliate-portal')) user.services = user.services.replace(', affiliate-portal', ', af-p-disabled');
+        else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', 'af-p-disabled');
 
         this.log.warn('Disabling %j', user);
         const updated = await this.authService.updateUser(user);
