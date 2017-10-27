@@ -81,7 +81,7 @@ export class FacilitatorsService {
                     facilitator.services = users[facilitator['Id']].services;
                 }
             }
-            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined || facilitator.services && !facilitator.services.includes('affiliate-portal'); });
+            facilitators = facilitators.filter(facilitator => { return facilitator['id'] !== undefined && facilitator.services && !facilitator.services.includes('affiliate-portal'); });
 
             this.cache.cache(this.getAllKey, facilitators);
             return Promise.resolve(facilitators);
