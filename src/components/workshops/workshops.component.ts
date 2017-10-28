@@ -95,7 +95,7 @@ export class WorkshopsService {
 
             this.log.warn('processing facilitators for %d workshops', workshops.length);
             for (const workshop of workshops) {
-                if (workshop.Instructors__r instanceof Array) workshop.facilitators = workshop.Instructors__r.map(i => i.Instructor__r);
+                if (workshop.Instructors__r && workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
             }
             this.log.warn('done processing facilitators for %d workshops', workshops.length);
 
