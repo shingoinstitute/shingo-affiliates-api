@@ -5,7 +5,7 @@ import {
     LoggerService
 } from '../';
 import { Workshop } from './workshop'
-import { _ } from 'lodash';
+import { _, chunk } from 'lodash';
 
 export { Workshop }
 
@@ -76,18 +76,22 @@ export class WorkshopsService {
             clauses: "Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c"
         }
 
-        if (!isPublic) {
-            let ids = this.userService.getWorkshopIds(user);
-            if (ids.length === 0) return Promise.resolve([]);
-            if (ids.length > 400) ids = ids.slice(0, 400);
-            query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
-            query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
-        } else {
+        if (isPublic) {
             key += '_public';
         }
 
         if (!this.cache.isCached(key) || refresh) {
-            let workshops: Workshop[] = (await this.sfService.query(query)).records as Workshop[];
+            let workshops: Workshop[] = [];
+            if (!isPublic) {
+                let ids = this.userService.getWorkshopIds(user);
+                if (ids.length === 0) return Promise.resolve([]);
+                for (let id of chunk(ids, 200)) {
+                    workshops = workshops.concat(await this.queryForWorkshops(id, query));
+                }
+            } else {
+                workshops = (await this.sfService.query(query)).records as Workshop[];
+            }
+
             for (const workshop of workshops) {
                 if (workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
             }
@@ -102,6 +106,12 @@ export class WorkshopsService {
         } else {
             return Promise.resolve(this.cache.getCache(key));
         }
+    }
+
+    private async queryForWorkshops(ids, query): Promise<Workshop[]> {
+        query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
+        query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
+        return (await this.sfService.query(query)).records as Workshop[];
     }
 
     private lazyLoad(id: string, callback) {
