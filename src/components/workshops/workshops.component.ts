@@ -77,8 +77,9 @@ export class WorkshopsService {
         }
 
         if (!isPublic) {
-            const ids = this.userService.getWorkshopIds(user);
+            let ids = this.userService.getWorkshopIds(user);
             if (ids.length === 0) return Promise.resolve([]);
+            if (ids.length > 400) ids = ids.slice(0, 400);
             query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
             query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
         } else {
