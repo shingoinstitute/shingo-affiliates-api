@@ -83,10 +83,11 @@ export class WorkshopsService {
         if (!this.cache.isCached(key) || refresh) {
             let workshops: Workshop[] = [];
             if (!isPublic) {
+                query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
                 let ids = this.userService.getWorkshopIds(user);
                 if (ids.length === 0) return Promise.resolve([]);
-                for (let id of chunk(ids, 200)) {
-                    workshops = workshops.concat(await this.queryForWorkshops(id, query));
+                for (let chuncked_ids of chunk(ids, 200)) {
+                    workshops = workshops.concat(await this.queryForWorkshops(chuncked_ids, query));
                 }
             } else {
                 workshops = (await this.sfService.query(query)).records as Workshop[];
@@ -110,7 +111,6 @@ export class WorkshopsService {
 
     private async queryForWorkshops(ids, query): Promise<Workshop[]> {
         query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
-        query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
         return (await this.sfService.query(query)).records as Workshop[];
     }
 
