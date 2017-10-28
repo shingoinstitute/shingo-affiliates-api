@@ -101,10 +101,6 @@ export class WorkshopsService {
 
             this.cache.cache(key, workshops);
 
-            for (let workshop of workshops) {
-                this.lazyLoad(workshop.Id, () => this.log.debug('Lazy loaded %s', workshop.Id));
-            }
-
             return Promise.resolve(workshops);
         } else {
             return Promise.resolve(this.cache.getCache(key));
@@ -114,11 +110,6 @@ export class WorkshopsService {
     private async queryForWorkshops(ids, query): Promise<Workshop[]> {
         query.clauses = `Id IN (${ids.join()}) ORDER BY Start_Date__c`
         return (await this.sfService.query(query)).records as Workshop[];
-    }
-
-    private lazyLoad(id: string, callback) {
-        this.get(id);
-        callback();
     }
 
     /**
