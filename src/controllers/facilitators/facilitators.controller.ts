@@ -224,6 +224,8 @@ export class FacilitatorsController extends BaseController {
 
         try {
             const result = await this.facilitatorsService.update(body);
+            console.info('SENDING BACK FACILITATORS');
+            console.info(JSON.stringify(result, null, 3));
             return res.status(HttpStatus.OK).json(result);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.update(): ', error);
