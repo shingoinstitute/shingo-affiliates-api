@@ -217,8 +217,9 @@ export class FacilitatorsController extends BaseController {
 
         if (!body.Id || body.Id !== id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
 
-        if (body.Biography) {
+        if (body.Biography || body.Biography__c) {
             delete body.Biography;
+            delete body.Biography__c;
             console.warn('Client attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.');
         }
 
