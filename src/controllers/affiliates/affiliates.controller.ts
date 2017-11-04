@@ -181,6 +181,8 @@ export class AffiliatesController extends BaseController {
 
         try {
             const result = await this.affService.update(body);
+            console.log('SENDING BACK FACILITATOR');
+            console.log(JSON.stringify(result, null, 3));
             return res.status(HttpStatus.OK).json(result);
         } catch (error) {
             return this.handleError(res, 'Error in AffiliatesController.update(): ', error);
