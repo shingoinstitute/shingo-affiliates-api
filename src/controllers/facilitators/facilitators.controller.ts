@@ -206,7 +206,7 @@ export class FacilitatorsController extends BaseController {
     /**
      * @desc <h5>PUT: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#update} to update a Facilitator. If <code>body</code> contains <code>Email</code> or <code>password</code> the associated auth is also updated.
      * 
-     * @param {any} body - Required fields <code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography', etc..] }</code>
+     * @param {any} body - Required fields <code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography__c', etc..] }</code>
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is status of updates and resulting SF Operation
      * @memberof FacilitatorsController
