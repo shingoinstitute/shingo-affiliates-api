@@ -174,7 +174,7 @@ export class AffiliatesController extends BaseController {
         let required = checkRequired(body, ['Id']);
         if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
-        if (body.hashOwnProperty('Summary__c')) {
+        if (body.hasOwnProperty('Summary__c')) {
             delete body.Summary__c;
             this.log.warn('\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
