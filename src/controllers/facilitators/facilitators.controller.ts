@@ -40,6 +40,7 @@ export class FacilitatorsController extends BaseController {
 
         try {
             const facilitators = await this.facilitatorsService.getAll(true, (isAfMan ? xAffiliate : session.affiliate));
+            console.warn('AAAAAAAHHHHHHHHH!!!!!!!!!!');
             return res.status(HttpStatus.OK).json(facilitators);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
