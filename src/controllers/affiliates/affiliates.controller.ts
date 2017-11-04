@@ -176,7 +176,7 @@ export class AffiliatesController extends BaseController {
 
         if (body.hashOwnProperty('Summary__c')) {
             delete body.Summary__c;
-            this.logger.warn('\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
+            this.log.warn('\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
         try {
