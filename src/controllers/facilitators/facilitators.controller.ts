@@ -217,19 +217,13 @@ export class FacilitatorsController extends BaseController {
 
         if (!body.Id || body.Id !== id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
 
-        if (body.Biography || body.Biography__c) {
-            delete body.Biography;
+        if (body.hasOwnProperty('Biography__c')) {
             delete body.Biography__c;
             console.warn('Client attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.');
         }
 
-        let fields = Object.keys(body).join(', ');
-        console.log('Updating Fields: ' + fields);
-
         try {
             const result = await this.facilitatorsService.update(body);
-            console.info('SENDING BACK FACILITATORS');
-            console.info(JSON.stringify(result, null, 3));
             return res.status(HttpStatus.OK).json(result);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.update(): ', error);
