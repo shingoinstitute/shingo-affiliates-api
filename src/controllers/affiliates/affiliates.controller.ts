@@ -174,15 +174,13 @@ export class AffiliatesController extends BaseController {
         let required = checkRequired(body, ['Id']);
         if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
-        if (body.Biography) {
-            delete body.Biography;
-            console.warn('Client attempted to update Biography field on Affiliate. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.');
+        if (body.hashOwnProperty('Biography__c')) {
+            delete body.Biography__c;
+            console.warn('\nClient attempted to update Biography field on Affiliate. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
         try {
             const result = await this.affService.update(body);
-            console.log('SENDING BACK AFFILIATE');
-            console.log(JSON.stringify(result, null, 3));
             return res.status(HttpStatus.OK).json(result);
         } catch (error) {
             return this.handleError(res, 'Error in AffiliatesController.update(): ', error);
