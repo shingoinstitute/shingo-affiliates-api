@@ -219,7 +219,7 @@ export class FacilitatorsController extends BaseController {
 
         if (body.hasOwnProperty('Biography__c')) {
             delete body.Biography__c;
-            console.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
+            this.log.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
         try {
