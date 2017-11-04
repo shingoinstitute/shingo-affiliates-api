@@ -40,7 +40,6 @@ export class FacilitatorsController extends BaseController {
 
         try {
             const facilitators = await this.facilitatorsService.getAll(true, (isAfMan ? xAffiliate : session.affiliate));
-            console.warn('AAAAAAAHHHHHHHHH!!!!!!!!!!');
             return res.status(HttpStatus.OK).json(facilitators);
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
@@ -217,6 +216,11 @@ export class FacilitatorsController extends BaseController {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         if (!body.Id || body.Id !== id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
+
+        if (body.Biography) {
+            delete body.Biography;
+            console.warn('Client attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.');
+        }
 
         try {
             const result = await this.facilitatorsService.update(body);
