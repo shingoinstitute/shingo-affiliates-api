@@ -93,11 +93,9 @@ export class WorkshopsService {
                 workshops = (await this.sfService.query(query)).records as Workshop[];
             }
 
-            this.log.warn('processing facilitators for %d workshops', workshops.length);
             for (const workshop of workshops) {
                 if (workshop.Instructors__r && workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
             }
-            this.log.warn('done processing facilitators for %d workshops', workshops.length);
 
             this.cache.cache(key, workshops);
 
