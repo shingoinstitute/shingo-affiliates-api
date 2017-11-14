@@ -119,8 +119,20 @@ export class FacilitatorsController extends BaseController {
             const result = await this.mailer.sendMail({
                 to: email,
                 subject: 'Password Reset -- Affiliate Portal',
-                text: `Hello,\n\nPlease follow this link to reset your password: \n\n\t${process.env.CLIENT_HOST}/resetpassword?token=${token}\n\nIf you did not request this password reset please ignore this message.\nnThank you,\n\nShingo Institute`,
-                html: `Hello,<br><br>Please follow this link to reset your password: <br><br>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a><br><br>If you did not request this password reset please ignore this message.<br><br>Thank you,<br><br>Shingo Institute`
+                text: `Hello,\n\nPlease follow this link to reset your password: \n\n\t${process.env.CLIENT_HOST}/resetpassword?token=${token}\n\nIf you did not request this password reset please ignore this message.\nNOTE: This link expires in 30 minutes.\nnThank you,\n\nShingo Institute`,
+                html: `
+                <p>Hello,</p>
+                <p>Please follow this link to reset your password: </p>
+                <p>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a></p>
+                <p>If you did not request this password reset please ignore this message.</p>
+                <p>NOTE: This link expires in 30 minutes.</p>
+                <br>
+                <p>Thank you,</p>
+                <br>
+                <p>The Shingo Institute, <em>Home of the Shingo Prize</em></p>
+                <hr>
+                <p>This message was an automated response.</p>
+                `
             });
 
             return res.status(HttpStatus.OK).json({ success: true });
