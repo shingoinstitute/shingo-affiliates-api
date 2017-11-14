@@ -25,6 +25,14 @@ export abstract class BaseController {
         if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
         if (error.message) error = { message: error.message };
 
+        if (typeof error.error === 'string' && error.error.match(/\{.*\}/g)) {
+            try {
+                error.error = JSON.parse(error.error);
+            } catch (e) {
+                this.log.warn(`Failed to parse an error in response object. Expected a JSON string but got ${error.error} instead`);
+            }
+        }
+
         this.log.error(message + ' %j', error);
         return res.status(errorCode).json({ error });
     }
