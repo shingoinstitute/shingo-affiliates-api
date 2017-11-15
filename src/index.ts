@@ -61,8 +61,7 @@ server.use(session(options));
 InitService.init()
     .then(() => {
         const app = NestFactory.create(ApplicationModule, server);
-        let prefix = process.env.GLOBAL_PREFIX ? process.env.GLOBAL_PREFIX : '/';
-        app.setGlobalPrefix(`${prefix}`);
+        app.setGlobalPrefix(`${process.env.GLOBAL_PREFIX}`);
         app.listen(port, () => log.info(`Application is listening on port ${port}`));
     })
     .catch(error => {
