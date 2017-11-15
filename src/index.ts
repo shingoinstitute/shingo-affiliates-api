@@ -65,5 +65,7 @@ InitService.init()
         app.listen(port, () => log.info(`Application is listening on port ${port}`));
     })
     .catch(error => {
-        log.error('Error in lifting application! %j', error);
+        log.error('Error in lifting application!');
+        log.error(JSON.stringify(error, null, 3));
+
     });
