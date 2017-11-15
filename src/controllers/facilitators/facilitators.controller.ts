@@ -100,7 +100,8 @@ export class FacilitatorsController extends BaseController {
     @Get('/:id')
     public async read( @Response() res, @Param('id') id): Promise<Response> {
         // Check the id
-        if (!id.match(/[\w\d]{15,18}/)) return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,18}/)) 
+            return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
             const facilitator = await this.facilitatorsService.get(id);
