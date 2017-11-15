@@ -34,6 +34,6 @@ export abstract class BaseController {
         }
 
         this.log.error(message + ' %j', error);
-        return res.status(errorCode).json({ error });
+        return res.status(errorCode).json({ error: error });
     }
 }

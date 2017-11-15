@@ -37,15 +37,26 @@ export class AuthController extends BaseController {
     public async login( @Request() req, @Response() res, @Body() body): Promise<Response> {
         if (!body.email || !body.password) return this.handleError(res, 'Error in AuthController.login(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
 
+        let user;
+
         try {
-            const user = await this.authService.login(body);
+            user = await this.authService.login(body);
+        } catch (e) {
+            return this.handleError(res, 'Error in AuthController.login(): ', e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
-            if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
-            if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
+        if (user === undefined) {
+            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
+        }
+    
+        if (!user.services.includes('affiliate-portal')) {
+            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
+        }
 
+        try {
             req.session.user = await this.getSessionUser(user);
             req.session.affiliate = req.session.user['AccountId'];
-
+            
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
