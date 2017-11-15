@@ -165,7 +165,8 @@ export class FacilitatorsController extends BaseController {
     @Post()
     public async create( @Response() res, @Body() body): Promise<Response> {
         const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
-        if (!required.valid) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
+        if (!required.valid)
+            return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
 
         if (!body.AccountId.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
@@ -189,6 +190,12 @@ export class FacilitatorsController extends BaseController {
 
             return res.status(HttpStatus.CREATED).json(result);
         } catch (error) {
+
+            if (error.message && error.message.match(/(invalid login).*(prod\.outlook\.com)/gi)) {
+                error.message = 'Invalid login for mailer - A facilitator was created but failed to send a notification email.';
+                error.error = 'EMAIL_NOT_SENT';
+            }
+
             return this.handleError(res, 'Error in FacilitatorsController.create(): ', error);
         }
     }
