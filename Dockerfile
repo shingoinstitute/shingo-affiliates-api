@@ -14,6 +14,8 @@ ENV SF_API=shingo-sf-api
 
 ENV AUTH_API=shingo-auth-api
 
+ENV GLOBAL_PREFIX='/'
+
 ENV LOG_PATH='./'
 
 ENV LOG_FILE='debug.log'
