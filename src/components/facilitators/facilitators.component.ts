@@ -225,8 +225,6 @@ export class FacilitatorsService {
             let facilitator = (await this.sfService.retrieve(data))[0];
             facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
             const user = await this.authService.getUser(`user.extId='${facilitator.Id}'`);
-            // const user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
-            console.log('LOOKED UP FACILITATOR: ' + JSON.stringify(user, null, 3));
             if (!user.services || !user.services.includes('affiliate-portal')) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
             if (user.id !== 0) {
                 facilitator['id'] = user.id;
