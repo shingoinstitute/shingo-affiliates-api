@@ -41,27 +41,25 @@ export class AuthController extends BaseController {
 
         try {
             user = await this.authService.login(body);
-
         } catch (e) {
-            return this.handleError(res, 'error in block 1', e);
+            return this.handleError(res, 'Error in AuthController.login(): ', e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (user === undefined) {
+            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
+        }
+    
+        if (!user.services.includes('affiliate-portal')) {
+            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
         }
 
         try {
-            if (user === undefined) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
-            if (!user.services.includes('affiliate-portal')) return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
-        } catch (e) {
-            return this.handleError(res, 'error in block 2', e);
-        }
-
-        try {
-
             req.session.user = await this.getSessionUser(user);
             req.session.affiliate = req.session.user['AccountId'];
-
+            
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
-            return this.handleError(res, 'error in block 3', error);
-            // return this.handleError(res, 'Error in AuthController.login(): ', error);
+            return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
     }
 

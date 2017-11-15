@@ -224,7 +224,20 @@ export class FacilitatorsService {
 
             let facilitator = (await this.sfService.retrieve(data))[0];
             facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
-            const user = await this.authService.getUser(`user.extId='${facilitator.Id}'`);
+
+            let user;
+            try {
+                user = await this.authService.getUser(`user.extId='${facilitator.Id}'`);
+            } catch (e) {
+                this.log.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`);
+                try {
+                    user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
+                } catch (e) {
+                    this.log.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
+                    return Promise.reject(e);
+                }
+            }
+
             if (!user.services || !user.services.includes('affiliate-portal')) return Promise.reject({ error: 'NOT_FOUND', status: 404 });
             if (user.id !== 0) {
                 facilitator['id'] = user.id;
