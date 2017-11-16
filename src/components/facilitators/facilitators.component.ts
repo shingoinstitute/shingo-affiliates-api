@@ -399,35 +399,31 @@ export class FacilitatorsService {
      *      &emsp;"auth": boolean
      *  }</code> 
      * 
-     * @param {any} user - The facilitator's fields to update
+     * @param {any} user - The facilitator object to update
      * @returns {Promise<any>} 
      * @memberof FacilitatorsService
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-        console.log('\nUpdating Facilitator...' + JSON.stringify(user, null, 3));
+        
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);
-            console.log(`Got Role from authService: ${JSON.stringify(role, null, 3)}`);
             await this.changeRole(user.Id, role.id);
         }
         
+        // Get current user data to check if email address is being udpated.
+        const prevUser: any = await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] });
+
+        // Update Contact record in Salesforce
         const data = {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
-
-        // Get current user data to check if email address is being udpated.
-        const prevUser = await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] });
-        console.log(`\n\nPREVIOUS USER DATA: ${JSON.stringify(prevUser, null, 3)}\n\n`);
-        console.log(`\nUpdating Contact record in Salesforce: ${JSON.stringify(contact, null, 3)}`);
         const record = (await this.sfService.update(data))[0];
-        console.log(`Record updated! ${JSON.stringify(record, null, 3)}`);
 
-        if (user.Email || user.password) {
-            console.log(`\nUpdating user's auth...`);
+        if ((user.Email !== prevUser.Email) || user.password) {
+            console.log('UPDATING USER AUTH...');
             const auth = await this.updateAuth(user, record.id);
-            console.log(`Update successful! ${JSON.stringify(auth, null, 3)}`);
             return Promise.resolve({ salesforce: true, auth: auth, record });
         }
 
