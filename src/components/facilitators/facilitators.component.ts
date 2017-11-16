@@ -418,7 +418,7 @@ export class FacilitatorsService {
         }
 
         // Get current user data to check if email address is being udpated.
-        const prevUser = await this.sfService.retrieve({ object: 'Contact', ids: [ user.extId ] });
+        const prevUser = await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] });
         console.log(`\n\nPREVIOUS USER DATA: ${JSON.stringify(prevUser, null, 3)}\n\n`);
         console.log(`\nUpdating Contact record in Salesforce: ${JSON.stringify(contact, null, 3)}`);
         const record = (await this.sfService.update(data))[0];
