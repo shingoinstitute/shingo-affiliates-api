@@ -301,7 +301,7 @@ export class FacilitatorsService {
         const record = (await this.sfService.retrieve(data))[0];
         if (record === undefined) return Promise.reject({ error: 'CONTACT_NOT_FOUND' });
 
-        record.RecordTypeId = '012A0000000zpqrIAA'
+        record.RecordTypeId = '012A0000000zpqrIAA';
         const updateData = {
             object: 'Contact',
             records: [{ contents: JSON.stringify(_.merge(_.omit(record, ['Name']), user)) }]
@@ -399,25 +399,32 @@ export class FacilitatorsService {
      *      &emsp;"auth": boolean
      *  }</code> 
      * 
-     * @param {any} user - The facilitator's fields to update
+     * @param {any} user - The facilitator object to update
      * @returns {Promise<any>} 
      * @memberof FacilitatorsService
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-
+        
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);
             await this.changeRole(user.Id, role.id);
         }
+        
+        // Get current user data to check if email address is being udpated.
+        const prevUser: any = await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] });
 
+        // Update Contact record in Salesforce
         const data = {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
         const record = (await this.sfService.update(data))[0];
-        if (user.Email || user.password) {
-            return Promise.resolve({ salesforce: true, auth: await this.updateAuth(user, record.id), record });
+
+        // If the users email or password changed, update their user auth
+        if ((user.Email !== prevUser.Email) || user.password) {
+            const auth = await this.updateAuth(user, record.id);
+            return Promise.resolve({ salesforce: true, auth: auth, record });
         }
 
         this.cache.invalidate(user.Id);
@@ -530,11 +537,16 @@ export class FacilitatorsService {
 
         const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; })[0];
 
+        console.log(`\nCurrent Role: ${JSON.stringify(currentRole, null, 3)}`);
+
         const set = { userEmail: user.email, roleId };
         if (currentRole !== undefined) {
+            console.log(`Removing current role from user: ${JSON.stringify(currentRole, null, 3)}`);
             await this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id });
         }
         const added = await this.authService.addRoleToUser(set);
+
+        console.log(`New role added to user: ${JSON.stringify(added, null, 3)}`);
 
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
