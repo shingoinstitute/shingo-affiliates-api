@@ -411,14 +411,19 @@ export class FacilitatorsService {
             console.log(`Got Role from authService: ${JSON.stringify(role, null, 3)}`);
             await this.changeRole(user.Id, role.id);
         }
-
+        
         const data = {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
+
+        // Get current user data to check if email address is being udpated.
+        const prevUser = await this.sfService.retrieve({ object: 'Contact', ids: [ user.extId ] });
+        console.log(`\n\nPREVIOUS USER DATA: ${JSON.stringify(prevUser, null, 3)}\n\n`);
         console.log(`\nUpdating Contact record in Salesforce: ${JSON.stringify(contact, null, 3)}`);
         const record = (await this.sfService.update(data))[0];
         console.log(`Record updated! ${JSON.stringify(record, null, 3)}`);
+
         if (user.Email || user.password) {
             console.log(`\nUpdating user's auth...`);
             const auth = await this.updateAuth(user, record.id);
