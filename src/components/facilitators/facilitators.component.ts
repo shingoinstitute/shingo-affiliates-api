@@ -301,7 +301,7 @@ export class FacilitatorsService {
         const record = (await this.sfService.retrieve(data))[0];
         if (record === undefined) return Promise.reject({ error: 'CONTACT_NOT_FOUND' });
 
-        record.RecordTypeId = '012A0000000zpqrIAA'
+        record.RecordTypeId = '012A0000000zpqrIAA';
         const updateData = {
             object: 'Contact',
             records: [{ contents: JSON.stringify(_.merge(_.omit(record, ['Name']), user)) }]
@@ -405,7 +405,7 @@ export class FacilitatorsService {
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-
+        
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);
             await this.changeRole(user.Id, role.id);
