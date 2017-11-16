@@ -416,7 +416,7 @@ export class FacilitatorsService {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
-        console.log(`\nUpdating Contact record in Salesforce...`);
+        console.log(`\nUpdating Contact record in Salesforce: ${JSON.stringify(contact, null, 3)}`);
         const record = (await this.sfService.update(data))[0];
         console.log(`Record updated! ${JSON.stringify(record, null, 3)}`);
         if (user.Email || user.password) {
