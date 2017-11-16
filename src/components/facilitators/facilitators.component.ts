@@ -405,9 +405,10 @@ export class FacilitatorsService {
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-        
+        console.log('\nUpdating Facilitator...' + JSON.stringify(user, null, 3));
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);
+            console.log(`New role: ${role}`);
             await this.changeRole(user.Id, role.id);
         }
 
@@ -415,9 +416,14 @@ export class FacilitatorsService {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
+        console.log(`\nUpdating Contact record in Salesforce...`);
         const record = (await this.sfService.update(data))[0];
+        console.log(`Record updated! ${JSON.stringify(record, null, 3)}`);
         if (user.Email || user.password) {
-            return Promise.resolve({ salesforce: true, auth: await this.updateAuth(user, record.id), record });
+            console.log(`\nUpdating user's auth...`);
+            const auth = await this.updateAuth(user, record.id);
+            console.log(`Update successful! ${JSON.stringify(auth, null, 3)}`);
+            return Promise.resolve({ salesforce: true, auth: auth, record });
         }
 
         this.cache.invalidate(user.Id);
@@ -532,9 +538,12 @@ export class FacilitatorsService {
 
         const set = { userEmail: user.email, roleId };
         if (currentRole !== undefined) {
+            console.log(`Removing current role from user: ${currentRole}`);
             await this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id });
         }
         const added = await this.authService.addRoleToUser(set);
+
+        console.log(`New role added to user: ${added}`);
 
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
