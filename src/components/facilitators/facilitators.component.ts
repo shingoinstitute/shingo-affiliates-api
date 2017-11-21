@@ -537,16 +537,11 @@ export class FacilitatorsService {
 
         const currentRole = user.roles.filter(role => { return role.service === 'affiliate-portal'; })[0];
 
-        console.log(`\nCurrent Role: ${JSON.stringify(currentRole, null, 3)}`);
-
         const set = { userEmail: user.email, roleId };
         if (currentRole !== undefined) {
-            console.log(`Removing current role from user: ${JSON.stringify(currentRole, null, 3)}`);
             await this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id });
         }
         const added = await this.authService.addRoleToUser(set);
-
-        console.log(`New role added to user: ${JSON.stringify(added, null, 3)}`);
 
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
