@@ -170,6 +170,13 @@ export class AffiliatesService {
         }
     }
 
+    /**
+     * @desc Executes a SOSL query to search for Contacts that match the given AccountId, and returns a list of Contacts that can be used as Course Managers.
+     * @param {string} id - A Salesforce AccountId.
+     * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
+     * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
+     * @param {boolean} [refresh=false] - Force the refresh of the cache
+     */
     public async searchCM(id: string, search: string, retrieve: string, refresh: boolean = false): Promise<any[]> {
         if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
         const data = {
