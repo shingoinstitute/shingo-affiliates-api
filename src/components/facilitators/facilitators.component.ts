@@ -419,6 +419,7 @@ export class FacilitatorsService {
             object: 'Contact',
             records: [{ contents: JSON.stringify(contact) }]
         }
+        console.log('\nUPDATING CONTACT: ', contact);
         const record = (await this.sfService.update(data))[0];
 
         // If the users email or password changed, update their user auth
