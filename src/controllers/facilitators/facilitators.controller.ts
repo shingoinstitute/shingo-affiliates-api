@@ -242,6 +242,8 @@ export class FacilitatorsController extends BaseController {
             this.log.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
+        console.log(`\nUPDATING FACILITATOR: `, body);
+
         try {
             const result = await this.facilitatorsService.update(body);
             return res.status(HttpStatus.OK).json(result);
