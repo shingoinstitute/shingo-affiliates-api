@@ -412,7 +412,7 @@ export class FacilitatorsService {
         }
         
         // Get current user data to check if email address is being udpated.
-        const prevUser: any = await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] });
+        const prevUser: any = (await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] }))[0];
 
         // Update Contact record in Salesforce
         const data = {
@@ -422,11 +422,12 @@ export class FacilitatorsService {
         const record = (await this.sfService.update(data))[0];
 
         // If the users email or password changed, update their user auth
+        let auth: any = false;
         if ((user.Email !== prevUser.Email) || user.password) {
-            const auth = await this.updateAuth(user, record.id);
-            return Promise.resolve({ salesforce: true, auth: auth, record });
+            auth = await this.updateAuth(user, record.id);
         }
 
+        // Update permissions
         if (user.AccountId !== prevUser.AccountId) {
             await this.authService.revokePermissionFromUser(`affiliate -- ${prevUser.AccountId}`, 1, user.id);
             await this.authService.revokePermissionFromUser(`workshops -- ${prevUser.AccountId}`, 2, user.id);
@@ -437,7 +438,7 @@ export class FacilitatorsService {
         this.cache.invalidate(user.Id);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ salesforce: true, auth: false, record });
+        return Promise.resolve({ salesforce: true, auth: auth, record });
     }
 
     /**
