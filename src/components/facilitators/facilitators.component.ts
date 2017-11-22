@@ -427,6 +427,13 @@ export class FacilitatorsService {
             return Promise.resolve({ salesforce: true, auth: auth, record });
         }
 
+        if (user.AccountId !== prevUser.AccountId) {
+            await this.authService.revokePermissionFromUser(`affiliate -- ${prevUser.AccountId}`, 1, user.id);
+            await this.authService.revokePermissionFromUser(`workshops -- ${prevUser.AccountId}`, 2, user.id);
+            await this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, user.id);
+            await this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, user.id);
+        }
+
         this.cache.invalidate(user.Id);
         this.cache.invalidate(this.getAllKey);
 

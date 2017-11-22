@@ -44,7 +44,7 @@ export class AuthMiddleware implements NestMiddleware {
                     else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
                     else resource = '';
                     if (result && result.response) return next();
-                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.email : 'anonymous'}` };
+                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
