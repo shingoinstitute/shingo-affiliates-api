@@ -93,8 +93,12 @@ export class AffiliatesController extends BaseController {
      */
     @Get('/:id/coursemanagers')
     public async searchCMS( @Response() res, @Param('id') id, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-        if (!search || !retrieve) return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
+        if (!id.match(/[\w\d]{15,17}/)) 
+            return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+
+        if (!search || !retrieve) 
+            return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
+            
         try {
             const cms = await this.affService.searchCM(id, search, retrieve, refresh === 'true');
             return res.status(HttpStatus.OK).json(cms);
