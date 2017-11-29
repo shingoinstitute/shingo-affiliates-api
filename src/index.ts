@@ -41,7 +41,6 @@ server.use(bodyParser.json());
 server.use(bodyParser.urlencoded({ extended: false }));
 
 // Set up express-session
-// TODO: Setup redis store
 let options: any = {
     secret: process.env.SESSION_SECRET || 'ilikedogz',
     resave: true,
