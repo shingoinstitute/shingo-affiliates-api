@@ -122,4 +122,22 @@ export class AuthController extends BaseController {
         }
     }
 
+    @Post('/loginas')
+    public async loginAs(@Request() req, @Response() res, @Body() body): Promise<Response> {
+        if(!body.adminId || !body.userId) return this.handleError(res, 'Error in AuthController.loginAs(): ', { error: 'MISSING_FIELDS', fields: ['adminId', 'userId']}, HttpStatus.BAD_REQUEST);
+        if(req.session.user.id != body.adminId) return this.handleError(res, 'Error in AuthController.loginAs(): ', {error: 'UNAUTHORIZED'}, HttpStatus.FORBIDDEN);
+        
+        try {
+            const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId});
+            req.session.user = await this.getSessionUser(user);
+            req.session.user.adminToken = req.headers['x-jwt'];
+            req.session.affiliate = req.session.user['AccountId'];
+
+            this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`);
+
+            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password']));
+        } catch(error) {
+            return this.handleError(res, 'Error in AuthController.loginAs', error);
+        }
+    }
 }

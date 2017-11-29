@@ -18,7 +18,8 @@ docker rm shingo-affiliates-api
 docker run -itd                     \
     --name shingo-affiliates-api    \
     --network shingo-dev-net        \
-    --volume $(pwd):/code           \
+    --volume $(pwd)/src:/code/src   \
+    --volume $(pwd)/proto:/code/proto   \
     --publish 8080:80               \
     -e EMAIL_PASS=${EMAIL_PASS}     \
     -e CLIENT_HOST='http://localhost:4200' \

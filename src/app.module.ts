@@ -72,7 +72,8 @@ export class ApplicationModule {
             { path: '/facilitators*', method: RequestMethod.DELETE },
             { path: '/affiliates*', method: RequestMethod.POST },
             { path: '/affiliates*', method: RequestMethod.PUT },
-            { path: '/affiliates*', method: RequestMethod.DELETE });
+            { path: '/affiliates*', method: RequestMethod.DELETE },
+            { path: '/auth/loginas', method: RequestMethod.ALL });
 
         // Protect all routes that require workshop creation permissions
         consumer.apply(AuthMiddleware)
