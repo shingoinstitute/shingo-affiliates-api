@@ -307,4 +307,8 @@ export class AuthService {
         return this.client.canAccessAsync({ resource, level, jwt });
     }
 
+    public loginAs(loginAsRequest : {adminId : number, userId: number}) : Promise<any> {
+        return this.client.loginAsAsync(loginAsRequest);
+    }
+
 }

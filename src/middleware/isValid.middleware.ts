@@ -33,6 +33,9 @@ export class IsValidMiddleware implements NestMiddleware {
             if (req.path.match(/.*resetpassword.*/gi)) return next();
             if (req.path === '/workshops' && (req.query.isPublic || req.headers['x-is-public'])) return next();
             if (!req.headers['x-jwt'] && !req.session.user) return res.status(HttpStatus.BAD_REQUEST).json({ error: 'INVALID_TOKEN', header: 'x-jwt' });
+
+            const adminToken = (req.session.user ? req.session.user.adminToken : '');
+
             return this.authService.isValid(req.headers['x-jwt'] || req.session.user.jwt)
                 .then(valid => {
                     if (valid && !valid.response) throw { error: 'INVALID_TOKEN' };
@@ -51,6 +54,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 .then(response => {
                     let contact = response[0];
                     req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
+                    req.session.user.adminToken = adminToken;
                     req.session.affiliate = contact['AccountId'];
                     return next();
                 })

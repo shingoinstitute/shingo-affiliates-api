@@ -57,6 +57,8 @@ service AuthServices {
 
     rpc RevokePermissionFromRole(GrantRequest) returns (PermissionSet) {}
 
+    rpc LoginAs(LoginAsRequest) returns (User) {}
+
 }
 
 message QueryRequest {
@@ -136,4 +138,9 @@ message UserBatch {
 
 message RoleBatch {
     repeated Role roles = 1;
+}
+
+message LoginAsRequest {
+    int32 adminId = 1;
+    int32 userId = 2;
 }
