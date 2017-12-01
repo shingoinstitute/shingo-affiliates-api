@@ -233,7 +233,7 @@ export class WorkshopsController extends BaseController {
 
                 this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')], req.file.mimetype);
 
-                return res.status(HttpStatus.ACCEPTED).json();
+                return res.status(HttpStatus.ACCEPTED).json({success: true});
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
             }
@@ -257,13 +257,13 @@ export class WorkshopsController extends BaseController {
         return upload(req, res, error => {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
 
-            const files = req.files.map(file => { return file.buffer.toString('base64'); });
-            const ext: string = req.files[0].originalname.split('.').pop();
-
             try {
+                const files = req.files.map(file => { return file.buffer.toString('base64'); });
+                const ext: string = req.files[0].originalname.split('.').pop();
+
                 this.workshopsService.upload(id, `evaluation.${ext}`, files, req.files[0].mimetype);
 
-                return res.status(HttpStatus.ACCEPTED).json();
+                return res.status(HttpStatus.ACCEPTED).json({success: true});
             } catch (error) {
                 return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
             }
