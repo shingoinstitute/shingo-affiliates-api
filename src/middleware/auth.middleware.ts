@@ -37,12 +37,14 @@ export class AuthMiddleware implements NestMiddleware {
             else if (!resource) resource = `${req.path}`;
 
             if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
+	    else if (resource.match(/^\/workshops\/.*\/attendee_file/)) resource = resource.split('/attendee_file')[0];
+	    else if (resource.match(/^\/workshops\/.*\/evaluation_files/)) resource = resource.split('/evaluation_files')[0];
 
             return this.authService.canAccess(resource, level, req.headers['x-jwt'])
                 .then(result => {
                     if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
                     else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
-                    else resource = '';
+			else resource = `${req.path}`;
                     if (result && result.response) return next();
                     throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
