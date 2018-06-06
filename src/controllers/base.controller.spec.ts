@@ -6,6 +6,8 @@ import { MockLoggerInstance } from '../components/mock';
 import { MockExpressInstance, MockServiceFactory } from '../factories';
 import { Expect, Test, TestFixture, Setup, Any, TestCase } from 'alsatian';
 
+// tslint:disable:max-classes-per-file
+
 @Controller()
 class MockBaseController extends BaseController {
     constructor(private logger: LoggerService) { super(logger); }
@@ -25,8 +27,8 @@ export class BaseControllerFixture {
         NestTest.createTestingModule({
             controllers: [MockBaseController],
             components: [
-                { provide: 'LoggerService', useValue: this.mockLogger }
-            ]
+                { provide: 'LoggerService', useValue: this.mockLogger },
+            ],
         });
     }
 
@@ -39,7 +41,10 @@ export class BaseControllerFixture {
         controller.handleError(this.mockExpress.res, message, error, errorCode);
 
         Expect(this.mockLogger.error).toHaveBeenCalledWith(message + ' %j', error);
-        Expect(this.mockExpress.res.status).toHaveBeenCalledWith(errorCode || HttpStatus.INTERNAL_SERVER_ERROR).exactly(1).times;
+        // tslint:disable:no-unused-expression
+
+        Expect(this.mockExpress.res.status)
+            .toHaveBeenCalledWith(errorCode || HttpStatus.INTERNAL_SERVER_ERROR).exactly(1).times;
         Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
     }
 

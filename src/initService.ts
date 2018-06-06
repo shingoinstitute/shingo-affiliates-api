@@ -4,9 +4,11 @@ import * as _ from 'lodash';
 const authService = new AuthService();
 const log = new LoggerService();
 
+// tslint:disable:no-string-literal
 /**
- * This class handles lifting the server. It checks for required roles (creates them if not found) and stores the requried global ids
- * 
+ * This class handles lifting the server.
+ * It checks for required roles (creates them if not found) and stores the requried global ids
+ *
  * @export
  * @class InitService
  */
@@ -17,8 +19,8 @@ export class InitService {
 
         const roles = (await authService.getRoles('role.service=\'affiliate-portal\'')).roles;
 
-        const facilitator = roles.filter(role => { return role.name === 'Facilitator'; });
-        const affiliateManager = roles.filter(role => { return role.name === 'Affiliate Manager'; });
+        const facilitator = roles.filter(role => role.name === 'Facilitator');
+        const affiliateManager = roles.filter(role => role.name === 'Affiliate Manager');
 
         if (!facilitator.length) {
             const role = await authService.createRole({ name: 'Facilitator', service: 'affiliate-portal' });
