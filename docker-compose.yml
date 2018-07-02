@@ -1,0 +1,10 @@
+version: '2.1'
+
+services:
+  shingo-affiliates-api:
+    image: shingo-affiliates-api
+    build: .
+    environment:
+      NODE_ENV: production
+    ports:
+      - 80:80
