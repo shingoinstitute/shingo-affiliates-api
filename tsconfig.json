@@ -3,21 +3,17 @@
     "module": "commonjs",
     "declaration": false,
     "noImplicitAny": false,
-    "noLib": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "target": "es6",
-    "outDir": "build",
-    "typeRoots": [
-      "node_modules/@types"
-    ]
+    "outDir": "build"
   },
   "include": [
-    "**/*.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "build",
-    "**/*spec*"
+    "**/*.mock.ts",
+    "**/*.spec.ts"
   ]
 }

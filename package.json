@@ -37,7 +37,8 @@
     "rxjs": "^5.4.0",
     "ts-mockito": "^2.0.2",
     "typescript": "^2.9.2",
-    "winston": "^2.3.1"
+    "winston": "^2.3.1",
+    "alsatian": "^2.0.0"
   },
   "scripts": {
     "start": "node ./build/index.js",
@@ -49,9 +50,6 @@
   },
   "author": "Dustin E. Homan",
   "license": "MIT",
-  "devDependencies": {
-    "alsatian": "^2.0.0"
-  },
   "nyc": {
     "exclude": [
       "**/*.spec.js",
