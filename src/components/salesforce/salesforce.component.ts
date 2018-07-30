@@ -20,7 +20,7 @@ export interface SFSearchData { retrieve: string; search: string }
 
 export interface SFSearchResults { searchRecords: any[] }
 
-const sfservices = grpc.load(path.join(__dirname, '../../../proto/sf_services.proto')).sfservices;
+const sfservices = grpc.load(path.join(__dirname, '../../proto/sf_services.proto')).sfservices;
 
 /**
  * @desc A service to abastract the Shingo SF Microservice client

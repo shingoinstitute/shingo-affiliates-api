@@ -7,7 +7,6 @@ if [[ "$MODE" == "dev" ]]; then
   TAG="${TAG:-local}"
   NETWORK="${NETWORK:-shingo-dev-net}"
   export NODE_ENV="${NODE_ENV:-development}"
-  export GLOBAL_PREFIX="/"
   export LOG_LEVEL="debug"
   export CLIENT_HOST="http://localhost:$PORT"
 else

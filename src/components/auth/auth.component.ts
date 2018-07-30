@@ -4,7 +4,7 @@ import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';
 
-const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_services.proto')).authservices;
+const authservices = grpc.load(path.join(__dirname, '../../proto/auth_services.proto')).authservices;
 
 /**
  * @desc A service to abastract the Shingo Auth Microservice client

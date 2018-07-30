@@ -1,10 +1,12 @@
-version: '2.1'
+version: '3'
 
 services:
   shingo-affiliates-api:
-    image: shingo-affiliates-api
+    image: docker.shingo.org/shingo-affiliates-api
     build: .
     environment:
       NODE_ENV: production
-    ports:
-      - 80:80
+      SF_API: "${SF_API:-shingo-sf-api}"
+      AUTH_API: "${AUTH_API:-shingo-auth-api}"
+      SHINGO_REDIS: "${SHINGO_REDIS:-shingo-redis}"
+      EMAIL_PASS: "${EMAIL_PASS:?Must set EMAIL_PASS}"

@@ -1,13 +1,29 @@
-version: '2.1'
+version: '3.4'
 
 services:
   shingo-affiliates-api:
-    image: shingo-affiliates-api
-    build: .
+    image: docker.shingo.org/shingo-affiliates-api:local
+    build:
+      context: .
+      target: debug
     environment:
       NODE_ENV: development
+      LOG_LEVEL: debug
+      CLIENT_HOST: "http://localhost:${PORT:-8080}"
+      SF_API: "${SF_API:-shingo-sf-api}"
+      AUTH_API: "${AUTH_API:-shingo-auth-api}"
+      EMAIL_PASS:
+    networks:
+      - shingo-dev-net
+      - default
+    volumes:
+      - ./build:/build
     ports:
-      - 80:80
-      - 9229:9229
+      - "${PORT:-8080}:80"
+      - "${INSPECT_PORT:-9229}:9229"
     ## set your startup file here
-    command: node --inspect index.js
+    command: npm run debug
+
+networks:
+  shingo-dev-net:
+    external: true
