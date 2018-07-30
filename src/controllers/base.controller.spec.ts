@@ -3,7 +3,7 @@ import { HttpStatus, Controller } from '@nestjs/common';
 import { BaseController } from './base.controller';
 import { LoggerService } from '../components';
 import { MockLoggerInstance } from '../components/mock';
-import { MockExpressInstance, MockServiceFactory } from '../factories';
+import { MockExpressInstance, MockServiceFactory } from '../factories/index.mock';
 import { Expect, Test, TestFixture, Setup, Any, TestCase } from 'alsatian';
 
 @Controller()

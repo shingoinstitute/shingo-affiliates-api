@@ -1,5 +1,5 @@
 import { createFunctionSpy, FunctionSpy } from 'alsatian';
-import { MockInstance } from './service.factory';
+import { MockInstance } from './service.factory.mock';
 
 export interface MockRequest {
     headers: any,

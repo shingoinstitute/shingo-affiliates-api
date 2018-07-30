@@ -1,5 +1,5 @@
 import { Component, Inject } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '../';
+import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '..';
 import { Affiliate } from './affiliate';
 import * as _ from 'lodash';
 

@@ -1,7 +1,7 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { WorkshopsService, LoggerService } from '../../components';
 import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockCacheServiceInstance, MockUserServiceInstance } from '../../components/mock';
-import { MockServiceFactory } from '../../factories';
+import { MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getService() {

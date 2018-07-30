@@ -3,7 +3,8 @@ import { HttpStatus } from '@nestjs/common';
 import { WorkshopsController } from './workshops.controller';
 import { WorkshopsService, LoggerService } from '../../components';
 import { MockWorkshopsServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockExpressInstance, MockMulterInstance, MockServiceFactory, MulterFactory } from '../../factories';
+import { MockExpressInstance, MockMulterInstance, MockServiceFactory } from '../../factories/index.mock';
+import { MulterFactory } from '../../factories'
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -76,7 +77,7 @@ export class WorkshopsControllerFixture {
         const session = {
             user: sessionUser
         }
-        await controller.readAll(this.mockExpress.res, session, isPublicQ, isPublicH, refresh);
+        await controller.readAll(this.mockExpress.res, session)
         const expectedIsPublic: boolean = (isPublicQ === 'true' || isPublicH === 'true');
         const expectedRefresh: boolean = refresh === 'true';
         const expectedUser: object | undefined = session.user;

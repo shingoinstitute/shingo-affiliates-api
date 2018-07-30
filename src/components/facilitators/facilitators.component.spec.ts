@@ -1,7 +1,7 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { FacilitatorsService, LoggerService } from '../../components';
 import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockCacheServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockServiceFactory } from '../../factories';
+import { MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getService() {
@@ -131,7 +131,7 @@ export class FacilitatorsServiceFixture {
         this.mockSalesforceService.search.andReturn({ searchRecords })
 
         let expected;
-        const actual = await service.search(search, retrieve, affiliate, refresh);
+        const actual = await service.search(search, retrieve, true, affiliate, refresh);
 
         Expect(this.mockCache.isCached).toHaveBeenCalledWith(Any).exactly(1).times;
 

@@ -1,8 +1,9 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { AffiliatesService, LoggerService } from '../../components';
 import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockCacheServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockServiceFactory } from '../../factories';
+import { MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
+import { Affiliate } from './affiliate';
 
 function getService() {
     const service: AffiliatesService = NestTest.get<AffiliatesService>(AffiliatesService);
@@ -191,18 +192,18 @@ export class AffiliatesServiceFixture {
         Expect(actual).toEqual(expected);
     }
 
-    @TestCase('003c00000dsFFaa')
+    @TestCase({ Id: '003c00000dsFFaa', Name: 'Hi', Summary__c: 'Hey' })
     @AsyncTest('Map an existing Affiliate')
-    public async map(id: string) {
+    public async map(aff: Affiliate) {
         const service = getService();
 
         const cm = { id: 1 };
-        const perm = { resource: `affiliate -- ${id}` };
+        const perm = { resource: `affiliate -- ${aff.Id}` };
 
         this.mockAuthService.createRole.andReturn(cm);
         this.mockAuthService.createPermission.andReturn(perm);
 
-        const actual = await service.map(id);
+        const actual = await service.map(aff);
 
         Expect(this.mockAuthService.createRole).toHaveBeenCalledWith(Any).exactly(1).times;
         Expect(this.mockAuthService.createPermission).toHaveBeenCalledWith(Any).exactly(6).times;

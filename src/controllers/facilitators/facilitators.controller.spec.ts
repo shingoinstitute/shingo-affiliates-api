@@ -3,7 +3,7 @@ import { HttpStatus } from '@nestjs/common';
 import { FacilitatorsController } from './facilitators.controller';
 import { FacilitatorsService, LoggerService } from '../../components';
 import { MockFacilitatorsServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockExpressInstance, MockServiceFactory } from '../../factories';
+import { MockExpressInstance, MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -43,7 +43,7 @@ export class FacilitatorsControllerFixture {
         Expect(controller.create).toBeDefined();
         Expect(controller.update).toBeDefined();
         Expect(controller.delete).toBeDefined();
-        Expect(controller.unamp).toBeDefined();
+        Expect(controller.unmap).toBeDefined();
         Expect(controller.deleteLogin).toBeDefined();
         Expect(controller.changeRole).toBeDefined();
         Expect(controller.describe).toBeDefined();
@@ -277,7 +277,7 @@ export class FacilitatorsControllerFixture {
     public async unmap(id: string, isValid: boolean) {
         const { controller, handleError } = getController();
 
-        await controller.unamp(this.mockExpress.res, id);
+        await controller.unmap(this.mockExpress.res, id);
 
         if (isValid) {
             Expect(this.mockFacilitatorsService.unmapAuth).toHaveBeenCalledWith(id).exactly(1).times;

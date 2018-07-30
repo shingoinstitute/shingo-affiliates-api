@@ -3,7 +3,7 @@ import { HttpStatus } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService, LoggerService, SalesforceService } from '../../components';
 import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockExpressInstance, MockServiceFactory } from '../../factories';
+import { MockExpressInstance, MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {

@@ -1,9 +1,9 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { AffiliatesController } from './affiliates.controller';
-import { AffiliatesService, LoggerService } from '../../components';
+import { AffiliatesService, LoggerService, Affiliate } from '../../components';
 import { MockAffiliatesServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockExpressInstance, MockServiceFactory, MulterFactory } from '../../factories';
+import { MockExpressInstance, MockServiceFactory } from '../../factories/index.mock';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
 
 function getController() {
@@ -203,13 +203,13 @@ export class AffiliatesControllerFixture {
     }
 
     @TestCase('', false)
-    @TestCase('not a sf id', false)
-    @TestCase('01Sg0000001jXbg', true)
+    @TestCase('not a sf id', false, { name: 'test', Summary__c: 'hi' })
+    @TestCase('01Sg0000001jXbg', true, { name: 'test', Summary__c: 'hey' })
     @AsyncTest('Map an existing Account to be an Affiliate')
-    public async map(id: string, isValid: boolean) {
+    public async map(id: string, isValid: boolean, aff: Affiliate) {
         const { controller, handleError } = getController();
 
-        await controller.map(this.mockExpress.res, id);
+        await controller.map(this.mockExpress.res, id, aff);
 
         if (isValid) {
             Expect(this.mockAffiliatesService.map).toHaveBeenCalledWith(id).exactly(1).times;

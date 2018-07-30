@@ -10,11 +10,6 @@
     "@nestjs/microservices": "^2.0.5",
     "@nestjs/testing": "^2.0.3",
     "@nestjs/websockets": "^2.0.3",
-    "@types/connect-redis": "0.0.6",
-    "@types/express": "^4.0.35",
-    "@types/node": "^7.0.39",
-    "@types/nodemailer": "^3.1.2",
-    "@types/winston": "^2.3.4",
     "bluebird": "^3.5.0",
     "body-parser": "^1.18.3",
     "connect-redis": "^3.3.2",
@@ -35,15 +30,22 @@
     "reflect-metadata": "^0.1.10",
     "request": "^2.87.0",
     "rxjs": "^5.4.0",
-    "ts-mockito": "^2.0.2",
+    "winston": "^2.3.1"
+  },
+  "devDependencies": {
+    "alsatian": "^2.0.0",
     "typescript": "^2.9.2",
-    "winston": "^2.3.1",
-    "alsatian": "^2.0.0"
+    "@types/connect-redis": "0.0.6",
+    "@types/express": "^4.0.35",
+    "@types/node": "^7.0.39",
+    "@types/nodemailer": "^3.1.2",
+    "@types/winston": "^2.3.4",
+    "ts-mockito": "^2.0.2"
   },
   "scripts": {
     "start": "node ./build/index.js",
     "build": "tsc -p ./tsconfig.json",
-    "test": "tsc -p ./tsconfig.spec.json; cd spec; alsatian ../**/*.spec.js",
+    "test": "tsc -p ./tsconfig.spec.json; cd spec; alsatian ./**/*.spec.js",
     "coverage": "nyc --reporter=lcov --reporter=html npm run test && nyc report",
     "docs": "tsc && jsdoc -t ./node_modules/ink-docstrap/template/ -r build/ -d docs -c jsdoc.conf.json --readme ./README-DOCS.md && cp Shingo_Logo.png ./docs",
     "clean": "rm -r build/ && rm -r coverage && rm -r .nyc_output && rm -r spec"

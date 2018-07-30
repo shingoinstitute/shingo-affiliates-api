@@ -2,7 +2,9 @@ FROM node:8.9-alpine
 ENV NODE_ENV production
 WORKDIR /usr/src/app
 COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --production --silent
+# if we really wanted to trim our build, we could build using a separate container
+# and then install only the production dependencies in a second container
+RUN npm install --silent
 COPY . .
 RUN npm run build
 EXPOSE 80

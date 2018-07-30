@@ -1,5 +1,5 @@
 import { createFunctionSpy, FunctionSpy } from 'alsatian';
-import { MockInstance } from '../../factories/service.factory';
+import { MockInstance } from '../../factories/service.factory.mock';
 
 export class MockFacilitatorsServiceInstance extends MockInstance {
 
