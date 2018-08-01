@@ -50,7 +50,7 @@ export class AffiliatesService {
                 "Languages__c"
             ],
             table: "Account",
-            clauses: "RecordType.Name='Licensed Affiliate'"
+            clauses: "RecordType.DeveloperName='Licensed_Affiliate'"
         }
 
         if (isPublic) {
@@ -147,7 +147,7 @@ export class AffiliatesService {
      * @memberof AffiliatesService
      */
     public async search(search: string, retrieve: string, refresh: boolean = false): Promise<Affiliate[]> {
-        if (!retrieve.includes('RecordType.Name')) retrieve += ', RecordType.Name';
+        if (!retrieve.includes('RecordType.DeveloperName')) retrieve += ', RecordType.DeveloperName';
         // Generate the data parameter for the RPC call
         const data = {
             search: `{${search}}`,
@@ -157,7 +157,7 @@ export class AffiliatesService {
         // If no cached result, use the shingo-sf-api to get result
         if (!this.cache.isCached(data) || refresh) {
             let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[] || [];
-            affiliates = affiliates.filter(aff => { return aff.RecordType && aff.RecordType.Name === 'Licensed Affiliate'; });
+            affiliates = affiliates.filter(aff => { return aff.RecordType && aff.RecordType.DeveloperName === 'Licensed_Affiliate'; });
 
             // Cache results
             this.cache.cache(data, affiliates);
@@ -353,7 +353,7 @@ export class AffiliatesService {
             action: "SELECT",
             fields: ["Id"],
             table: "Contact",
-            clauses: `Facilitator_For__c='${id}' AND RecordType.Name='Affiliate Instructor'`
+            clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`
         }
         const facilitators = (await this.sfService.query(query)).records as any[] || [];
         for (const facilitator of facilitators) {
