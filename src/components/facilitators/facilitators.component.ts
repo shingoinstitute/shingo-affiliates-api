@@ -62,7 +62,7 @@ export class FacilitatorsService {
                     "Biography__c"
                 ],
                 table: "Contact",
-                clauses: `RecordType.Name='Affiliate Instructor'`
+                clauses: `RecordType.DeveloperName='Affiliate_Instructor'`
             }
 
             if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
