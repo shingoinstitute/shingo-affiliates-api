@@ -146,7 +146,7 @@ export class FacilitatorsService {
     public async search(search: string, retrieve: string, isMapped: boolean = true, affiliate: string = '', refresh: boolean = false): Promise<any> {
         // Generate the data parameter for the RPC call
         if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
-        if (!retrieve.includes('RecordType.Name')) retrieve += ', RecordType.Name';
+        if (!retrieve.includes('RecordType.DeveloperName')) retrieve += ', RecordType.DeveloperName';
         if (!retrieve.includes('Id')) retrieve += ', Id';
         const data = {
             search: `{${search}}`,
@@ -157,8 +157,8 @@ export class FacilitatorsService {
         if (!this.cache.isCached(data) || refresh) {
             let facilitators = (await this.sfService.search(data)).searchRecords || [];
             facilitators = facilitators.filter(result => {
-                if (affiliate === '' && isMapped) return result.RecordType && result.RecordType.Name === 'Affiliate Instructor';
-                else if (affiliate !== '') return result.AccountId === affiliate && result.RecordType && result.RecordType.Name === 'Affiliate Instructor';
+                if (affiliate === '' && isMapped) return result.RecordType && result.RecordType.DeveloperName === 'Affiliate_Instructor';
+                else if (affiliate !== '') return result.AccountId === affiliate && result.RecordType && result.RecordType.DeveloperName === 'Affiliate_Instructor';
                 else return result;
             });
 
