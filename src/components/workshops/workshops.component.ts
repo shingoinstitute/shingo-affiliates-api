@@ -5,7 +5,8 @@ import {
     LoggerService
 } from '../';
 import { Workshop } from './workshop'
-import { _, chunk } from 'lodash';
+import _, { chunk } from 'lodash';
+import { RequireKeys } from '../../util';
 
 export { Workshop }
 
@@ -152,7 +153,7 @@ export class WorkshopsService {
             if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
             if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
 
-            workshop.files = await this.getFiles(workshop.Id) || [];
+            workshop.files = await this.getFiles(workshop.Id!) || [];
 
             this.cache.cache(id, workshop);
 
@@ -175,8 +176,7 @@ export class WorkshopsService {
             clauses: `ParentId='${id}'`
         }
 
-        const files = (await this.sfService.query(query)).records;
-        return Promise.resolve(files);
+        return (await this.sfService.query(query)).records || [];
     }
 
     /**
@@ -312,7 +312,7 @@ export class WorkshopsService {
      * @returns {Promise<any>} 
      * @memberof WorkshopsService
      */
-    public async create(workshop: Workshop): Promise<any> {
+    public async create(workshop: RequireKeys<Workshop, 'Name' | 'Start_Date__c' | 'End_Date__c' | 'Organizing_Affiliate__c' | 'facilitators'>): Promise<any> {
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Workshop__c',
@@ -320,9 +320,10 @@ export class WorkshopsService {
         }
 
         const result: SFSuccessObject = (await this.sfService.create(data))[0];
+        const newWorkshop = { ...workshop, Id: result.id }
         workshop.Id = result.id;
 
-        await this.grantPermissions(workshop);
+        await this.grantPermissions(newWorkshop);
 
         this.cache.invalidate('WorkshopsService.getAll');
 
@@ -341,7 +342,7 @@ export class WorkshopsService {
      * @returns {Promise<any>} 
      * @memberof WorkshopsService
      */
-    public async update(workshop: Workshop): Promise<any> {
+    public async update(workshop: RequireKeys<Workshop, 'Id'>): Promise<any> {
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Workshop__c',
@@ -350,13 +351,13 @@ export class WorkshopsService {
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
         const currFacilitators = await this.facilitators(workshop.Id);
-        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Instructor__r.Id === other.Id });
-        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Instructor__r.Id });
+        const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators || [], (val: any, other) => { return other && val.Instructor__r.Id === other.Id });
+        workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other: any) => { return other && val.Id === other.Instructor__r.Id });
 
-        await this.grantPermissions(workshop);
+        await this.grantPermissions(workshop as any);
         await this.removePermissions(workshop, removeFacilitators);
 
-        this.cache.invalidate(workshop.Id);
+        this.cache.invalidate(workshop.Id!);
         this.cache.invalidate(`${workshop.Id}_facilitators`);
         this.cache.invalidate('WorkshopsService.getAll');
 
@@ -375,11 +376,9 @@ export class WorkshopsService {
      */
     public async upload(id: string, fileName: string, files: string[], contentType: string = 'text/csv'): Promise<SFSuccessObject[]> {
 
-        const records = [];
-        let fileId = 0;
-        for (const file of files) {
-            records.push({ contents: JSON.stringify({ ParentId: id, Name: `${fileId++}-${fileName}`, Body: file, ContentType: contentType }) });
-        }
+        const records = files.map((file, fileId) =>
+            ({ contents: JSON.stringify({ ParentId: id, Name: `${fileId}-${fileName}`, Body: file, ContentType: contentType }) })
+        )
 
         const data = {
             object: 'Attachment',
@@ -389,7 +388,7 @@ export class WorkshopsService {
         const result: SFSuccessObject[] = await this.sfService.create(data);
 
         this.cache.invalidate(id);
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -450,7 +449,7 @@ export class WorkshopsService {
      * @returns {Promise<void>} 
      * @memberof WorkshopsService
      */
-    private async grantPermissions(workshop: Workshop): Promise<void> {
+    private async grantPermissions(workshop: RequireKeys<Workshop, 'Id' | 'facilitators'>): Promise<void> {
         const roles = (await this.authService.getRoles(`role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${workshop.Organizing_Affiliate__c}'`)).roles;
 
         const resource = `/workshops/${workshop.Id}`;

@@ -167,7 +167,7 @@ export class FacilitatorsService {
                 const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
                 const users = _.keyBy(usersArr, 'extId');
 
-                const accountIds = [];
+                const accountIds: string[] = [];
                 // Add the facilitator's auth id to the object
                 for (let facilitator of facilitators) {
                     if (facilitator.AccountId) accountIds.push(`'${facilitator.AccountId}'`);
@@ -449,12 +449,12 @@ export class FacilitatorsService {
      * @returns {Promise<boolean>} 
      * @memberof FacilitatorsService
      */
-    public async updateAuth(user, extId): Promise<boolean> {
+    public async updateAuth(user: any, extId: string): Promise<boolean> {
         const set = { extId };
         if (user.Email) set['email'] = user.Email;
         if (user.password) set['password'] = user.password;
 
-        const updated = await this.authService.updateUser(set as User);
+        const updated = await this.authService.updateUser(set);
 
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
@@ -581,7 +581,7 @@ export class FacilitatorsService {
 
         if (new Date(decoded.expires) < new Date()) return Promise.reject({ error: 'RESET_TOKEN_EXPIRED' });
 
-        await this.authService.updateUser({ id: user.id, password } as User);
+        await this.authService.updateUser({ id: user.id, password });
 
         return Promise.resolve(user);
     }

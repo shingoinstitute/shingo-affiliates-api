@@ -3,6 +3,8 @@ import {
     SalesforceService, CacheService,
     SFQueryObject, LoggerService
 } from '../';
+import { tryCache } from '../../util';
+import { SFIdData, SFSearchData } from '../salesforce/salesforce.component';
 
 /**
  * @desc A service to provide functions for working with Support Pages
@@ -18,7 +20,7 @@ export class SupportService {
         @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
 
     public async getAll(role: string, refresh: boolean = false): Promise<any[]> {
-        let query = {
+        const query: SFQueryObject = {
             action: "SELECT",
             fields: [
                 "Id",
@@ -31,34 +33,17 @@ export class SupportService {
             clauses: `Application__c='Affiliate Portal'`
         }
 
-        let pages;
-        if (!this.cache.isCached(query) || refresh) {
-            pages = (await this.sfService.query(query as SFQueryObject)).records as any;
-            this.cache.cache(query, pages);
-        } else {
-            pages = this.cache.getCache(query);
-        }
-
-        pages = pages.filter(page => page.Restricted_To__c.includes(role));
-
-        return Promise.resolve(pages);
+        return (await tryCache(this.cache, query, () => this.sfService.query(query).then(d => d.records || []), refresh))
+            .filter((page: any) => page.Restricted_To__c.includes(role));
     }
 
     public async get(id: string, refresh: boolean = false): Promise<any> {
-        let request = {
+        const request: SFIdData = {
             object: 'Support_Page__c',
             ids: [id]
         }
 
-        let page;
-        if (!this.cache.isCached(request) || refresh) {
-            page = (await this.sfService.retrieve(request))[0] as any;
-            this.cache.cache(request, page);
-        } else {
-            page = this.cache.getCache(request);
-        }
-
-        return Promise.resolve(page);
+        return tryCache(this.cache, request, () => this.sfService.retrieve(request).then(d => d[0]), refresh);
     }
 
     /**
@@ -71,40 +56,17 @@ export class SupportService {
     public async describe(refresh: boolean = false): Promise<any> {
         const key = 'describeSupportPage';
 
-        if (!this.cache.isCached(key) || refresh) {
-            const describeObject = await this.sfService.describe('Support_Page__c');
-
-            this.cache.cache(key, describeObject);
-
-            return Promise.resolve(describeObject);
-        } else {
-            return Promise.resolve(this.cache.getCache(key));
-        }
+        return tryCache(this.cache, key, () => this.sfService.describe('Support_Page__c'), refresh);
     }
 
     public async search(search: string, retrieve: string, role: string, refresh: boolean = false): Promise<any[]> {
         // Generate the data parameter for the RPC call
-        const data = {
+        const data: SFSearchData = {
             search: `{${search}}`,
             retrieve: `Support_Page__c(${retrieve})`
         }
 
-        // If no cached result, use the shingo-sf-api to get result
-        let pages;
-        if (!this.cache.isCached(data) || refresh) {
-            pages = (await this.sfService.search(data)).searchRecords as any[] || [];
-
-            // Cache results
-            this.cache.cache(data, pages);
-
-        }
-        // else return the cached result
-        else {
-            pages = this.cache.getCache(data);
-        }
-
-        pages = pages.filter(page => page.Restricted_To__c.includes(role));
-
-        return Promise.resolve(pages);
+        return (await tryCache(this.cache, data, () => this.sfService.search(data).then(d => d.searchRecords), refresh))
+            .filter(page => page.Restricted_To__c.includes(role));
     }
 }

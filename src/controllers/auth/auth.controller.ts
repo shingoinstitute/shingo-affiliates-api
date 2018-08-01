@@ -10,7 +10,8 @@ import {
 } from '../../components';
 import { BaseController } from '../base.controller';
 
-import * as _ from 'lodash';
+import _ from 'lodash';
+import { parseError } from '../../util';
 
 /**
  * @desc Provides the controller of the Auth REST logic
@@ -42,7 +43,12 @@ export class AuthController extends BaseController {
         try {
             user = await this.authService.login(body);
         } catch (e) {
-            return this.handleError(res, 'Error in AuthController.login(): ', e, HttpStatus.INTERNAL_SERVER_ERROR);
+            this.log.debug(e)
+            const parsed = parseError(e);
+            return this.handleError(res, 'Error in AuthController.login(): ', e,
+            parsed.error && (parsed.error === 'INVALID_PASSWORD' || parsed.error === 'EMAIL_NOT_FOUND')
+                ? HttpStatus.FORBIDDEN
+                : HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         if (user === undefined) {

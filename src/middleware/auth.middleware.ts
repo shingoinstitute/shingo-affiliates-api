@@ -33,20 +33,24 @@ export class AuthMiddleware implements NestMiddleware {
 
             if (isAfMan) return next();
 
-            if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
-            else if (!resource) resource = `${req.path}`;
+            let realResource =
+                resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
+                : !resource ? `${req.path}`
+                : resource;
 
-            if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
-	    else if (resource.match(/^\/workshops\/.*\/attendee_file/)) resource = resource.split('/attendee_file')[0];
-	    else if (resource.match(/^\/workshops\/.*\/evaluation_files/)) resource = resource.split('/evaluation_files')[0];
+            if (realResource.match(/^\/workshops\/.*\/facilitators/)) realResource = realResource.split('/facilitators')[0];
+	        else if (realResource.match(/^\/workshops\/.*\/attendee_file/)) realResource = realResource.split('/attendee_file')[0];
+	        else if (realResource.match(/^\/workshops\/.*\/evaluation_files/)) realResource = realResource.split('/evaluation_files')[0];
 
-            return this.authService.canAccess(resource, level, req.headers['x-jwt'])
+            return this.authService.canAccess(realResource, level, req.headers['x-jwt'])
                 .then(result => {
-                    if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
-                    else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
-			else resource = `${req.path}`;
+                    const messageResource =
+                        realResource.includes('affiliate -- ') ? 'affiliate -- '
+                        : realResource.includes('workshops -- ') ? 'workshops -- '
+                        : `${req.path}`;
+
                     if (result && result.response) return next();
-                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
+                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${messageResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);

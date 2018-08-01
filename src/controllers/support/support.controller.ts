@@ -45,8 +45,8 @@ export class SupportController extends BaseController {
             role = session.user.role.name + "s";
 
         try {
-            let pages = await this.supportService.getAll(role, refresh === 'true');
-            pages = pages.filter(page => page.Category__c.toLowerCase() === catName.toLowerCase());
+            const pages = (await this.supportService.getAll(role, refresh === 'true'))
+                .filter(page => page.Category__c.toLowerCase() === catName.toLowerCase());
             return res.status(HttpStatus.OK).json(pages);
         } catch (error) {
             return this.handleError(res, 'Error in SupportController.readCategory(): ', error);

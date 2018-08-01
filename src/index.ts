@@ -2,11 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { ApplicationModule } from './app.module';
 import { InitService } from './initService';
 import { LoggerService } from './components';
-import * as express from 'express';
-import * as bodyParser from 'body-parser';
-import * as session from 'express-session';
-import * as cors from 'cors';
-import * as connectRedis from 'connect-redis';
+import express from 'express';
+import bodyParser from 'body-parser';
+import session from 'express-session';
+import cors from 'cors';
+import connectRedis from 'connect-redis';
 
 const RedisStore = connectRedis(session);
 
@@ -20,26 +20,32 @@ if (!process.env.AUTH_API || !process.env.SF_API) {
 
 // Set up CORS whitelist
 let whitelist = ['https://affiliates.shingo.org', 'http://affiliates.shingo.org', 'https://beta-affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
-if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'http://172.18.0.5', 'http://129.123.47.167']);
+if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'https://api.shingo.org']);
 
 // Set up ExpressJS Server
 const server = express();
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) > -1) {
-            log.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
-            callback(null, true);
-        } else {
-            log.warn(`${origin} was not in the whitelist: %j`, whitelist);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true
-}
-
 // Set up CORS using specified options
-server.use(cors(corsOptions));
+server.use(cors((req, cb) => {
+    return cb(null, {
+        origin: (origin, callback) => {
+            // if (process.env.NODE_ENV !== 'production') return callback(null, true);
+
+            const realOrigin = typeof origin === 'undefined'
+                ? `${req.headers['x-forwarded-proto'] || req.protocol}://${req.hostname}`
+                : origin;
+
+            if (whitelist.indexOf(realOrigin) > -1) {
+                log.debug('Setting \'Access-Control-Allow-Origin\' to %s', realOrigin);
+                callback(null, true);
+            } else {
+                log.warn(`${realOrigin} was not in the whitelist: %j`, whitelist);
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true
+    })
+}));
 
 // Set up bodyParser to handle json and urlencoded bodies
 server.use(bodyParser.json());
@@ -71,5 +77,5 @@ InitService.init()
     .catch(error => {
         log.error('Error in lifting application!');
         log.error(JSON.stringify(error, null, 3));
-
+        process.exit(1);
     });

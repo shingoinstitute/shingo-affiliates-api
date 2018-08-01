@@ -1,5 +1,6 @@
 import { Response, HttpStatus, Inject } from '@nestjs/common';
 import { SalesforceService, LoggerService } from '../components';
+import { parseError } from '../util';
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -22,18 +23,9 @@ export abstract class BaseController {
     * @memberof BaseController
     */
     public handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-        if (error.message) error = { message: error.message };
+        const err = parseError(error, e => this.log.warn(`Failed to parse an error in response object. Expected a JSON string but got ${e.error} instead`))
 
-        if (typeof error.error === 'string' && error.error.match(/\{.*\}/g)) {
-            try {
-                error.error = JSON.parse(error.error);
-            } catch (e) {
-                this.log.warn(`Failed to parse an error in response object. Expected a JSON string but got ${error.error} instead`);
-            }
-        }
-
-        this.log.error(message + ' %j', error);
-        return res.status(errorCode).json({ error: error });
+        this.log.error(message + ' %j', err);
+        return res.status(errorCode).json({ error: err });
     }
 }

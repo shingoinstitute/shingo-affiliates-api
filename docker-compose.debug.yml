@@ -14,8 +14,10 @@ services:
       AUTH_API: "${AUTH_API:-shingo-auth-api}"
       EMAIL_PASS:
     networks:
-      - shingo-dev-net
-      - default
+      shingo-dev-net:
+        aliases:
+          - "shingo-affiliates-api"
+      default:
     volumes:
       - ./build:/build
     ports:

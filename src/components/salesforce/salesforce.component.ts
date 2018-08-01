@@ -2,7 +2,7 @@ import { Component } from '@nestjs/common';
 import { LoggerService } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
-import * as bluebird from 'bluebird';
+import bluebird from 'bluebird';
 
 export interface gRPCError { metadata: any }
 
@@ -10,7 +10,7 @@ export interface SFSuccessObject { id: string; success: boolean; errors: any[] }
 
 export interface SFQueryObject { action: 'SELECT' | 'select'; fields: string[]; table: string; clauses?: string }
 
-export interface SFQueryResponse { totalSize: number, done: false, records: object[] }
+export interface SFQueryResponse { totalSize: number, done: false, records?: object[] }
 
 export interface SFIdData { object: string; ids: string[] }
 

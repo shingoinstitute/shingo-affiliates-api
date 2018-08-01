@@ -2,7 +2,8 @@ import { Component } from '@nestjs/common';
 import { gRPCError, User } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
-import * as bluebird from 'bluebird';
+import bluebird from 'bluebird';
+import { RequireKeys } from '../../util';
 
 const authservices = grpc.load(path.join(__dirname, '../../proto/auth_services.proto')).authservices;
 
@@ -72,7 +73,7 @@ export class AuthService {
      * @returns {Promise<any>} 
      * @memberof AuthService
      */
-    public updateUser(user: User): Promise<any> {
+    public updateUser(user: RequireKeys<Partial<User>, 'id'> | RequireKeys<Partial<User>, 'extId'>): Promise<any> {
         return this.client.updateUserAsync(user);
     }
 

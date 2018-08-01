@@ -1,7 +1,8 @@
 import { Component, Inject } from '@nestjs/common';
 import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '..';
 import { Affiliate } from './affiliate';
-import * as _ from 'lodash';
+import _ from 'lodash';
+import { tryCache, RequireKeys } from '../../util';
 
 export { Affiliate };
 
@@ -58,24 +59,15 @@ export class AffiliatesService {
             query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
         }
 
-        let affiliates = [];
-        if (!this.cache.isCached(key) || refresh) {
-            affiliates = (await this.sfService.query(query)).records as Affiliate[];
-
-            this.cache.cache(key, affiliates);
-        } else {
-            affiliates = this.cache.getCache(key);
-        }
+        const affiliates = await tryCache(this.cache, key, () => this.sfService.query(query).then(q => q.records || []), refresh) as Affiliate[]
 
         if (isPublic) {
-            return Promise.resolve(affiliates);
+            return affiliates
         }
 
         const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
 
-        affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
-
-        return Promise.resolve(affiliates);
+        return affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
     }
 
     /**
@@ -88,7 +80,7 @@ export class AffiliatesService {
      * @returns {Promise<Affiliate>} 
      * @memberof AffiliatesService
      */
-    public async get(id: string): Promise<Affiliate> {
+    public async get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
         if (!this.cache.isCached(id)) {
             const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
             return Promise.resolve(affiliate);
@@ -261,7 +253,7 @@ export class AffiliatesService {
      * @returns {Promise<SFSuccessObject>} 
      * @memberof AffiliatesService
      */
-    public async update(affiliate: Affiliate): Promise<SFSuccessObject> {
+    public async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>): Promise<SFSuccessObject> {
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Account',
@@ -289,7 +281,7 @@ export class AffiliatesService {
      * @memberof AffiliatesService
      */
     public async delete(id: string): Promise<SFSuccessObject> {
-        const result: Affiliate = await this.get(id);
+        const result = await this.get(id);
         result.RecordTypeId = '012A0000000zprfIAA';
 
         await this.deletePermissions(result.Id);

@@ -17,14 +17,10 @@ export class UserService {
      * @returns {string[]} 
      * @memberof UserService
      */
-    public getWorkshopIds(user): string[] {
-        let ids = [];
-        user.permissions.forEach(p => {
-            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
-        });
-        user.role.permissions.forEach(p => {
-            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
-        });
+    public getWorkshopIds(user: { permissions: Array<{ resource: string }>, role: { permissions: Array<{resource: string}> } }): string[] {
+        const ids = [...user.permissions, ...user.role.permissions]
+                .filter(p => p.resource.includes('/workshops/'))
+                .map(p => `'${p.resource.replace('/worshops/', '')}'`)
 
         return [...new Set(ids)]; // Only return unique ids
     }
