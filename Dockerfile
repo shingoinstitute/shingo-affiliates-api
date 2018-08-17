@@ -1,12 +1,12 @@
 ### STEP 1: Build ###
-FROM node:8.9-alpine as build
+FROM node:8-alpine as build
 COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
 RUN npm install --silent
 COPY . .
 RUN npm run build
 
 ### STEP 2: Run Production ##
-FROM node:8.9-alpine as prod
+FROM node:8-alpine as prod
 COPY --from=build /build/ build
 COPY --from=build /package.json package.json
 # install production modules instead of full

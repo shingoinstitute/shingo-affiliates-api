@@ -1,4 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createTransport, Transport, Transporter } from 'nodemailer';
 import { LoggerService } from '../logger/logger.component';
 
@@ -8,7 +8,7 @@ import { LoggerService } from '../logger/logger.component';
  * @export
  * @class MailerService
  */
-@Component()
+@Injectable()
 export class MailerService {
 
     private transporter: Transporter;
@@ -31,8 +31,11 @@ export class MailerService {
     }
 
     public async sendMail(options: { from?: string, to: string, subject: string, text: string, html?: string }) {
-        options.from = 'shingo.it@usu.edu';
-        return await this.transporter.sendMail(options);
+        if (process.env.EMAIL_PASS && process.env.EMAIL_PASS !== '') {
+            console.log(process.env.EMAIL_PASS)
+            options.from = 'shingo.it@usu.edu';
+            return this.transporter.sendMail(options);
+        }
     }
 
 }

@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 export { User } from './user';
 
 /**
@@ -7,7 +7,7 @@ export { User } from './user';
  * @export
  * @class UserService
  */
-@Component()
+@Injectable()
 export class UserService {
 
     /**

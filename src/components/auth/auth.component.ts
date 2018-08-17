@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { gRPCError, User } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
@@ -13,7 +13,7 @@ const authservices = grpc.load(path.join(__dirname, '../../proto/auth_services.p
  * @export
  * @class AuthService
  */
-@Component()
+@Injectable()
 export class AuthService {
 
     private client;

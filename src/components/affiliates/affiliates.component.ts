@@ -1,4 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '..';
 import { Affiliate } from './affiliate';
 import _ from 'lodash';
@@ -12,7 +12,7 @@ export { Affiliate };
  * @export
  * @class AffiliatesService
  */
-@Component()
+@Injectable()
 export class AffiliatesService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),

@@ -1,4 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, User,
     SFQueryObject, LoggerService
@@ -12,7 +12,7 @@ import * as jwt from 'jwt-simple';
  * @export
  * @class FacilitatorsService
  */
-@Component()
+@Injectable()
 export class FacilitatorsService {
 
     private getAllKey = 'FacilitatorsService.getAll';

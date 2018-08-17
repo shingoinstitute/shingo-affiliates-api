@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { LoggerService } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
@@ -28,7 +28,7 @@ const sfservices = grpc.load(path.join(__dirname, '../../proto/sf_services.proto
  * @export
  * @class SalesforceService
  */
-@Component()
+@Injectable()
 export class SalesforceService {
 
     private client;

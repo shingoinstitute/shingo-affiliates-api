@@ -1,4 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     SalesforceService, CacheService,
     SFQueryObject, LoggerService
@@ -12,7 +12,7 @@ import { SFIdData, SFSearchData } from '../salesforce/salesforce.component';
  * @export
  * @class SupportService
  */
-@Component()
+@Injectable()
 export class SupportService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),

@@ -11,25 +11,30 @@ export type RequireKeys<T extends object, K extends keyof T> = Overwrite<T, { [k
  * @param data A lazy promise for some data
  * @param invalidate Boolean indicating if the cache should be invalidated
  */
-export const tryCache = async <T>(cache: CacheService, key: string | object, data: Lazy<Promise<T>>, invalidate = false) => {
+export const tryCache = async <T>(
+  cache: CacheService,
+  key: string | object,
+  data: Lazy<Promise<T>>,
+  invalidate = false
+) => {
   if (!cache.isCached(key) || invalidate) {
-    const result = await data();
-    cache.cache(key, result);
-    return result;
+    const result = await data()
+    cache.cache(key, result)
+    return result
   } else {
-    return cache.getCache(key) as T;
+    return cache.getCache(key) as T
   }
-};
+}
 
 export const parseError = (error: any, errHandler?: (e: { error: string }) => void) => {
-  if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-  if (error.message) error = { message: error.message };
+  if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error)
+  if (error.message) error = { message: error.message }
 
   if (typeof error.error === 'string' && error.error.match(/\{.*\}/g)) {
       try {
-          error.error = JSON.parse(error.error);
+          error.error = JSON.parse(error.error)
       } catch (e) {
-        errHandler && errHandler(error)
+        if (errHandler) errHandler(error)
       }
   }
 

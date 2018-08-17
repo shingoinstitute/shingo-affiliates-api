@@ -1,4 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Logger, LoggerInstance, LoggerOptions, transports } from 'winston';
 import * as path from 'path';
 
@@ -10,7 +10,7 @@ type Level = 'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly';
  * @export
  * @class LoggerService
  */
-@Component()
+@Injectable()
 export class LoggerService {
 
     /**
@@ -25,7 +25,7 @@ export class LoggerService {
     constructor() {
         let logPath: string = process.env.LOG_PATH || '';
         let logName: string = process.env.LOG_FILE || 'affiliates-api.log';
-        let logLevel: Level = process.env.LOG_LEVEL || 'silly';
+        let logLevel: Level = process.env.LOG_LEVEL as Level || 'silly';
 
         const logTransports = [
             new transports.Console({ colorize: true, prettyPrint: true, timestamp: true }),

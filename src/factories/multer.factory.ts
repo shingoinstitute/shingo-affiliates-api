@@ -1,7 +1,7 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as multer from 'multer';
 
-@Component()
+@Injectable()
 export class MulterFactory {
 
     public getUploadFunction(fieldName: string = 'files', type: 'single' | 'array' = 'single') {
