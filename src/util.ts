@@ -1,4 +1,4 @@
-import { CacheService, SalesforceService } from './components'
+import { CacheService } from './components'
 
 export type Lazy<T> = () => T
 export type Overwrite<A extends object, B extends object> = Pick<A, Exclude<keyof A, keyof B>> & B
@@ -26,8 +26,12 @@ export const tryCache = async <T>(
   }
 }
 
+export const parseRPCErrorMeta = (err: any): any => {
+
+}
+
 export const parseError = (error: any, errHandler?: (e: { error: string }) => void) => {
-  if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error)
+  if (error.metadata) error = parseRPCErrorMeta(error)
   if (error.message) error = { message: error.message }
 
   if (typeof error.error === 'string' && error.error.match(/\{.*\}/g)) {
@@ -39,4 +43,9 @@ export const parseError = (error: any, errHandler?: (e: { error: string }) => vo
   }
 
   return error
+}
+
+export const getBearerToken = (header: string): string | null => {
+  const parts = header.split('Bearer ')
+  return parts.length > 0 ? parts[1] : null
 }

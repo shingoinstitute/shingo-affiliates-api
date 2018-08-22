@@ -1,24 +1,28 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '..';
+import { CacheService, LoggerService } from '..';
 import { Affiliate } from './affiliate';
 import _ from 'lodash';
 import { tryCache, RequireKeys } from '../../util';
+import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
+import { AuthClient } from '@shingo/shingo-auth-api';
 
 export { Affiliate };
 
 /**
  * @desc A service to provide functions for working with Affiliates
- * 
+ *
  * @export
  * @class AffiliatesService
  */
 @Injectable()
 export class AffiliatesService {
 
-    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+    constructor(
+      private sfService: SalesforceClient,
+      private authService: AuthClient,
+      private cache: CacheService,
+      private log: LoggerService
+    ) { }
 
     /**
      * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
@@ -31,43 +35,46 @@ export class AffiliatesService {
      *  &emsp;"Website",<br>
      *  &emsp;"Languages__c"<br>
      * ]</code>
-     * 
+     *
      * @param {boolean} [isPublic=false] - Filter out private Affiliates
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<Affiliate[]>} 
+     * @returns {Promise<Affiliate[]>}
      * @memberof AffiliatesService
      */
-    public async getAll(isPublic: boolean = false, refresh: boolean = false): Promise<Affiliate[]> {
-        let key = 'AffiliatesService.getAll';
-        const query: SFQueryObject = {
-            action: "SELECT",
-            fields: [
-                "Id",
-                "Name",
-                "Summary__c",
-                "Logo__c",
-                "Page_Path__c",
-                "Website",
-                "Languages__c"
-            ],
-            table: "Account",
-            clauses: "RecordType.DeveloperName='Licensed_Affiliate'"
-        }
+    async getAll(isPublic: boolean = false, refresh: boolean = false): Promise<Affiliate[]> {
+      let key = 'AffiliatesService.getAll';
+      const query: QueryRequest = {
+        fields: [
+          'Id',
+          'Name',
+          'Summary__c',
+          'Logo__c',
+          'Page_Path__c',
+          'Website',
+          'Languages__c',
+        ],
+        table: 'Account',
+        clauses: `RecordType.DeveloperName='Licensed_Affiliate'`,
+      }
 
-        if (isPublic) {
-            key += '_public';
-            query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
-        }
+      if (isPublic) {
+        key += '_public';
+        query.clauses += ` AND (NOT Name LIKE 'McKinsey%')`;
+      }
 
-        const affiliates = await tryCache(this.cache, key, () => this.sfService.query(query).then(q => q.records || []), refresh) as Affiliate[]
+      const affiliates = await tryCache(
+        this.cache,
+        key,
+        () => this.sfService.query(query).then(q => q.records || []), refresh
+      ) as Affiliate[]
 
-        if (isPublic) {
-            return affiliates
-        }
+      if (isPublic) {
+        return affiliates
+      }
 
-        const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
+      const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`));
 
-        return affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
+      return affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
     }
 
     /**
@@ -75,12 +82,12 @@ export class AffiliatesService {
      * <code>[<br>
      * TODO: Add fields that are returned<br>
      * ]</code>
-     * 
+     *
      * @param {string} id - Salesforce ID for an Account
-     * @returns {Promise<Affiliate>} 
+     * @returns {Promise<Affiliate>}
      * @memberof AffiliatesService
      */
-    public async get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
+    async get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
         if (!this.cache.isCached(id)) {
             const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
             return Promise.resolve(affiliate);
@@ -90,13 +97,14 @@ export class AffiliatesService {
     }
 
     /**
-     * @desc Uses the Salesforce REST API to describe the Account object. See the Salesforce documentation for more about 'describe'
-     * 
+     * Uses the Salesforce REST API to describe the Account object.
+     * See the Salesforce documentation for more about 'describe'
+     *
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof AffiliatesService
      */
-    public async describe(refresh: boolean = false): Promise<any> {
+    async describe(refresh: boolean = false): Promise<any> {
         // Set the key for the cache
         const key = 'describeAccounts'
 
@@ -108,9 +116,8 @@ export class AffiliatesService {
             this.cache.cache(key, describeObject);
 
             return Promise.resolve(describeObject);
-        }
-        // else return the cachedResult
-        else {
+        } else {
+          // else return the cachedResult
             return Promise.resolve(this.cache.getCache(key));
         }
     }
@@ -131,11 +138,11 @@ export class AffiliatesService {
      *          &emsp;&emsp;"Name": "Test Three",<br>
      *      &emsp;},<br>
      *  ]</code>
-     * 
+     *
      * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<Affiliate[]>} 
+     * @returns {Promise<Affiliate[]>}
      * @memberof AffiliatesService
      */
     public async search(search: string, retrieve: string, refresh: boolean = false): Promise<Affiliate[]> {
@@ -195,9 +202,9 @@ export class AffiliatesService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
+     *
      * @param {Affiliate} affiliate - Affiliate to create
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof AffiliatesService
      */
     public async create(affiliate: Affiliate): Promise<any> {
@@ -207,8 +214,10 @@ export class AffiliatesService {
             records: [{ contents: JSON.stringify(affiliate) }]
         }
 
-        const result: SFSuccessObject = (await this.sfService.create(data))[0];
-        await this.map({ Id: result.id } as Affiliate);
+        const result = (await this.sfService.create(data))[0];
+        if (result.success) {
+          await this.map({ Id: result.id } as Affiliate);
+        }
 
         this.cache.invalidate('AffiliatesService.getAll');
 
@@ -217,9 +226,9 @@ export class AffiliatesService {
 
     /**
      * @desc Create the corresponding permissions and roles for the Affiliate in the Shingo Auth API.
-     * 
+     *
      * @param {string} id - Affiliate's Account Id
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof AffiliatesService
      */
     public async map(affiliate: Affiliate): Promise<any> {
@@ -248,19 +257,19 @@ export class AffiliatesService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
+     *
      * @param {Affiliate} affiliate - Affiliate's fields to update
-     * @returns {Promise<SFSuccessObject>} 
+     * @returns {Promise<SFSuccessObject>}
      * @memberof AffiliatesService
      */
-    public async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>): Promise<SFSuccessObject> {
+    public async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>) {
         // Use the shingo-sf-api to create the new record
         const data = {
             object: 'Account',
             records: [{ contents: JSON.stringify(affiliate) }]
         }
 
-        const result: SFSuccessObject = (await this.sfService.update(data))[0];
+        const result = (await this.sfService.update(data))[0];
 
         this.cache.invalidate(affiliate.Id);
         this.cache.invalidate('AffiliatesService.getAll');
@@ -275,12 +284,12 @@ export class AffiliatesService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
+     *
      * @param {string} id - Salesforce Id of the Account to "delete"
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof AffiliatesService
      */
-    public async delete(id: string): Promise<SFSuccessObject> {
+    public async delete(id: string) {
         const result = await this.get(id);
         result.RecordTypeId = '012A0000000zprfIAA';
 
@@ -290,7 +299,7 @@ export class AffiliatesService {
 
         await this.deleteFacilitators(result.Id);
 
-        const update: SFSuccessObject = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
+        const update = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
 
 
         this.cache.invalidate(id);
@@ -302,7 +311,7 @@ export class AffiliatesService {
 
     /**
      * @desc Delete the associated permissions of an Affiliate from the Auth API. Namely 'workshops -- ID' and 'affiliate -- ID'
-     * 
+     *
      * @private
      * @param {SalesforceId} id - The Affilaite's Salesforce Id
      * @returns {Promise<void>}
@@ -319,10 +328,10 @@ export class AffiliatesService {
 
     /**
      * @desc Delete the Affiliate specific roles from the Auth API. Namely, 'Course Manager -- ID'
-     * 
+     *
      * @private
      * @param {SalesforceId} id - The Affiliate's Salesforce Id
-     * @returns {Promise<void>} 
+     * @returns {Promise<void>}
      * @memberof AffiliatesService
      */
     private async deleteRoles(id: string): Promise<void> {
@@ -334,18 +343,17 @@ export class AffiliatesService {
 
     /**
      * @desc Delete the Affiliate's Facilitators logins from the Auth API.
-     * 
+     *
      * @private
      * @param {SalseforceId} id - The Affiliate's SalesforceId
-     * @returns {Promise<void>} 
+     * @returns {Promise<void>}
      * @memberof AffiliatesService
      */
     private async deleteFacilitators(id: string): Promise<void> {
-        const query: SFQueryObject = {
-            action: "SELECT",
-            fields: ["Id"],
-            table: "Contact",
-            clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`
+        const query: QueryRequest = {
+            fields: ['Id'],
+            table: 'Contact',
+            clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`,
         }
         const facilitators = (await this.sfService.query(query)).records as any[] || [];
         for (const facilitator of facilitators) {

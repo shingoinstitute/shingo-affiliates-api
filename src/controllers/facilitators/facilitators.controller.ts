@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { SalesforceService, CacheService, AuthService, FacilitatorsService, LoggerService, MailerService } from '../../components';
+import { FacilitatorsService, LoggerService, MailerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
@@ -12,7 +12,7 @@ import * as generator from 'generate-password';
 
 /**
  * @desc Controller of the REST API logic for Facilitators
- * 
+ *
  * @export
  * @class FacilitatorsController
  * @extends {BaseController}
@@ -20,13 +20,17 @@ import * as generator from 'generate-password';
 @Controller('facilitators')
 export class FacilitatorsController extends BaseController {
 
-    constructor(private facilitatorsService: FacilitatorsService, private mailer: MailerService, logger: LoggerService) {
+    constructor(
+      private facilitatorsService: FacilitatorsService,
+      private mailer: MailerService,
+      logger: LoggerService
+    ) {
         super(logger);
     };
 
     /**
      * @desc <h5>GET: /facilitators</h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given <code>'x-affiliate' || session.affilaite</code>
-     * 
+     *
      * @param {Header} [xAffiliate=''] - Header 'x-affiliate' Used by the 'Affiliate Manager' role to specify the affiliate to query facilitators for ('' queries all affiliates).
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} Response body is JSON Array of objects of type <code>{<em>queried fields</em>}</code>
@@ -48,7 +52,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>GET: /facilitators/describe</h5> Calls {@link FacilitatorsService#describe} to describe Contact
-     * 
+     *
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} Response body is a JSON object with the describe result
      * @memberof FacilitatorsController
@@ -65,8 +69,8 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>GET: /facilitators/search</h5> Calls {@link FacilitatorsService#search} to search for facilitators
-     * 
-     * 
+     *
+     *
      * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*')
      * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name, Email')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
@@ -92,7 +96,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>GET: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#get} to retrieve a Facilitator
-     * 
+     *
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
      * @memberof FacilitatorsController
@@ -100,7 +104,7 @@ export class FacilitatorsController extends BaseController {
     @Get('/:id')
     public async read( @Response() res, @Param('id') id): Promise<Response> {
         // Check the id
-        if (!id.match(/[\w\d]{15,18}/)) 
+        if (!id.match(/[\w\d]{15,18}/))
             return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -157,7 +161,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>POST: /facilitators</h5> Calls {@link FacilitatorsService#create} to create a new Facilitator
-     * 
+     *
      * @param {Body} body - Required fields: <code>[ 'AccountId', 'FirstName', 'LastName', 'Email' ]</code><br>Optional fields: <code>[ 'roleId' ]</code>
      * @returns {Promise<Response>} Response body is a JSON object.
      * @memberof FacilitatorsController
@@ -202,10 +206,10 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>POST: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#mapContact} to map an existing Affiliate Instructor Contact to a new/current Auth login
-     * 
+     *
      * @param {Body} body - Required fields: <code>[ 'AccountId', 'Email', 'password' ]</code><br>Optional fields: <code>['roleId']</code>
      * @param {SalesforceId} id - SalesforceId of the Contact to map
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof FacilitatorsController
      */
     @Post('/:id')
@@ -225,7 +229,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>PUT: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#update} to update a Facilitator. If <code>body</code> contains <code>Email</code> or <code>password</code> the associated auth is also updated.
-     * 
+     *
      * @param {any} body - Required fields <code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography__c', etc..] }</code>
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is status of updates and resulting SF Operation
@@ -253,7 +257,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>DELETE: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#delete}, {@link FacilitatorsService#deleteAuth} or {@link FacilitatorsService#unmapAuth} to remove a facilitator from the affiliate portal
-     * 
+     *
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @param {string} [deleteAuth='true'] - Delete auth as well
      * @returns {Promise<Response>} Response is status of deletes and resulting SF Operation
@@ -277,7 +281,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>DELETE: /facilitators/<em>:id</em>/login</h5> Calls {@link FacilitatorsService#deleteAuth} to delete a Facilitator's login only
-     * 
+     *
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Response body is result of delete
      * @memberof FacilitatorsController
@@ -296,7 +300,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>DELETE: /facilitators/<em>:id</em>/unmap</h5> Calls {@link FacilitatorsService#unmapAuth} to remove the Affiliate Portal service from a login
-     * 
+     *
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @returns {Promise<Response>} Reponse body is result of unmap
      * @memberof FacilitatorsController
@@ -315,7 +319,7 @@ export class FacilitatorsController extends BaseController {
 
     /**
      * @desc <h5>POST: /facilitators/<em>:id</em>/roles/<em>:roleId</em></h5> Calls {@link FacilitatorsService#changeRole} to change a Facilitator's role
-     * 
+     *
      * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
      * @param {number} roleId - Id of the role to change too
      * @returns {Promise<Response>} Response body is result of add

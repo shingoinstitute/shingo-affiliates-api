@@ -1,29 +1,31 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-    SalesforceService, AuthService, CacheService, UserService,
-    SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError,
-    LoggerService
+    CacheService, UserService, LoggerService
 } from '../';
 import { Workshop } from './workshop'
 import _, { chunk } from 'lodash';
 import { RequireKeys } from '../../util';
+import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
+import { AuthClient } from '@shingo/shingo-auth-api';
 
 export { Workshop }
 
 /**
  * @desc A service to provide functions for working with Workshops
- * 
+ *
  * @export
  * @class WorkshopsService
  */
 @Injectable()
 export class WorkshopsService {
 
-    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('UserService') private userService: UserService = new UserService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+    constructor(
+      private sfService: SalesforceClient,
+      private authService: AuthClient,
+      private cache: CacheService,
+      private userService: UserService,
+      private log: LoggerService
+    ) {}
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -45,36 +47,35 @@ export class WorkshopsService {
      *      &emsp;"Language\__c"<br>
      *  ]</code><br><br>
      * The query is ordered by <em>'Start_Date\__c'</em>.
-     * 
+     *
      * @param {boolean} [isPublic=false] - Get Only public workshops (skips permission check)
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @param {any} [user] - The user to filter permissions for (<code>isPublic === false</code>); user needs permissions[] and roles[].permissions[]
-     * @returns {Promise<Workshop[]>} 
+     * @returns {Promise<Workshop[]>}
      * @memberof WorkshopsService
      */
     public async getAll(isPublic: boolean = false, refresh: boolean = false, user?): Promise<Workshop[]> {
         let key = 'WorkshopsService.getAll';
-        const query: SFQueryObject = {
-            action: 'SELECT',
+        const query: QueryRequest = {
             fields: [
-                "Id",
-                "Name",
-                "Start_Date__c",
-                "End_Date__c",
-                "Course_Manager__c",
-                "Billing_Contact__c",
-                "Event_City__c",
-                "Event_Country__c",
-                "Organizing_Affiliate__c",
-                "Public__c",
-                "Registration_Website__c",
-                "Status__c",
-                "Host_Site__c",
-                "Workshop_Type__c",
-                "Language__c"
+                'Id',
+                'Name',
+                'Start_Date__c',
+                'End_Date__c',
+                'Course_Manager__c',
+                'Billing_Contact__c',
+                'Event_City__c',
+                'Event_Country__c',
+                'Organizing_Affiliate__c',
+                'Public__c',
+                'Registration_Website__c',
+                'Status__c',
+                'Host_Site__c',
+                'Workshop_Type__c',
+                'Language__c',
             ],
-            table: "Workshop__c",
-            clauses: "Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c"
+            table: 'Workshop__c',
+            clauses: `Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c`,
         }
 
         if (isPublic) {
@@ -138,9 +139,9 @@ export class WorkshopsService {
      *   &emsp;"Host_Site\__c",<br>
      *   &emsp;"Language\__c",<br>
      * ]</code>
-     * 
+     *
      * @param {string} id - A Salesforce ID corresponding to a Workshop\__c record
-     * @returns {Promise<Workshop>} 
+     * @returns {Promise<Workshop>}
      * @memberof WorkshopsService
      */
     public async get(id: string): Promise<Workshop> {
@@ -164,16 +165,15 @@ export class WorkshopsService {
     }
 
     private async getFiles(id: string): Promise<any[]> {
-        const query: SFQueryObject = {
-            action: 'SELECT',
+        const query: QueryRequest = {
             fields: [
                 'Name',
                 'ParentId',
                 'ContentType',
-                'BodyLength'
+                'BodyLength',
             ],
             table: 'Attachment',
-            clauses: `ParentId='${id}'`
+            clauses: `ParentId='${id}'`,
         }
 
         return (await this.sfService.query(query)).records || [];
@@ -181,9 +181,9 @@ export class WorkshopsService {
 
     /**
      * @desc Uses the Salesforce REST API to describe the Workshop\__c object. See the Salesforce documentation for more about 'describe'.
-     * 
+     *
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof WorkshopsService
      */
     public async describe(refresh: boolean = false): Promise<any> {
@@ -224,11 +224,11 @@ export class WorkshopsService {
      *          &emsp;&emsp;"Start_Date\__c": "2017-07-11"<br>
      *      &emsp;}<br>
      *  ]</code>
-     * 
+     *
      * @param {Header} search - SOSL search expression (i.e. '*Discover Test*')
      * @param {Header} retrieve - A comma seperated list of the Workshop\__c fields to retrieve (i.e. 'Id, Name, Start_Date\__c')
      * @param {Header} [refresh='false'] - Used to force the refresh of the cache
-     * @returns {Promise<Workshop[]>} 
+     * @returns {Promise<Workshop[]>}
      * @memberof WorkshopsService
      */
     public async search(search: string, retrieve: string, refresh: boolean = false): Promise<Workshop[]> {
@@ -261,32 +261,31 @@ export class WorkshopsService {
      *  &emsp;"Instructor\__r.Email",<br>
      *  &emsp;"Instructor\__r.Title"<br>
      * ]</code>
-     * 
+     *
      * @param {string} id - A Salesforce ID corresponding to a Workshop\__c record
-     * @returns {Promise<object[]>} 
+     * @returns {Promise<object[]>}
      * @memberof WorkshopsService
      */
     public async facilitators(id: string): Promise<object[]> {
         if (!this.cache.isCached(id + '_facilitators')) {
-            let query: SFQueryObject = {
-                action: "SELECT",
+            let query: QueryRequest = {
                 fields: [
-                    "Id",
-                    "Instructor__r.Id",
-                    "Instructor__r.FirstName",
-                    "Instructor__r.LastName",
-                    "Instructor__r.Name",
-                    "Instructor__r.AccountId",
-                    "Instructor__r.Email",
-                    "Instructor__r.Title"
+                    'Id',
+                    'Instructor__r.Id',
+                    'Instructor__r.FirstName',
+                    'Instructor__r.LastName',
+                    'Instructor__r.Name',
+                    'Instructor__r.AccountId',
+                    'Instructor__r.Email',
+                    'Instructor__r.Title',
                 ],
-                table: "WorkshopFacilitatorAssociation__c",
-                clauses: `Workshop__c='${id}'`
+                table: 'WorkshopFacilitatorAssociation__c',
+                clauses: `Workshop__c='${id}'`,
             }
 
             const facilitators: any[] = (await this.sfService.query(query)).records || [];
             const ids = facilitators.map(fac => `'${fac.Id}'`)
-            const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`));
             for (let fac of facilitators) {
                 let auth = auths.filter(auth => auth.extId === fac.Id)[0];
                 if (auth) fac.id = auth.id;
@@ -307,9 +306,9 @@ export class WorkshopsService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
+     *
      * @param {Workshop} workshop - The workshop to be created. Requires <code>[ 'Name', 'Start_Date\__c', 'End_Date\__c', 'Organizing_Affiliate\__c' ]
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof WorkshopsService
      */
     public async create(workshop: RequireKeys<Workshop, 'Name' | 'Start_Date__c' | 'End_Date__c' | 'Organizing_Affiliate__c' | 'facilitators'>): Promise<any> {
@@ -319,11 +318,12 @@ export class WorkshopsService {
             records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }]
         }
 
-        const result: SFSuccessObject = (await this.sfService.create(data))[0];
+        const result = (await this.sfService.create(data))[0];
+        if (!result.success) throw new Error('Failed to create: ' + result.errors.join('\n'))
         const newWorkshop = { ...workshop, Id: result.id }
-        workshop.Id = result.id;
+        workshop.Id = result.id as string;
 
-        await this.grantPermissions(newWorkshop);
+        await this.grantPermissions(newWorkshop as any);
 
         this.cache.invalidate('WorkshopsService.getAll');
 
@@ -337,9 +337,9 @@ export class WorkshopsService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
-     * @param {Workshop} workshop 
-     * @returns {Promise<any>} 
+     *
+     * @param {Workshop} workshop
+     * @returns {Promise<any>}
      * @memberof WorkshopsService
      */
     public async update(workshop: RequireKeys<Workshop, 'Id'>): Promise<any> {
@@ -348,7 +348,7 @@ export class WorkshopsService {
             object: 'Workshop__c',
             records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }]
         }
-        const result: SFSuccessObject = (await this.sfService.update(data))[0];
+        const result = (await this.sfService.update(data))[0];
 
         const currFacilitators = await this.facilitators(workshop.Id);
         const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators || [], (val: any, other) => { return other && val.Instructor__r.Id === other.Id });
@@ -366,15 +366,15 @@ export class WorkshopsService {
 
     /**
      * @desc Upload a file(s) as an attachment to the specified record
-     * 
+     *
      * @param {SalesforceId} id - Id of the record to attach file to
      * @param {string} fileName - The name of the file
-     * 
+     *
      * @param {string[]} files - The files to attach (base 64)
-     * @returns {Promise<SFSuccessObject[]>} 
+     * @returns {Promise<SFSuccessObject[]>}
      * @memberof WorkshopsService
      */
-    public async upload(id: string, fileName: string, files: string[], contentType: string = 'text/csv'): Promise<SFSuccessObject[]> {
+    public async upload(id: string, fileName: string, files: string[], contentType: string = 'text/csv') {
 
         const records = files.map((file, fileId) =>
             ({ contents: JSON.stringify({ ParentId: id, Name: `${fileId}-${fileName}`, Body: file, ContentType: contentType }) })
@@ -385,7 +385,7 @@ export class WorkshopsService {
             records
         }
 
-        const result: SFSuccessObject[] = await this.sfService.create(data);
+        const result = await this.sfService.create(data);
 
         this.cache.invalidate(id);
         return result;
@@ -398,9 +398,9 @@ export class WorkshopsService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
-     * @param {string} id 
-     * @returns {Promise<any>} 
+     *
+     * @param {string} id
+     * @returns {Promise<any>}
      * @memberof WorkshopsService
      */
     public async delete(id: string): Promise<any> {
@@ -409,7 +409,7 @@ export class WorkshopsService {
             object: 'Workshop__c',
             ids: [id]
         }
-        const result: SFSuccessObject = (await this.sfService.delete(data))[0];
+        const result = (await this.sfService.delete(data))[0];
         for (const level of [0, 1, 2])
             await this.authService.deletePermission(`/workshops/${id}`, level as 0 | 1 | 2);
 
@@ -426,13 +426,13 @@ export class WorkshopsService {
             object: 'Workshop__c',
             records: [{ contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) }]
         }
-        const update: SFSuccessObject = (await this.sfService.update(updateData))[0];
+        const update = (await this.sfService.update(updateData))[0];
 
         const noteData = {
             object: 'Note',
             records: [{ contents: JSON.stringify({ Title: 'Reasons for Cancelling', Body: reason, ParentId: id }) }]
         }
-        const note: SFSuccessObject = (await this.sfService.create(noteData))[0];
+        const note = (await this.sfService.create(noteData))[0];
 
         this.cache.invalidate(id);
         this.cache.invalidate('WorkshopsService.getAll');
@@ -443,14 +443,14 @@ export class WorkshopsService {
 
     /**
      * @desc Helper method to grant permissions to the appropraite roles and users in the Auth API.
-     * 
+     *
      * @private
      * @param {Workshop} workshop - Requires [ 'Id', 'facilitators' ]
-     * @returns {Promise<void>} 
+     * @returns {Promise<void>}
      * @memberof WorkshopsService
      */
     private async grantPermissions(workshop: RequireKeys<Workshop, 'Id' | 'facilitators'>): Promise<void> {
-        const roles = (await this.authService.getRoles(`role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${workshop.Organizing_Affiliate__c}'`)).roles;
+        const roles = (await this.authService.getRoles(`role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${workshop.Organizing_Affiliate__c}'`));
 
         const resource = `/workshops/${workshop.Id}`;
         for (const role of roles) {
@@ -471,11 +471,11 @@ export class WorkshopsService {
 
     /**
      * @desc Helper method to remove permissions from deleted facilitators
-     * 
+     *
      * @private
      * @param {Workshop} workshop - Requires [ 'Id', 'facilitators' ]
      * @param {any[]} remove - Requires [ 'Id', 'Email' ]
-     * @returns {Promise<void>} 
+     * @returns {Promise<void>}
      * @memberof WorkshopsService
      */
     private async removePermissions(workshop: Workshop, remove: any[]): Promise<void> {

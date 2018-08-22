@@ -1,9 +1,12 @@
-import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { AuthService, SalesforceService, LoggerService } from '../components';
+import { HttpStatus, Middleware, NestMiddleware, MiddlewareFunction, ForbiddenException } from '@nestjs/common';
+import { LoggerService } from '../components';
+import { AuthClient } from '@shingo/shingo-auth-api';
+import { getBearerToken, parseError } from '../util';
+import { Request, Response, NextFunction } from 'express';
 
 /**
  * The auth middleware uses the Shingo Auth API to test if the user has permissions to access a given resource
- * 
+ *
  * @export
  * @class AuthMiddleware
  * @implements {NestMiddleware}
@@ -11,52 +14,54 @@ import { AuthService, SalesforceService, LoggerService } from '../components';
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
 
-    private authService;
-    private log;
+  constructor(private authService: AuthClient, private log: LoggerService) { }
 
-    constructor() {
-        this.authService = new AuthService();
-        this.log = new LoggerService();
+  /**
+   * The function called when the middleware is activated.
+   * NOTE: If user is an Affiliate Manager all check logic is skipped as the user implicitly has all permissions.
+   *
+   * @param level - The level of permissions required (1=Read,2=Write)
+   * @param [resource] - The resource being accessed
+   */
+  resolve(level: 1 | 2, resource?: string): MiddlewareFunction {
+    return (req: Request, _res: Response, next) => {
+      const isAfMan = req.session && req.session.user && req.session.user.role.name === 'Affiliate Manager';
+
+      if (isAfMan) return next && next();
+
+      let realResource =
+          resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
+          : !resource ? `${req.path}`
+          : resource;
+
+      if (realResource.match(/^\/workshops\/.*\/facilitators/)) realResource = realResource.split('/facilitators')[0];
+      else if (realResource.match(/^\/workshops\/.*\/attendee_file/)) realResource = realResource.split('/attendee_file')[0];
+      else if (realResource.match(/^\/workshops\/.*\/evaluation_files/)) realResource = realResource.split('/evaluation_files')[0];
+
+      const jwt = (req.headers.authorization && getBearerToken(req.headers.authorization))
+        || req.headers['x-jwt'] as string
+
+      return this.authService
+          .canAccess(realResource, level, jwt)
+          .then(result => {
+            const messageResource =
+                realResource.includes('affiliate -- ') ? 'affiliate -- '
+                : realResource.includes('workshops -- ') ? 'workshops -- '
+                : `${req.path}`;
+
+            if (result && result.response) return next && next();
+
+            throw new ForbiddenException(
+              // tslint:disable-next-line:max-line-length
+              `Insufficent permission to access ${messageResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}`,
+              'ACCESS_FORBIDDEN'
+            )
+          })
+          .catch(error => {
+            if (error.metadata) error = parseError(error)
+            this.log.error('Error in AuthMiddleware.resolve(): %j', error);
+            throw error
+          });
     }
-
-    /**
-     * The function called when the middleware is activated. Calls {@link AuthService#canAccess}. NOTE: If user is an Affiliate Manager all check logic is skipped as the user implicitly has all permissions.
-     * 
-     * @param {(1|2)} level - The level of permissions required (1=Read,2=Write)
-     * @param {string} [resource] - The resource being accessed
-     * @returns {void}
-     * @memberof AuthMiddleware
-     */
-    public resolve(level: number, resource?: string) {
-        return (req, res, next) => {
-            let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
-
-            if (isAfMan) return next();
-
-            let realResource =
-                resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
-                : !resource ? `${req.path}`
-                : resource;
-
-            if (realResource.match(/^\/workshops\/.*\/facilitators/)) realResource = realResource.split('/facilitators')[0];
-	        else if (realResource.match(/^\/workshops\/.*\/attendee_file/)) realResource = realResource.split('/attendee_file')[0];
-	        else if (realResource.match(/^\/workshops\/.*\/evaluation_files/)) realResource = realResource.split('/evaluation_files')[0];
-
-            return this.authService.canAccess(realResource, level, req.headers['x-jwt'])
-                .then(result => {
-                    const messageResource =
-                        realResource.includes('affiliate -- ') ? 'affiliate -- '
-                        : realResource.includes('workshops -- ') ? 'workshops -- '
-                        : `${req.path}`;
-
-                    if (result && result.response) return next();
-                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${messageResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
-                })
-                .catch(error => {
-                    if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-                    this.log.error('Error in AuthMiddleware.resolve(): %j', error);
-                    return res.status(HttpStatus.FORBIDDEN).json(error);
-                });
-        }
-    }
+  }
 }

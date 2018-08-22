@@ -1,9 +1,11 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common'
 import { WorkshopsController, AuthController,
   FacilitatorsController, AffiliatesController, SupportController } from './controllers'
+import { SalesforceClient } from '@shingo/shingo-sf-api'
+import { AuthClient } from '@shingo/shingo-auth-api'
 import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddleware } from './middleware'
 import {
-    SalesforceService, CacheService, AuthService,
+    CacheService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
     UserService, LoggerService, MailerService, SupportService
 } from './components'
@@ -16,21 +18,27 @@ import { MulterFactory } from './factories'
  * @class ApplicationModule
  */
 @Module({
-    controllers: [WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController],
-    components: [
-        AuthMiddleware,
-        LoggerService,
-        CacheService,
-        UserService,
-        SalesforceService,
-        AuthService,
-        WorkshopsService,
-        FacilitatorsService,
-        AffiliatesService,
-        MailerService,
-        MulterFactory,
-        SupportService,
-    ],
+  controllers: [
+    WorkshopsController,
+    AuthController,
+    FacilitatorsController,
+    AffiliatesController,
+    SupportController,
+  ],
+  providers: [
+    AuthMiddleware,
+    LoggerService,
+    CacheService,
+    UserService,
+    WorkshopsService,
+    FacilitatorsService,
+    AffiliatesService,
+    MailerService,
+    MulterFactory,
+    SupportService,
+    { provide: AuthClient, useFactory: () => new AuthClient(`${process.env.AUTH_API}:80`) },
+    { provide: SalesforceClient, useFactory: () => new SalesforceClient(`${process.env.SF_API}:80`) },
+  ],
 })
 export class ApplicationModule {
 

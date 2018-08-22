@@ -1,14 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-    SalesforceService, AuthService, CacheService, User,
-    SFQueryObject, LoggerService
+    CacheService, User,
+    LoggerService
 } from '../';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import * as jwt from 'jwt-simple';
+import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
+import { AuthClient } from '@shingo/shingo-auth-api';
 
 /**
  * @desc A service to provide functions for working with Facilitators
- * 
+ *
  * @export
  * @class FacilitatorsService
  */
@@ -17,10 +19,12 @@ export class FacilitatorsService {
 
     private getAllKey = 'FacilitatorsService.getAll';
 
-    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+    constructor(
+      private sfService: SalesforceClient,
+      private authService: AuthClient,
+      private cache: CacheService,
+      private log: LoggerService
+    ) { }
 
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>
@@ -37,39 +41,38 @@ export class FacilitatorsService {
      *  &emsp;"Photograph\__c",<br>
      *  &emsp;"Biography\__c"<br>
      * ]</code>
-     * 
+     *
      * @param {boolean} [refresh=false] - Force the refresh of the cache
      * @param {string} [affiliate] - SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
-     * @returns {Promise<any[]>} 
+     * @returns {Promise<any[]>}
      * @memberof FacilitatorsService
      */
     public async getAll(refresh: boolean = false, affiliate?: string): Promise<any[]> {
 
         if (!this.cache.isCached(this.getAllKey)) {
-            let query = {
-                action: "SELECT",
+            let query: QueryRequest = {
                 fields: [
-                    "Id",
-                    "FirstName",
-                    "LastName",
-                    "Email",
-                    "Title",
-                    "Account.Id",
-                    "Account.Name",
-                    "Facilitator_For__r.Id",
-                    "Facilitator_For__r.Name",
-                    "Photograph__c",
-                    "Biography__c"
+                    'Id',
+                    'FirstName',
+                    'LastName',
+                    'Email',
+                    'Title',
+                    'Account.Id',
+                    'Account.Name',
+                    'Facilitator_For__r.Id',
+                    'Facilitator_For__r.Name',
+                    'Photograph__c',
+                    'Biography__c',
                 ],
-                table: "Contact",
-                clauses: `RecordType.DeveloperName='Affiliate_Instructor'`
+                table: 'Contact',
+                clauses: `RecordType.DeveloperName='Affiliate_Instructor'`,
             }
 
             if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
 
-            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any;
-            const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            let facilitators = (await this.sfService.query(query)).records as any;
+            const ids = facilitators.map(facilitator => `'${facilitator['Id']}'`);
+            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`));
             const users = _.keyBy(usersArr, 'extId');
 
             // Add the facilitator's auth id to object
@@ -81,9 +84,9 @@ export class FacilitatorsService {
                     facilitator.services = users[facilitator['Id']].services;
                 }
             }
-            
-            facilitators = facilitators.filter(facilitator => { 
-                return facilitator['id'] !== undefined && facilitator.services && facilitator.services.includes('affiliate-portal'); 
+
+            facilitators = facilitators.filter(facilitator => {
+                return facilitator['id'] !== undefined && facilitator.services && facilitator.services.includes('affiliate-portal');
             });
 
             this.cache.cache(this.getAllKey, facilitators);
@@ -97,9 +100,9 @@ export class FacilitatorsService {
 
     /**
      * @desc Uses the Salesforce REST API to describe the Contact object. See the Salesforce documentation for more about 'describe'
-     * 
+     *
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async describe(refresh: boolean = false): Promise<any> {
@@ -135,12 +138,12 @@ export class FacilitatorsService {
      *          &emsp;&emsp;"Email": "testthree@example.com"<br>
      *      &emsp;},<br>
      *  ]</code>
-     * 
+     *
      * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name, Email')
      * @param {string} [affiliate=''] - The SF Id to filter results for (or '' for no filter)
      * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async search(search: string, retrieve: string, isMapped: boolean = true, affiliate: string = '', refresh: boolean = false): Promise<any> {
@@ -164,7 +167,7 @@ export class FacilitatorsService {
 
             if (facilitators.length) {
                 const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`));
                 const users = _.keyBy(usersArr, 'extId');
 
                 const accountIds: string[] = [];
@@ -178,11 +181,10 @@ export class FacilitatorsService {
                     }
                 }
 
-                const query: SFQueryObject = {
-                    action: 'SELECT',
+                const query: QueryRequest = {
                     fields: ['Id', 'Name'],
                     table: 'Account',
-                    clauses: `Id IN (${accountIds.join()})`
+                    clauses: `Id IN (${accountIds.join()})`,
                 }
                 const affiliates = _.keyBy((await this.sfService.query(query)).records || [], 'Id');
 
@@ -212,9 +214,9 @@ export class FacilitatorsService {
      * <code>[<br>
      * TODO: Add fields that are returned<br>
      * ]</code>
-     * 
+     *
      * @param {string} id - Salesforce ID for a Contact
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async get(id: string): Promise<any> {
@@ -259,13 +261,13 @@ export class FacilitatorsService {
 
     /**
      * @desc Creates a new Contact of record type 'Affiliate Instructor' in Salesforce and addes a user to the Shingo Auth api. The user create for the Auth API will be assigned the role of roleId (defaults to 'Facilitator'). Returns a response like:<br><br>
-     * <code>{<br> 
+     * <code>{<br>
      *  &emsp;"jwt": string,<br>
      *  &emsp;"id:" number<br>
      * }</code>
-     * 
+     *
      * @param {any} user - User to create
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async create(user): Promise<any> {
@@ -279,17 +281,19 @@ export class FacilitatorsService {
         }
         const record = (await this.sfService.create(data))[0];
 
+        if (!record.success) throw new Error('Failed to create user: ' + (record.errors || []).join('\n'))
+
         this.cache.invalidate(this.getAllKey);
 
-        return this.createOrMapAuth(record.id, user);
+        return this.createOrMapAuth(record.id as string, user);
     }
 
     /**
      * @desc Maps an existing Contact record to a new/current login
-     * 
+     *
      * @param {SalesforceId} id  - The Salesforce Id of the Contact to map
-     * @param {any} user 
-     * @returns {Promise<any>} 
+     * @param {any} user
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async mapContact(id: string, user): Promise<any> {
@@ -315,10 +319,10 @@ export class FacilitatorsService {
 
     /**
      * @desc Searches for an existing user with the same email. If not found, one is created, else the 'affiliate-portal' service is added and permissions are granted.
-     * 
+     *
      * @param {SalesforceId} id - Salesforce Id of the associated contact
-     * @param {any} user 
-     * @returns {Promise<any>} 
+     * @param {any} user
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async createOrMapAuth(id: string, user): Promise<any> {
@@ -348,12 +352,12 @@ export class FacilitatorsService {
 
     /**
      * @desc Uses the Shingo Auth API to create a new login
-     * 
-     * @param {string} email 
-     * @param {string} password 
-     * @param {number} roleId 
+     *
+     * @param {string} email
+     * @param {string} password
+     * @param {number} roleId
      * @param {string} extId - Salesforce Id of the associated contact
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async createNewAuth(email: string, password: string, roleId: number, extId: string): Promise<any> {
@@ -366,11 +370,11 @@ export class FacilitatorsService {
 
     /**
      * @desc Uses the Shingo Auth API to map a Salesforce contact to a current login
-     * 
-     * @param {string} userEmail 
-     * @param {number} roleId 
+     *
+     * @param {string} userEmail
+     * @param {number} roleId
      * @param {string} extId - Salesforce Id of the associated contact
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async mapCurrentAuth(userEmail: string, roleId: number, extId: string): Promise<any> {
@@ -397,20 +401,20 @@ export class FacilitatorsService {
      *      &emsp;},<br>
      *      &emsp;"salesforce": boolean,<br>
      *      &emsp;"auth": boolean
-     *  }</code> 
-     * 
+     *  }</code>
+     *
      * @param {any} user - The facilitator object to update
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async update(user): Promise<any> {
         const contact = _.omit(user, ["password", "Account", "Facilitator_For__r", "id", "role"]);
-        
+
         if (user.role) {
             const role = await this.authService.getRole(`role.name='${user.role.name}'`);
             await this.changeRole(user.Id, role.id);
         }
-        
+
         // Get current user data to check if email address is being udpated.
         const prevUser: any = (await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] }))[0];
 
@@ -421,10 +425,12 @@ export class FacilitatorsService {
         }
         const record = (await this.sfService.update(data))[0];
 
+        if (!record.success) throw new Error('Failed to update user: ' + (record.errors || []).join('\n'))
+
         // If the users email or password changed, update their user auth
         let auth: any = false;
         if ((user.Email !== prevUser.Email) || user.password) {
-            auth = await this.updateAuth(user, record.id);
+            auth = await this.updateAuth(user, record.id as string);
         }
 
         // Update permissions
@@ -443,10 +449,10 @@ export class FacilitatorsService {
 
     /**
      * @desc Update the associated login of a facilitator
-     * 
+     *
      * @param {any} user - Facilitator's fields to update
      * @param {any} extId - Facilitator's Contact ID
-     * @returns {Promise<boolean>} 
+     * @returns {Promise<boolean>}
      * @memberof FacilitatorsService
      */
     public async updateAuth(user: any, extId: string): Promise<boolean> {
@@ -459,7 +465,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve((updated && updated.response));
+        return Promise.resolve(updated);
     }
 
     /**
@@ -469,10 +475,10 @@ export class FacilitatorsService {
      *      &emsp;"success": boolean,<br>
      *      &emsp;"errors": []<br>
      *  }</code>
-     * 
-     * 
+     *
+     *
      * @param {string} id - Salesforce Id of the Contact to delete
-     * @returns {Promise<any>} 
+     * @returns {Promise<any>}
      * @memberof FacilitatorsService
      */
     public async delete(id: string): Promise<any> {
@@ -491,9 +497,9 @@ export class FacilitatorsService {
 
     /**
      * @desc Delete a login from the Shingo Auth API
-     * 
+     *
      * @param {string} extId - Facilitator's Contact Id
-     * @returns {Promise<boolean>} 
+     * @returns {Promise<boolean>}
      * @memberof FacilitatorsService
      */
     public async deleteAuth(extId: string): Promise<boolean> {
@@ -502,14 +508,14 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(deleted && deleted.response);
+        return Promise.resolve(deleted);
     }
 
     /**
      * @desc Remove the Affiliate Portal as service for a login
-     * 
+     *
      * @param {string} extId - Facilitator's Contact Id
-     * @returns {Promise<boolean>} 
+     * @returns {Promise<boolean>}
      * @memberof FacilitatorsService
      */
     public async unmapAuth(extId: string): Promise<boolean> {
@@ -527,15 +533,15 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(updated && updated.response);
+        return Promise.resolve(updated);
     }
 
     /**
      * @desc Change a Facilitator's role to the role specified by <code>roleId</code>. If a role exists that belongs to the Affiliate Portal, it is removed first
-     * 
+     *
      * @param {string} extId - Facilitator's Contact Id
      * @param {any} roleId - Id of the role to change to
-     * @returns {Promise<boolean>} 
+     * @returns {Promise<boolean>}
      * @memberof FacilitatorsService
      */
     public async changeRole(extId: string, roleId): Promise<boolean> {
@@ -554,7 +560,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(added && added.response);
+        return Promise.resolve(added);
     }
 
     public async generateReset(email: string): Promise<string> {
