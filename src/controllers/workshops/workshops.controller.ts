@@ -2,17 +2,18 @@ import {
     Controller,
     Get, Post, Put, Delete,
     HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
+    Param, Query, Headers, Body, Session, Inject
 } from '@nestjs/common';
-import { WorkshopsService, Workshop, LoggerService } from '../../components';
+import { WorkshopsService, Workshop } from '../../components';
 import { MulterFactory } from '../../factories';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc Controller of the REST API logic for Workshops
- * 
+ *
  * @export
  * @class WorkshopsController
  * @extends {BaseController}
@@ -20,13 +21,13 @@ import { checkRequired } from '../../validators/objKeyValidator';
 @Controller('workshops')
 export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory, logger: LoggerService) {
+    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory, @Inject('LoggerService') logger: LoggerInstance) {
         super(logger);
     };
 
     /**
      * @desc <h5>GET: /workshops</h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
-     * 
+     *
      * @param {Session} session - Session contains the current user. The function uses the permissions on this object to query Salesforce for the workshops.
      * @param {any} isPublicQ - Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public workshops
      * @param {any} isPublicH - Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public workshops
@@ -60,7 +61,7 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>GET: /workshops/describe</h5> Calls {@link WorkshopsService#describe} to describe Workshop\__c
-     * 
+     *
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} Response body is a JSON object with the describe result
      * @memberof WorkshopsController
@@ -79,8 +80,8 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>GET: /workshops/search</h5> Calls {@link WorkshopsService#search}. Returns an array of workshops that match search criteria
-     * 
-     * 
+     *
+     *
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. '*Discover Test*').
      * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Workshop\__c fields to retrieve (i.e. 'Id, Name, Start_Date\__c')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
@@ -104,7 +105,7 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>GET: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
-     * 
+     *
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
      * @memberof WorkshopsController
@@ -125,7 +126,7 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>GET: /workshops/<em>:id</em>/facilitators</h5> Calls {@link WorkshopsService#facilitators} to get all associated facilitators for a workshop
-     * 
+     *
      * @param {SalesforceId} id - Workshop\__cid. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response is a JSON Array of Contact objects
      * @memberof WorkshopsController
@@ -181,7 +182,7 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>PUT: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#update} to update a workshop's fields. This function also updates facilitator associations and permissions
-     * 
+     *
      * @param {Body} body - Required fields <code>[ "Id", "Organizing_Affiliate\__c" ]</code>
      * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
@@ -216,7 +217,7 @@ export class WorkshopsController extends BaseController {
      * @desc <h5>POST: /workshops/<em>:id</em>/attendee_file</h5> Calls {@link WorkshopsService#upload} to upload a file (containing the Attendee List) as an attachment to the Workshop\__c record in Salesforce
      * <br>NOTE: Expecting attached file to be in the field attendeeList and <= 25MB in size
      * @param {SalesforceId} id - The record Id of the Workshop to attach the file to
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof WorkshopsController
      */
     @Post('/:id/attendee_file')
@@ -244,8 +245,8 @@ export class WorkshopsController extends BaseController {
     /**
      * @desc <h5>POST: /workshops/<em>:id</em>/evaluation_files</h5> Calls {@link WorkshopsService#upload} to upload an array of files (containing workshop evaluations) as attachments to the Workshop\__c record in Salesforce
      *
-     * @param {SalesforceId} id - The record Id of the Workshop to attach the files to 
-     * @returns {Promise<Response>} 
+     * @param {SalesforceId} id - The record Id of the Workshop to attach the files to
+     * @returns {Promise<Response>}
      * @memberof WorkshopsController
      */
     @Post('/:id/evaluation_files')
@@ -273,7 +274,7 @@ export class WorkshopsController extends BaseController {
 
     /**
      * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to delete the workshop given by <em>:id</em>
-     * 
+     *
      * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
      * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
      * @memberof WorkshopsController

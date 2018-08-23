@@ -2,13 +2,14 @@ import {
     Controller,
     Get, Post, Put, Delete,
     HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
+    Param, Query, Headers, Body, Session, Inject
 } from '@nestjs/common';
-import { FacilitatorsService, LoggerService, MailerService } from '../../components';
+import { FacilitatorsService, MailerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
 import * as generator from 'generate-password';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc Controller of the REST API logic for Facilitators
@@ -23,7 +24,7 @@ export class FacilitatorsController extends BaseController {
     constructor(
       private facilitatorsService: FacilitatorsService,
       private mailer: MailerService,
-      logger: LoggerService
+      @Inject('LoggerService') logger: LoggerInstance
     ) {
         super(logger);
     };

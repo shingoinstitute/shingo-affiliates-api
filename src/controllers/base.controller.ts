@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Res } from '@nestjs/common';
-import { LoggerService } from '../components';
 import { parseError } from '../util';
 import { Response } from 'express';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -11,7 +11,7 @@ import { Response } from 'express';
  */
 export abstract class BaseController {
 
-  constructor(protected log: LoggerService) { };
+  constructor(protected log: LoggerInstance) { };
 
   /**
    * @desc A helper function to return an error response to the client.

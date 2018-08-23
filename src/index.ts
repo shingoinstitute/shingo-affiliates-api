@@ -1,18 +1,18 @@
 import { NestFactory } from '@nestjs/core'
 import { ApplicationModule } from './app.module'
 import { InitService } from './initService'
-import { LoggerService } from './components'
 import express from 'express'
 import bodyParser from 'body-parser'
 import session from 'express-session'
 import cors from 'cors'
 import connectRedis from 'connect-redis'
+import { loggerFactory } from './components';
 
 // tslint:disable-next-line:variable-name
 const RedisStore = connectRedis(session)
 
 const port = process.env.PORT || 3000
-const log = new LoggerService()
+const log = loggerFactory()
 
 if (!process.env.AUTH_API || !process.env.SF_API) {
     log.error(`Environment variables missing. AUTH: ${process.env.AUTH_API} SF: ${process.env.SF_API}`)

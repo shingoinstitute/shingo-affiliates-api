@@ -1,12 +1,13 @@
-import { Controller, Get, Post, Put, Delete, HttpStatus, Request, Response, Next, Param, Query, Headers, Body, Session } from '@nestjs/common';
-import { AffiliatesService, Affiliate, LoggerService } from '../../components';
+import { Controller, Get, Post, Put, Delete, HttpStatus, Request, Response, Next, Param, Query, Headers, Body, Session, Inject } from '@nestjs/common';
+import { AffiliatesService, Affiliate } from '../../components';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc Controller of the REST API logic for Affiliates
- * 
+ *
  * @export
  * @class AffiliatesController
  * @extends {BaseController}
@@ -14,17 +15,17 @@ import { checkRequired } from '../../validators/objKeyValidator';
 @Controller('affiliates')
 export class AffiliatesController extends BaseController {
 
-    constructor(private affService: AffiliatesService, logger: LoggerService) {
+    constructor(private affService: AffiliatesService, @Inject('LoggerService') logger: LoggerInstance) {
         super(logger);
     };
 
     /**
      * @desc <h5>GET: /affiliates</h5> Calls {@link AffiliatesService#getAll} to get a list of affiliates
-     * 
+     *
      * @param {Query} isPublicQ - Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public affiliates
      * @param {Header} isPublicH - Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public affiliates
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Get()
@@ -44,9 +45,9 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>GET: /affiliates/describe</h5> Calls {@link AffiliatesService#describe} to describe the Account Object
-     * 
+     *
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Get('/describe')
@@ -61,11 +62,11 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>GET: /affiliates/search</h5> Calls {@link AffiliatesService#search}. Returns an array of affiliates that match search criteria
-     * 
+     *
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. '*Test*').
      * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Get('/search')
@@ -83,22 +84,22 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>GET: /affiliates/<em>:id</em>/coursemanagers</h5> Search the related contacts of an Affiliate. Calls {@link AffiliatesService#searchCM} to retrieve a list of contacts
-     * 
+     *
      * @param {SalesforceId} id - The Salesforce Id of the affiliate
      * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. 'User*').
      * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name')
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Get('/:id/coursemanagers')
     public async searchCMS( @Response() res, @Param('id') id, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) 
+        if (!id.match(/[\w\d]{15,17}/))
             return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
-        if (!search || !retrieve) 
+        if (!search || !retrieve)
             return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
-            
+
         try {
             const cms = await this.affService.searchCM(id, search, retrieve, refresh === 'true');
             return res.status(HttpStatus.OK).json(cms);
@@ -109,9 +110,9 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>GET: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#get} to retrieve a specific affiliate
-     * 
+     *
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Get(':id')
@@ -128,9 +129,9 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>POST: /affiliates</h5> Calls {@link AffiliatesService#create} to create a new Affiliate
-     * 
+     *
      * @param {Body} body - Required fields <code>[ "Name" ]</code>
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Post()
@@ -147,9 +148,9 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>POST: /affiliates/<em>:id</em>/map</h5> Calls {@link AffiliatesService#map} to create permissions for a Licensed Affiliate Account
-     * 
+     *
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Post(':id/map')
@@ -166,10 +167,10 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>PUT: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#update} to update an Affiliate
-     * 
+     *
      * @param {Body} body - Required fields <code>[ "Id" ]</code>
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Put(':id')
@@ -193,9 +194,9 @@ export class AffiliatesController extends BaseController {
 
     /**
      * @desc <h5>DELETE: /affiliates/<em>:id</em></h5> Calls {@link AffiliatesService#delete} to "delete" an Affiliate
-     * 
+     *
      * @param {SalesforceId} id - Account id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} 
+     * @returns {Promise<Response>}
      * @memberof AffiliatesController
      */
     @Delete(':id')

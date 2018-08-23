@@ -1,9 +1,9 @@
-import { LoggerService } from './components'
 import _ from 'lodash'
-import { AuthClient } from '@shingo/shingo-auth-api';
+import { AuthClient } from '@shingo/shingo-auth-api'
+import { loggerFactory } from './components'
 
 const authService = new AuthClient(`${process.env.AUTH_API}:80`)
-const log = new LoggerService()
+const log = loggerFactory()
 
 /**
  * This class handles lifting the server.

@@ -1,6 +1,6 @@
-import { Middleware, NestMiddleware } from '@nestjs/common';
-import { LoggerService } from '../components';
+import { Middleware, NestMiddleware, Inject } from '@nestjs/common';
 import _ from 'lodash';
+import { LoggerInstance } from 'winston';
 
 /**
  * Route Logger logs information about every route. Use this to debug any issues.
@@ -12,7 +12,7 @@ import _ from 'lodash';
 @Middleware()
 export class RouteLoggerMiddleware implements NestMiddleware {
 
-  constructor(private log: LoggerService) { }
+  constructor(@Inject('LoggerService') private log: LoggerInstance) { }
 
   /**
    * Logs:

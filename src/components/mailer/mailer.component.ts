@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { createTransport, Transport, Transporter } from 'nodemailer';
-import { LoggerService } from '../logger/logger.component';
+import { LoggerInstance } from 'winston';
 
 /**
  * Provides an abstraction of nodemailer.
- * 
+ *
  * @export
  * @class MailerService
  */
@@ -13,7 +13,7 @@ export class MailerService {
 
     private transporter: Transporter;
 
-    constructor( @Inject('LoggerService') private log: LoggerService = new LoggerService()) {
+    constructor(@Inject('LoggerService') private log: LoggerInstance) {
         const transport = {
             host: 'smtp.office365.com',
             port: 587,

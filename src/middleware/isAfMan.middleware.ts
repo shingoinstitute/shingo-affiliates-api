@@ -1,5 +1,5 @@
-import { Middleware, NestMiddleware, ForbiddenException } from '@nestjs/common';
-import { LoggerService } from '../components';
+import { Middleware, NestMiddleware, ForbiddenException, Inject } from '@nestjs/common';
+import { LoggerInstance } from 'winston';
 
 /**
  * This middleware checks if the current session's user has the role of Affiliate Manager
@@ -11,7 +11,7 @@ import { LoggerService } from '../components';
 @Middleware()
 export class IsAFManMiddleware implements NestMiddleware {
 
-  constructor(private log: LoggerService) { }
+  constructor(@Inject('LoggerService') private log: LoggerInstance) { }
 
   /**
    * The function called when the middleware is activated.

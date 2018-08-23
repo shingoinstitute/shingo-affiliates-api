@@ -2,17 +2,15 @@ import {
     Controller,
     Get, Post, Put, Delete,
     HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
+    Param, Query, Headers, Body, Session, Inject
 } from '@nestjs/common';
-import {
-    LoggerService
-} from '../../components';
 import { BaseController } from '../base.controller';
 
 import _ from 'lodash';
 import { parseError } from '../../util';
 import { SalesforceClient } from '@shingo/shingo-sf-api';
 import { AuthClient, User } from '@shingo/shingo-auth-api';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc Provides the controller of the Auth REST logic
@@ -24,7 +22,9 @@ import { AuthClient, User } from '@shingo/shingo-auth-api';
 @Controller('auth')
 export class AuthController extends BaseController {
 
-    constructor(private sfService: SalesforceClient, private authService: AuthClient, logger: LoggerService) {
+    constructor(private sfService: SalesforceClient,
+                private authService: AuthClient,
+                @Inject('LoggerService') logger: LoggerInstance) {
         super(logger);
     };
 

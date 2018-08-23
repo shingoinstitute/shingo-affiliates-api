@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
     CacheService, User,
-    LoggerService
 } from '../';
 import _ from 'lodash';
 import * as jwt from 'jwt-simple';
 import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
 import { AuthClient } from '@shingo/shingo-auth-api';
+import { LoggerInstance } from 'winston'
 
 /**
  * @desc A service to provide functions for working with Facilitators
@@ -23,7 +23,7 @@ export class FacilitatorsService {
       private sfService: SalesforceClient,
       private authService: AuthClient,
       private cache: CacheService,
-      private log: LoggerService
+      @Inject('LoggerService') private log: LoggerInstance
     ) { }
 
     /**

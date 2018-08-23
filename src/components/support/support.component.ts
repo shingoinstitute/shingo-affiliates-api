@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
     CacheService,
-    LoggerService
 } from '../';
 import { tryCache } from '../../util';
 import { SalesforceClient, QueryRequest, IdRequest, SearchRequest } from '@shingo/shingo-sf-api';
+import { LoggerInstance } from 'winston'
 
 /**
  * @desc A service to provide functions for working with Support Pages
@@ -18,7 +18,7 @@ export class SupportService {
     constructor(
       private sfService: SalesforceClient,
       private cache: CacheService,
-      private log: LoggerService
+      @Inject('LoggerService') private log: LoggerInstance
     ) { }
 
     public async getAll(role: string, refresh: boolean = false): Promise<any[]> {

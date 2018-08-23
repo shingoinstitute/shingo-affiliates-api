@@ -2,17 +2,18 @@ import {
     Controller,
     Get, Post, Put, Delete,
     HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
+    Param, Query, Headers, Body, Session, Inject
 } from '@nestjs/common';
-import { LoggerService, SupportService } from '../../components';
+import { SupportService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
 import * as generator from 'generate-password';
+import { LoggerInstance } from 'winston';
 
 /**
  * @desc Controller of the REST API logic for Support Pages
- * 
+ *
  * @export
  * @class SupportController
  * @extends {BaseController}
@@ -20,7 +21,7 @@ import * as generator from 'generate-password';
 @Controller('support')
 export class SupportController extends BaseController {
 
-    constructor(private supportService: SupportService, private logger: LoggerService) {
+    constructor(private supportService: SupportService, @Inject('LoggerService') private logger: LoggerInstance) {
         super(logger);
     };
 
@@ -55,7 +56,7 @@ export class SupportController extends BaseController {
 
     /**
      * @desc <h5>GET: /support/describe</h5> Calls {@link SupportService#describe} to describe Support_Page__c
-     * 
+     *
      * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
      * @returns {Promise<Response>} Response body is a JSON object with the describe result
      * @memberof FacilitatorsController

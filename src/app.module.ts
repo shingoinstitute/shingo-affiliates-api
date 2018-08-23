@@ -7,7 +7,7 @@ import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddle
 import {
     CacheService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService, LoggerService, MailerService, SupportService
+    UserService, MailerService, SupportService, loggerFactory
 } from './components'
 import { MulterFactory } from './factories'
 
@@ -27,7 +27,7 @@ import { MulterFactory } from './factories'
   ],
   providers: [
     AuthMiddleware,
-    LoggerService,
+    { provide: 'LoggerService', useFactory: loggerFactory },
     CacheService,
     UserService,
     WorkshopsService,

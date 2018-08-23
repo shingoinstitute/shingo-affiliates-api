@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CacheService, LoggerService } from '..';
+import { CacheService } from '..';
 import { Affiliate } from './affiliate';
 import _ from 'lodash';
 import { tryCache, RequireKeys } from '../../util';
 import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
 import { AuthClient } from '@shingo/shingo-auth-api';
+import { LoggerInstance } from 'winston'
 
 export { Affiliate };
 
@@ -21,7 +22,7 @@ export class AffiliatesService {
       private sfService: SalesforceClient,
       private authService: AuthClient,
       private cache: CacheService,
-      private log: LoggerService
+      @Inject('LoggerService') private log: LoggerInstance
     ) { }
 
     /**

@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-    CacheService, UserService, LoggerService
+    CacheService, UserService,
 } from '../';
 import { Workshop } from './workshop'
 import _, { chunk } from 'lodash';
 import { RequireKeys } from '../../util';
 import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
 import { AuthClient } from '@shingo/shingo-auth-api';
+import { LoggerInstance } from 'winston'
 
 export { Workshop }
 
@@ -24,7 +25,7 @@ export class WorkshopsService {
       private authService: AuthClient,
       private cache: CacheService,
       private userService: UserService,
-      private log: LoggerService
+      @Inject('LoggerService') private log: LoggerInstance
     ) {}
 
     /**

@@ -1,8 +1,8 @@
-import { HttpStatus, Middleware, NestMiddleware, MiddlewareFunction, ForbiddenException } from '@nestjs/common';
-import { LoggerService } from '../components';
+import { HttpStatus, Middleware, NestMiddleware, MiddlewareFunction, ForbiddenException, Inject } from '@nestjs/common';
 import { AuthClient } from '@shingo/shingo-auth-api';
 import { getBearerToken, parseError } from '../util';
 import { Request, Response, NextFunction } from 'express';
+import { LoggerInstance } from 'winston';
 
 /**
  * The auth middleware uses the Shingo Auth API to test if the user has permissions to access a given resource
@@ -14,7 +14,7 @@ import { Request, Response, NextFunction } from 'express';
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
 
-  constructor(private authService: AuthClient, private log: LoggerService) { }
+  constructor(private authService: AuthClient, @Inject('LoggerService') private log: LoggerInstance) { }
 
   /**
    * The function called when the middleware is activated.
@@ -49,7 +49,7 @@ export class AuthMiddleware implements NestMiddleware {
                 : realResource.includes('workshops -- ') ? 'workshops -- '
                 : `${req.path}`;
 
-            if (result && result.response) return next && next();
+            if (result) return next && next();
 
             throw new ForbiddenException(
               // tslint:disable-next-line:max-line-length

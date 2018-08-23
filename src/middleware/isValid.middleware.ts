@@ -1,9 +1,9 @@
-import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
-import { LoggerService } from '../components';
+import { HttpStatus, Middleware, NestMiddleware, Inject } from '@nestjs/common';
 import _ from 'lodash';
 import { SalesforceClient } from '@shingo/shingo-sf-api';
 import { AuthClient } from '@shingo/shingo-auth-api';
 import { parseRPCErrorMeta } from '../util'
+import { LoggerInstance } from 'winston';
 
 /**
  * Checks if the user with given JWT is valid (JWT is correct and hasn't expired)
@@ -16,7 +16,11 @@ import { parseRPCErrorMeta } from '../util'
 @Middleware()
 export class IsValidMiddleware implements NestMiddleware {
 
-  constructor(private sfService: SalesforceClient, private authService: AuthClient, private log: LoggerService) { }
+  constructor(
+    private sfService: SalesforceClient,
+    private authService: AuthClient,
+    @Inject('LoggerService') private log: LoggerInstance
+  ) { }
 
   /**
    * If <code>req.session.user === undefined</code> this method gets
@@ -38,7 +42,7 @@ export class IsValidMiddleware implements NestMiddleware {
       return this.authService
         .isValid(req.headers['x-jwt'] || req.session.user.jwt)
         .then(valid => {
-          if (valid && !valid.response) throw { error: 'INVALID_TOKEN' };
+          if (!valid) throw { error: 'INVALID_TOKEN' };
 
           if (req.session.user
             && req.session.user.AccountId
@@ -63,7 +67,7 @@ export class IsValidMiddleware implements NestMiddleware {
           const contact = response[0];
           req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
           req.session.user.adminToken = adminToken;
-          req.session.affiliate = contact['AccountId'];
+          req.session.affiliate = contact.AccountId;
           return next();
         })
         .catch(error => {
