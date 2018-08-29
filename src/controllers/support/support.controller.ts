@@ -1,110 +1,86 @@
 import {
     Controller,
-    Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session, Inject
-} from '@nestjs/common';
-import { SupportService } from '../../components';
-import { BaseController } from '../base.controller';
-import { checkRequired } from '../../validators/objKeyValidator';
-import * as _ from 'lodash';
-import * as generator from 'generate-password';
-import { LoggerInstance } from 'winston';
+    Get, Param, Headers, Session, Inject, BadRequestException, ForbiddenException
+} from '@nestjs/common'
+import { SupportService } from '../../components'
+import { LoggerInstance } from 'winston'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
  *
  * @export
  * @class SupportController
- * @extends {BaseController}
  */
 @Controller('support')
-export class SupportController extends BaseController {
+export class SupportController {
 
-    constructor(private supportService: SupportService, @Inject('LoggerService') private logger: LoggerInstance) {
-        super(logger);
-    };
+  constructor(private supportService: SupportService, @Inject('LoggerService') private log: LoggerInstance) { }
 
-    @Get()
-    public async readAll( @Response() res, @Session() session, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let role = 'Anonymous';
-        if (session.user && session.user.role)
-            role = session.user.role.name + "s";
+  private getRole(session: any) {
+    return session.user && session.user.role && session.user.role.name + 's' || 'Anonymous';
+  }
 
-        try {
-            const pages = await this.supportService.getAll(role, refresh === 'true');
-            return res.status(HttpStatus.OK).json(pages);
-        } catch (error) {
-            return this.handleError(res, 'Error in SupportController.readAll(): ', error);
-        }
+  @Get()
+  async readAll(@Session() session, @Headers('x-force-refresh') refresh = 'false') {
+    const role = this.getRole(session)
+
+    return this.supportService.getAll(role, refresh === 'true')
+  }
+
+  @Get('/category/:name')
+  async readCategory(@Session() session,
+                     @Param('name') category: string,
+                     @Headers('x-force-refresh') refresh = 'false') {
+    const role = this.getRole(session)
+
+    return this.supportService
+      .getAll(role, refresh === 'true')
+      .then(pages => pages.filter(page => page.Category__c.toLowerCase() === category.toLowerCase()))
+  }
+
+  /**
+   * ### GET: /support/describe
+   * Describes Support_Page__c
+   *
+   * @param refresh Force cache refresh using header 'x-force-refresh'
+   */
+  @Get('/describe')
+  async describe(@Headers('x-force-refresh') refresh = 'false') {
+    return this.supportService.describe(refresh === 'true')
+  }
+
+  @Get('/search')
+  async search(@Session() session,
+               @Headers('x-search') search: string,
+               @Headers('x-retrieve') retrieve: string,
+               @Headers('x-force-refresh') refresh = 'false') {
+
+    // Check for required fields
+    if (!search || !retrieve) {
+      throw new BadRequestException(
+        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
+        'MISSING_PARAMETERS'
+      )
     }
 
-    @Get('/category/:name')
-    public async readCategory( @Response() res, @Session() session, @Param('name') catName, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let role = 'Anonymous';
-        if (session.user && session.user.role)
-            role = session.user.role.name + "s";
+    if (!retrieve.includes('Restricted_To__c')) retrieve += ',Restricted_To__c';
 
-        try {
-            const pages = (await this.supportService.getAll(role, refresh === 'true'))
-                .filter(page => page.Category__c.toLowerCase() === catName.toLowerCase());
-            return res.status(HttpStatus.OK).json(pages);
-        } catch (error) {
-            return this.handleError(res, 'Error in SupportController.readCategory(): ', error);
-        }
+    const role = this.getRole(session)
+
+    return this.supportService.search(search, retrieve, role, refresh === 'true');
+  }
+
+  @Get('/:id')
+  async read(@Session() session, @Param('id') id: string, @Headers('x-force-refresh') refresh = 'false') {
+    const role = this.getRole(session)
+
+    const page = await this.supportService.get(id, refresh === 'true');
+
+    if (!page.Restricted_To__c.includes(role)) {
+      throw new ForbiddenException('You do not have permission to read this support page!', 'ACCESS_FORBIDDEN')
     }
 
-    /**
-     * @desc <h5>GET: /support/describe</h5> Calls {@link SupportService#describe} to describe Support_Page__c
-     *
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is a JSON object with the describe result
-     * @memberof FacilitatorsController
-     */
-    @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        try {
-            const describeObject = await this.supportService.describe(refresh === 'true');
-            return res.status(HttpStatus.OK).json(describeObject);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.describe(): ', error);
-        }
-    }
-
-    @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-
-        // Check for required fields
-        if (!search || !retrieve) return this.handleError(res, 'Error in SupportController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
-
-        if (!retrieve.includes("Restricted_To__c")) retrieve += ",Restricted_To__c";
-
-        let role = 'Anonymous';
-        if (session.user && session.user.role)
-            role = session.user.role.name + "s";
-
-        try {
-            const pages = await this.supportService.search(search, retrieve, role, refresh === 'true');
-            return res.status(HttpStatus.OK).json(pages);
-        } catch (error) {
-            return this.handleError(res, 'Error in SupportController.search(): ', error);
-        }
-
-    }
-
-    @Get('/:id')
-    public async read( @Response() res, @Session() session, @Param('id') id, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let role = 'Anonymous';
-        if (session.user && session.user.role)
-            role = session.user.role.name + "s";
-
-        try {
-            const page = await this.supportService.get(id, refresh === 'true');
-            if (!page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
-            return res.status(HttpStatus.OK).json(page);
-        } catch (error) {
-            return this.handleError(res, 'Error in SupportController.read(): ', error);
-        }
-    }
+    return page
+  }
 
 }
