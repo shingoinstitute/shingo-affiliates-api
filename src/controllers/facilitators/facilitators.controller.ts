@@ -1,15 +1,14 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session, Inject
-} from '@nestjs/common';
-import { FacilitatorsService, MailerService } from '../../components';
-import { BaseController } from '../base.controller';
-import { checkRequired } from '../../validators/objKeyValidator';
-import * as _ from 'lodash';
-import * as generator from 'generate-password';
-import { LoggerInstance } from 'winston';
+    Param, Query, Headers, Body, Session, Inject,
+    ForbiddenException, BadRequestException, InternalServerErrorException
+} from '@nestjs/common'
+import { FacilitatorsService, MailerService } from '../../components'
+import { checkRequired } from '../../validators/objKeyValidator'
+import _ from 'lodash'
+import generator from 'generate-password'
+import { LoggerInstance } from 'winston'
 
 /**
  * @desc Controller of the REST API logic for Facilitators
@@ -19,323 +18,347 @@ import { LoggerInstance } from 'winston';
  * @extends {BaseController}
  */
 @Controller('facilitators')
-export class FacilitatorsController extends BaseController {
+export class FacilitatorsController {
 
-    constructor(
-      private facilitatorsService: FacilitatorsService,
-      private mailer: MailerService,
-      @Inject('LoggerService') logger: LoggerInstance
-    ) {
-        super(logger);
-    };
+  constructor(
+    private facilitatorsService: FacilitatorsService,
+    private mailer: MailerService,
+    @Inject('LoggerService') private log: LoggerInstance
+  ) { }
 
-    /**
-     * @desc <h5>GET: /facilitators</h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given <code>'x-affiliate' || session.affilaite</code>
-     *
-     * @param {Header} [xAffiliate=''] - Header 'x-affiliate' Used by the 'Affiliate Manager' role to specify the affiliate to query facilitators for ('' queries all affiliates).
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is JSON Array of objects of type <code>{<em>queried fields</em>}</code>
-     * @memberof FacilitatorsController
-     */
-    @Get('')
-    public async readAll( @Response() res, @Session() session, @Headers('x-affiliate') xAffiliate = '', @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        let isAfMan = session.user && session.user.role.name === 'Affiliate Manager';
+  /**
+   * ### GET: /facilitators
+   * Get a list of facilitators for given `'x-affiliate' || session.affiliate`
+   *
+   * @param xAffiliate Afilliate to query facilitators for from header 'x-affiliate'
+   * @param refresh Force cache refresh using header 'x-force-refresh'
+   */
+  @Get()
+  async readAll(@Session() session,
+                @Headers('x-affiliate') xAffiliate = '',
+                @Headers('x-force-refresh') refresh = 'false') {
+    const isAfMan = session.user && session.user.role.name === 'Affiliate Manager'
 
-        if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
-
-        try {
-            const facilitators = await this.facilitatorsService.getAll(true, (isAfMan ? xAffiliate : session.affiliate));
-            return res.status(HttpStatus.OK).json(facilitators);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', error);
-        }
+    if (!isAfMan && !session.affiliate) {
+      throw new ForbiddenException('', 'MISSING_FIELDS')
     }
 
-    /**
-     * @desc <h5>GET: /facilitators/describe</h5> Calls {@link FacilitatorsService#describe} to describe Contact
-     *
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is a JSON object with the describe result
-     * @memberof FacilitatorsController
-     */
-    @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
-        try {
-            const describeObject = await this.facilitatorsService.describe(refresh === 'true');
-            return res.status(HttpStatus.OK).json(describeObject);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.describe(): ', error);
-        }
+    return this.facilitatorsService.getAll(true, isAfMan ? xAffiliate : session.affiliate)
+  }
+
+  /**
+   * ### GET: /facilitators/describe
+   *
+   * Describes Contact
+   *
+   * @param refresh Force cache refresh using header 'x-force-refresh'
+   */
+  @Get('/describe')
+  async describe(@Headers('x-force-refresh') refresh = 'false') {
+    return this.facilitatorsService.describe(refresh === 'true')
+  }
+
+  /**
+   * @desc <h5>GET: /facilitators/search</h5> Calls {@link FacilitatorsService#search} to search for facilitators
+   *
+   *
+   * @param search SOSL search expresssion found in header 'x-search'
+   * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
+   * @param refresh Force cache refresh using header 'x-force-refresh'
+   */
+  @Get('/search')
+  search(@Session() session,
+         @Headers('x-search') search: string,
+         @Headers('x-retrieve') retrieve: string,
+         @Headers('x-is-mapped') isMapped = 'true',
+         @Headers('x-force-refresh') refresh = 'false') {
+    const isAfMan = session.user.role.name === 'Affiliate Manager'
+
+    if (!isAfMan) isMapped = 'true'
+
+    if (!isAfMan && !session.affiliate) {
+      throw new ForbiddenException('', 'SESSION_EXPIRED')
     }
 
-    /**
-     * @desc <h5>GET: /facilitators/search</h5> Calls {@link FacilitatorsService#search} to search for facilitators
-     *
-     *
-     * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*')
-     * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Contact fields to retrieve (i.e. 'Id, Name, Email')
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is a JSON Array of objects of type {<em>retrieve fields</em>}
-     * @memberof FacilitatorsController
-     */
-    @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-is-mapped') isMapped = 'true', @Headers('x-force-refresh') refresh = 'false') {
-        let isAfMan = session.user.role.name === 'Affiliate Manager';
-        if (!isAfMan) isMapped = 'true';
-        if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
-
-        // Check for required fields
-        if (!search || !retrieve) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'MISSING_FIELDS' }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const searchRecords = await this.facilitatorsService.search(search, retrieve, isMapped === 'true', (isAfMan ? '' : session.affiliate), refresh === 'true');
-            return res.status(HttpStatus.OK).json(searchRecords);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.search(): ', error);
-        }
+    // Check for required fields
+    if (!search || !retrieve) {
+      throw new BadRequestException(
+        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
+        'MISSING_FIELDS'
+      )
     }
 
-    /**
-     * @desc <h5>GET: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#get} to retrieve a Facilitator
-     *
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
-     * @memberof FacilitatorsController
-     */
-    @Get('/:id')
-    public async read( @Response() res, @Param('id') id): Promise<Response> {
-        // Check the id
-        if (!id.match(/[\w\d]{15,18}/))
-            return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    return this.facilitatorsService.search(
+      search,
+      retrieve,
+      isMapped === 'true',
+      (isAfMan ? '' : session.affiliate), refresh === 'true'
+    )
+  }
 
-        try {
-            const facilitator = await this.facilitatorsService.get(id);
-            return res.status(HttpStatus.OK).json(facilitator);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.read(): ', error);
-        }
+  /**
+   * ### GET: /facilitators/:id
+   * Retrieves a faciliatator
+   *
+   * @param id - Contact salesforce id
+   */
+  @Get('/:id')
+  read(@Param('id') id: string) {
+    // Check the id
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
+    return this.facilitatorsService.get(id)
+  }
 
-    @Get('/resetpassword/:email')
-    public async resetPassword( @Response() res, @Param('email') email): Promise<Response> {
-        try {
-            const token = await this.facilitatorsService.generateReset(email);
-            // TODO: Send token to user in email
-            const result = await this.mailer.sendMail({
-                to: email,
-                subject: 'Password Reset -- Affiliate Portal',
-                text: `Hello,\n\nPlease follow this link to reset your password: \n\n\t${process.env.CLIENT_HOST}/resetpassword?token=${token}\n\nIf you did not request this password reset please ignore this message.\nNOTE: This link expires in 30 minutes.\nnThank you,\n\nShingo Institute`,
-                html: `
-                <p>Hello,</p>
-                <p>Please follow this link to reset your password: </p>
-                <p>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a></p>
-                <p>If you did not request this password reset please ignore this message.</p>
-                <p>NOTE: This link expires in 30 minutes.</p>
-                <br>
-                <p>Thank you,</p>
-                <br>
-                <p>The Shingo Institute, <em>Home of the Shingo Prize</em></p>
-                <hr>
-                <p>This message was an automated response.</p>
-                `
-            });
+  @Get('/resetpassword/:email')
+  async resetPassword(@Param('email') email: string): Promise<
+    { success: false, rejected?: string[] } |
+    { success: true, accepted: string[], response: string}
+  > {
+    const token = await this.facilitatorsService.generateReset(email);
+    return this.mailer.sendMail({
+        to: email,
+        subject: 'Password Reset -- Affiliate Portal',
+        text: `Hello,
 
-            return res.status(HttpStatus.OK).json({ success: true });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.resetPassword(): ', error);
-        }
+Please follow this link to reset your password:
+
+  ${process.env.CLIENT_HOST}/resetpassword?token=${token}
+
+If you did not request this password reset please ignore this message.
+NOTE: This link expires in 30 minutes.
+
+Thank you,
+
+  The Shingo Institute, Home of the Shingo Prize
+
+This message was an automated response`,
+        html: `
+        <p>Hello,</p>
+        <p>Please follow this link to reset your password: </p>
+        <p>&emsp;<a href="${process.env.CLIENT_HOST}/resetpassword?token=${token}">Reset Password</a></p>
+        <p>If you did not request this password reset please ignore this message.</p>
+        <p>NOTE: This link expires in 30 minutes.</p>
+        <br>
+        <p>Thank you,</p>
+        <br>
+        <p>The Shingo Institute, <em>Home of the Shingo Prize</em></p>
+        <hr>
+        <p>This message was an automated response.</p>
+        `,
+    }).then(response => {
+      if (!response) return { success: false as false }
+      if (response.rejected.length > 0) return { success: false as false, rejected: response.rejected }
+      return { success: true as true, accepted: response.accepted, response: response.response }
+    })
+  }
+
+  @Post('/resetpassword/token')
+  async changePassword(@Body() body) {
+    const valid = checkRequired(body, ['password', 'token']);
+
+    if (!valid.valid) {
+      throw new BadRequestException(`Missing Fields: ${valid.missing.join()}`, 'MISSING_FIELDS')
     }
 
-    @Post('/resetpassword/token')
-    public async changePassword( @Response() res, @Body() body): Promise<Response> {
-        const valid = checkRequired(body, ['password', 'token']);
-        if (!valid.valid) return this.handleError(res, 'Error in FacilitatorsController.changePassword(): ', { error: 'MISSING_FIELDS', fields: valid.missing }, HttpStatus.BAD_REQUEST);
+    return this.facilitatorsService
+      .resetPassword(body.token, body.password)
+      .then(user => ({ id: user.id, email: user.email }))
+  }
 
-        try {
-            const user = await this.facilitatorsService.resetPassword(body.token, body.password);
-            return res.status(HttpStatus.OK).json({ id: user.id, email: user.email });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.changePassword(): ', error);
-        }
+  /**
+   * ### POST: /facilitators
+   * Creates a new facilitator
+   *
+   * @param body Required fields: [ 'AccountId', 'FirstName', 'LastName', 'Email' ]
+   * Optional fields: [ 'roleId' ]
+   */
+  @Post()
+  async create(@Body() body) {
+    const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
+    if (!required.valid) {
+      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
     }
 
-    /**
-     * @desc <h5>POST: /facilitators</h5> Calls {@link FacilitatorsService#create} to create a new Facilitator
-     *
-     * @param {Body} body - Required fields: <code>[ 'AccountId', 'FirstName', 'LastName', 'Email' ]</code><br>Optional fields: <code>[ 'roleId' ]</code>
-     * @returns {Promise<Response>} Response body is a JSON object.
-     * @memberof FacilitatorsController
-     */
-    @Post()
-    public async create( @Response() res, @Body() body): Promise<Response> {
-        const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
-        if (!required.valid)
-            return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
-
-        if (!body.AccountId.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.AccountId} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        try {
-            body.password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
-            const result = await this.facilitatorsService.create(body);
-
-            await this.mailer.sendMail({
-                to: (process.env.NODE_ENV === 'development' ? 'dustin.e.homan@usu.edu,craig.blackburn@usu.edu' : 'shingo.coord@usu.edu'),
-                subject: 'New Shingo Affiliate Portal Account',
-                text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
-                html: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`
-            });
-
-            await this.mailer.sendMail({
-                to: body.Email,
-                subject: 'New Shingo Affiliate Portal Account',
-                text: `Hello ${body.FirstName} ${body.LastName},\n\nYour account for the Shingo Affiliate Portal has been created!\n\nYour temporary password is:\n\t${body.password}\nPlease change it when you first log in.\n\nThank you,\n\nShingo Institute`,
-                html: `Hello ${body.FirstName} ${body.LastName},<br><br>Your account for the Shingo Affiliate Portal has been created!<br><br>Your temporary password is:<br>&emsp;${body.password}<br>Please change it when you first log in.<br><br>Thank you,<br><br>Shingo Institute`
-            });
-
-            return res.status(HttpStatus.CREATED).json(result);
-        } catch (error) {
-
-            if (error.message && error.message.match(/(invalid login).*(prod\.outlook\.com)/gi)) {
-                error.message = 'Invalid login for mailer - A facilitator was created but failed to send a notification email.';
-                error.error = 'EMAIL_NOT_SENT';
-            }
-
-            return this.handleError(res, 'Error in FacilitatorsController.create(): ', error);
-        }
+    if (!body.AccountId.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${body.AccountId} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>POST: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#mapContact} to map an existing Affiliate Instructor Contact to a new/current Auth login
-     *
-     * @param {Body} body - Required fields: <code>[ 'AccountId', 'Email', 'password' ]</code><br>Optional fields: <code>['roleId']</code>
-     * @param {SalesforceId} id - SalesforceId of the Contact to map
-     * @returns {Promise<Response>}
-     * @memberof FacilitatorsController
-     */
-    @Post('/:id')
-    public async map( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
-        if (!id.match(/[\w\d]{15,18}/)) return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    try {
+      body.password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
+      const result = await this.facilitatorsService.create(body)
 
-        const required = checkRequired(body, ['AccountId', 'Email']);
-        if (!required.valid) return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
+      this.mailer.sendMail({
+        to: (process.env.NODE_ENV === 'development'
+          ? 'shingo.it@usu.edu,abe.white@usu.edu' : 'shingo.coord@usu.edu'),
+        subject: 'New Shingo Affiliate Portal Account',
+        text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
+        html: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
+      });
 
-        try {
-            const result = await this.facilitatorsService.mapContact(id, body);
-            return res.status(HttpStatus.CREATED).json(result);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.map(): ', error);
-        }
+      return this.mailer.sendMail({
+        to: body.Email,
+        subject: 'New Shingo Affiliate Portal Account',
+        text: `Hello ${body.FirstName} ${body.LastName},
+
+Your account for the Shingo Affiliate Portal has been created!
+
+Your temporary password is:
+
+  ${body.password}
+
+Please change it when you first log in.
+
+Thank you,
+
+  The Shingo Institute, Home of the Shingo Prize`,
+        html: `
+        <p>Hello ${body.FirstName} ${body.LastName},</p>
+        <p>Your account for the Shingo Affiliate Portal has been created!</p>
+        <p>Your temporary password is:</p>
+        <p>&emsp;${body.password}</p>
+        <p>Please change it when you first log in.</p>
+        <p>Thank you,</p>
+        <br>
+        <p>The Shingo Institute, <em>Home of the Shingo Prize</em></p>
+        <hr>
+        <p>This message was an automated response.</p>`,
+      }).then(() => result);
+
+    } catch (error) {
+      if (error.message && error.message.match(/(invalid login).*(prod\.outlook\.com)/gi)) {
+        throw new InternalServerErrorException(
+          'Invalid login for mailer - A facilitator was created but failed to send a notification email.',
+          'EMAIL_NOT_SENT'
+        )
+      }
+
+      throw error
+    }
+  }
+
+  /**
+   * ### POST: /facilitators/:id
+   * Maps an existing Affiliate Instructor Contact to a new/current Auth login
+   *
+   * @param body Required fields: [ 'AccountId', 'Email', 'password' ]
+   * Optional fields: ['roleId']
+   * @param id SalesforceId of the Contact to map
+   */
+  @Post('/:id')
+  async map(@Body() body, @Param('id') id: string): Promise<Response> {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>PUT: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#update} to update a Facilitator. If <code>body</code> contains <code>Email</code> or <code>password</code> the associated auth is also updated.
-     *
-     * @param {any} body - Required fields <code>{ ['Id'], oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography__c', etc..] }</code>
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} Response body is status of updates and resulting SF Operation
-     * @memberof FacilitatorsController
-     */
-    @Put('/:id')
-    public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        if (!body.Id || body.Id !== id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
-
-        if (body.hasOwnProperty('Biography__c')) {
-            delete body.Biography__c;
-            this.log.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
-        }
-
-        try {
-            const result = await this.facilitatorsService.update(body);
-            return res.status(HttpStatus.OK).json(result);
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.update(): ', error);
-        }
-
+    const required = checkRequired(body, ['AccountId', 'Email']);
+    if (!required.valid) {
+      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
     }
 
-    /**
-     * @desc <h5>DELETE: /facilitators/<em>:id</em></h5> Calls {@link FacilitatorsService#delete}, {@link FacilitatorsService#deleteAuth} or {@link FacilitatorsService#unmapAuth} to remove a facilitator from the affiliate portal
-     *
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @param {string} [deleteAuth='true'] - Delete auth as well
-     * @returns {Promise<Response>} Response is status of deletes and resulting SF Operation
-     * @memberof FacilitatorsController
-     */
-    @Delete('/:id')
-    public async delete( @Response() res, @Param('id') id, @Query('deleteAuth') deleteAuth = 'true'): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    return this.facilitatorsService.mapContact(id, body)
+  }
 
-        try {
-            const record = await this.facilitatorsService.delete(id);
-            let deleted = false;
-            if (deleteAuth === 'true') deleted = await this.facilitatorsService.deleteAuth(id);
-            else await this.facilitatorsService.unmapAuth(id);
-
-            return res.status(HttpStatus.OK).json({ salesforce: true, auth: deleted, record });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.delete(): ', error);
-        }
+  /**
+   * ### PUT: /facilitators/:id
+   * Updates a Facilitator.
+   * If `body` contains `Email` or `password` the associated auth is also updated
+   *
+   * @param body Required fields { ['Id'],
+   * oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography__c', etc..]
+   * }
+   * @param id - Contact id. match <code>/[\w\d]{15,17}/</code>
+   */
+  @Put('/:id')
+  async update(@Body() body, @Param('id') id: string): Promise<Response> {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>DELETE: /facilitators/<em>:id</em>/login</h5> Calls {@link FacilitatorsService#deleteAuth} to delete a Facilitator's login only
-     *
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} Response body is result of delete
-     * @memberof FacilitatorsController
-     */
-    @Delete('/:id/login')
-    public async deleteLogin( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const deleted = await this.facilitatorsService.deleteAuth(id);
-            return res.status(HttpStatus.OK).json({ deleted });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', error);
-        }
+    if (!body.Id || body.Id !== id) {
+      throw new BadRequestException('Missing Fields: Id', 'MISSING_FIELDS')
     }
 
-    /**
-     * @desc <h5>DELETE: /facilitators/<em>:id</em>/unmap</h5> Calls {@link FacilitatorsService#unmapAuth} to remove the Affiliate Portal service from a login
-     *
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @returns {Promise<Response>} Reponse body is result of unmap
-     * @memberof FacilitatorsController
-     */
-    @Delete('/:id/unmap')
-    public async unmap( @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.unmap(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const unmaped = await this.facilitatorsService.unmapAuth(id);
-            return res.status(HttpStatus.OK).json({ unmaped });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.unmap(): ', error);
-        }
+    if (body.hasOwnProperty('Biography__c')) {
+      delete body.Biography__c;
+      // tslint:disable-next-line:max-line-length
+      this.log.warn('Client attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.')
     }
 
-    /**
-     * @desc <h5>POST: /facilitators/<em>:id</em>/roles/<em>:roleId</em></h5> Calls {@link FacilitatorsService#changeRole} to change a Facilitator's role
-     *
-     * @param {SalesforceId} id - Contact id. match <code>/[\w\d]{15,17}/</code>
-     * @param {number} roleId - Id of the role to change too
-     * @returns {Promise<Response>} Response body is result of add
-     * @memberof FacilitatorsController
-     */
-    @Post('/:id/roles/:roleId')
-    public async changeRole( @Response() res, @Param('id') id, @Param('roleId') roleId): Promise<Response> {
-        if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    return this.facilitatorsService.update(body)
+  }
 
-        try {
-            const added = this.facilitatorsService.changeRole(id, roleId);
-            return res.status(HttpStatus.OK).json({ added });
-        } catch (error) {
-            return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', error);
-        }
+  /**
+   * ### DELETE: /facilitators/:id
+   * Removes a facilitator from the affiliate portal
+   *
+   * @param id Contact salesforce id
+   * @param deleteAuth Delete auth as well
+   * @memberof FacilitatorsController
+   */
+  @Delete('/:id')
+  async delete(@Param('id') id: string, @Query('deleteAuth') deleteAuth = 'true') {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
+
+    const record = await this.facilitatorsService.delete(id)
+
+    const deleted = deleteAuth === 'true'
+      ? await this.facilitatorsService.deleteAuth(id)
+      : false
+
+    if (deleteAuth !== 'true') await this.facilitatorsService.unmapAuth(id)
+
+    return { salesforce: true, auth: deleted, record }
+  }
+
+  /**
+   * ### DELETE: /facilitators/:id/login
+   * Deletes a faciliators login only
+   *
+   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   */
+  @Delete('/:id/login')
+  async deleteLogin(@Param('id') id: string) {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+    }
+
+    return { deleted: await this.facilitatorsService.deleteAuth(id) }
+  }
+
+  /**
+   * ### DELETE: /facilitators/:id/unmap
+   * Removes the Affiliate Portal service from a login
+   *
+   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   */
+  @Delete('/:id/unmap')
+  async unmap(@Param('id') id: string) {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+    }
+
+    return { unmaped: await this.facilitatorsService.unmapAuth(id) }
+  }
+
+  /**
+   * @desc ### POST: /facilitators/:id/roles/:roleId
+   * Changes a faciliatator's role
+   *
+   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   * @param roleId Id of the role to change too
+   */
+  @Post('/:id/roles/:roleId')
+  async changeRole(@Param('id') id: string, @Param('roleId') roleId: string) {
+    if (!id.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+    }
+
+    return { added: await this.facilitatorsService.changeRole(id, roleId) }
+  }
 
 }

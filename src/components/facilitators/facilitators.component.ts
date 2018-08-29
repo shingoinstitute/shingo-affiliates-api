@@ -1,12 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common'
 import {
     CacheService, User,
-} from '../';
-import _ from 'lodash';
-import * as jwt from 'jwt-simple';
-import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
-import { AuthClient } from '@shingo/shingo-auth-api';
+} from '../'
+import _ from 'lodash'
+import * as jwt from 'jwt-simple'
+import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
+import { AuthClient } from '@shingo/shingo-auth-api'
 import { LoggerInstance } from 'winston'
+// tslint:disable-next-line:no-implicit-dependencies
+import { DescribeSObjectResult } from 'jsforce'
 
 /**
  * @desc A service to provide functions for working with Facilitators
@@ -99,24 +101,24 @@ export class FacilitatorsService {
     }
 
     /**
-     * @desc Uses the Salesforce REST API to describe the Contact object. See the Salesforce documentation for more about 'describe'
+     * Describes the Contact object
      *
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>}
-     * @memberof FacilitatorsService
+     * See the Salesforce documentation for more about 'describe'
+     *
+     * @param refresh Force the refresh of the cache
      */
-    public async describe(refresh: boolean = false): Promise<any> {
-        const key = 'describeContact';
+    async describe(refresh = false) {
+      const key = 'describeContact'
 
-        if (!this.cache.isCached(key) || refresh) {
-            const describeObject = await this.sfService.describe('Contact');
+      if (!this.cache.isCached(key) || refresh) {
+        const describeObject = await this.sfService.describe('Contact')
 
-            this.cache.cache(key, describeObject);
+        this.cache.cache(key, describeObject)
 
-            return Promise.resolve(describeObject);
-        } else {
-            return Promise.resolve(this.cache.getCache(key));
-        }
+        return describeObject
+      } else {
+        return this.cache.getCache(key) as DescribeSObjectResult
+      }
     }
 
     /**
