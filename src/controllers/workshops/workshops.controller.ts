@@ -1,311 +1,285 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session, Inject
-} from '@nestjs/common';
-import { WorkshopsService, Workshop } from '../../components';
-import { MulterFactory } from '../../factories';
-import { BaseController } from '../base.controller';
+    Param, Headers, Body, Session, Inject,
+    ForbiddenException, BadRequestException,
+    UseInterceptors, FileInterceptor, UploadedFile, FilesInterceptor, UploadedFiles
+} from '@nestjs/common'
+import { WorkshopsService } from '../../components'
 
-import { checkRequired } from '../../validators/objKeyValidator';
-import { LoggerInstance } from 'winston';
+import { checkRequired } from '../../validators/objKeyValidator'
+import { LoggerInstance } from 'winston'
 
 /**
  * @desc Controller of the REST API logic for Workshops
  *
  * @export
  * @class WorkshopsController
- * @extends {BaseController}
  */
 @Controller('workshops')
-export class WorkshopsController extends BaseController {
+export class WorkshopsController {
 
-    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory, @Inject('LoggerService') logger: LoggerInstance) {
-        super(logger);
-    };
+  constructor(
+    private workshopsService: WorkshopsService,
+    @Inject('LoggerService') private log: LoggerInstance
+  ) { }
 
-    /**
-     * @desc <h5>GET: /workshops</h5> Calls {@link WorkshopsService#getAll} to get an array of Workshops
-     *
-     * @param {Session} session - Session contains the current user. The function uses the permissions on this object to query Salesforce for the workshops.
-     * @param {any} isPublicQ - Query parameter <code>'isPublic'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>headers['x-force-refesh']</code>; Returns public workshops
-     * @param {any} isPublicH - Header <code>'x-is-public'</code>; Expected values <code>[ 'true', 'false' ]</code>; Alias <code>query['isPublic']</code>; Returns public workshops
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body contains a JSON array of Workshops
-     * @memberof WorkshopsController
-     */
-    @Get()
-    public async readAll( @Response() res, @Session() session): Promise<Response> {
-        if (!session.user) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
-
-        try {
-            const workshops: Workshop[] = await this.workshopsService.getAll(false, true, session.user);
-
-            return res.status(HttpStatus.OK).json(workshops);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.readAll(): ', error);
-        }
+  /**
+   * ### GET: /workshops
+   * Get all workshops
+   *
+   * @param session Session containing the current user.
+   */
+  @Get()
+  readAll(@Session() session) {
+    if (!session.user) {
+      throw new ForbiddenException('SESSION_EXPIRED')
     }
 
-    @Get('public')
-    public async readPublic( @Response() res, @Headers('x-force-refresh') refresh = 'false') {
-        try {
-            const workshops: Workshop[] = await this.workshopsService.getAll(true, refresh === 'true', null);
+    return this.workshopsService.getAll(false, true, session.user)
+  }
 
-            return res.status(HttpStatus.OK).json(workshops);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.readPublic(): ', error);
-        }
+  /**
+   * ### GET: /workshops/public
+   * Get all public workshops
+   *
+   * @param refresh Force cache refresh using header x-force-refresh
+   */
+  @Get('public')
+  readPublic(@Headers('x-force-refresh') refresh = 'false') {
+    return this.workshopsService.getAll(true, refresh === 'true', null)
+  }
+
+  /**
+   * ### GET: /workshops/describe
+   * Describe the Workshop__c object
+   *
+   * @param refresh Force cache refresh using header x-force-refresh
+   */
+  @Get('/describe')
+  describe(@Headers('x-force-refresh') refresh = 'false') {
+    return this.workshopsService.describe(refresh === 'true')
+  }
+
+  /**
+   * ### GET: /workshops/search
+   * Search workshops using a SOSL expression
+   *
+   * @param search SOSL search expresssion found in header 'x-search'
+   * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
+   * @param refresh Force cache refresh using header x-force-refresh
+   */
+  @Get('/search')
+  search(@Headers('x-search') search: string,
+         @Headers('x-retrieve') retrieve: string,
+         @Headers('x-force-refresh') refresh = 'false') {
+    if (!search || !retrieve) {
+      throw new BadRequestException(
+        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
+        'MISSING_PARAMETERS'
+      )
     }
 
-    /**
-     * @desc <h5>GET: /workshops/describe</h5> Calls {@link WorkshopsService#describe} to describe Workshop\__c
-     *
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is a JSON object with the describe result
-     * @memberof WorkshopsController
-     */
-    @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    return this.workshopsService.search(search, retrieve, refresh === 'true')
+  }
 
-        try {
-            const describeObject = await this.workshopsService.describe(refresh === 'true');
-            return res.status(HttpStatus.OK).json(describeObject);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.describe(): ', error);
-        }
-
+  /**
+   * ### GET: /workshops/:id
+   * Get a workshop by Id
+   *
+   * @param id Workshop__c Salesforce id
+   */
+  @Get('/:id')
+  read(@Param('id') id: string) {
+    // Check the id
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>GET: /workshops/search</h5> Calls {@link WorkshopsService#search}. Returns an array of workshops that match search criteria
-     *
-     *
-     * @param {Header} search - Header <code>'x-search'</code>. SOSL search expression (i.e. '*Discover Test*').
-     * @param {Header} retrieve - Header <code>'x-retrieve'</code>. A comma seperated list of the Workshop\__c fields to retrieve (i.e. 'Id, Name, Start_Date\__c')
-     * @param {Header} [refresh='false'] - Header <code>'x-force-refresh'</code>; Expected values <code>[ 'true', 'false' ]</code>; Forces cache refresh
-     * @returns {Promise<Response>} Response body is a JSON Array of workshops
-     * @memberof WorkshopsController
-     */
-    @Get('/search')
-    public async search( @Response() res, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    return this.workshopsService.get(id).then(w => {
+      this.log.debug(`GET: /workshops/${id} => %j`, w)
+      return w
+    })
+  }
 
-        // Check for required fields
-        if (!search || !retrieve) return this.handleError(res, 'Error in WorkshopsController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const workshops: Workshop[] = await this.workshopsService.search(search, retrieve, refresh === 'true');
-            return res.status(HttpStatus.OK).json(workshops);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.search(): ', error);
-        }
-
+  /**
+   * ### GET: /workshops/:id/faciliators
+   * Get the facilitators for a workshop
+   *
+   * @param id Workshop__c Salesforce id
+   */
+  @Get('/:id/facilitators')
+  facilitators(@Param('id') id) {
+    // Check the id
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>GET: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
-     *
-     * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
-     * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
-     * @memberof WorkshopsController
-     */
-    @Get('/:id')
-    public async read( @Response() res, @Param('id') id): Promise<Response> {
-        // Check the id
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    return this.workshopsService.facilitators(id)
+  }
 
-        try {
-            const workshop: Workshop = await this.workshopsService.get(id);
-            this.log.debug(`GET: /workshops/${id} => %j`, workshop);
-            return res.status(HttpStatus.OK).json(workshop);
-        } catch (error) {
-            return this.handleError(res, '(114:48) Error in WorkshopsController.read(): ', error);
-        }
+  /**
+   * ### POST: /workshops
+   * Creates a new workshop in salesforce and adds permissions through shingo auth service
+   *
+   * NOTE: facilitators is exptected to be of type [{"Id", "Email"}]. Where "Id" is a Salesforce Contact Id.
+   * @param body Required fields
+   * ["Name","Organizing_Affiliate__c","Start_Date__c","End_Date__c",
+   * "Host_Site__c","Event_Country__c","Event_City__c","facilitators"]
+   * @param session Accesses the affiliate id from the session to compare to the Organizing_Affiliate__c on the body
+   */
+  @Post()
+  async create(@Body() body, @Session() session) {
+    // Check required parameters
+    this.log.debug('Trying to create workshop:\n%j', body)
+
+    const valid = checkRequired(body, [
+      'Organizing_Affiliate__c',
+      'Start_Date__c',
+      'End_Date__c',
+      'Host_Site__c',
+      'Event_Country__c',
+      'Event_City__c',
+      'Course_Manager__c',
+      'facilitators',
+    ])
+
+    if (!valid.valid) {
+      throw new BadRequestException(`Missing Fields: ${valid.missing.join()}`, 'MISSING_FIELD')
     }
 
-    /**
-     * @desc <h5>GET: /workshops/<em>:id</em>/facilitators</h5> Calls {@link WorkshopsService#facilitators} to get all associated facilitators for a workshop
-     *
-     * @param {SalesforceId} id - Workshop\__cid. match <code>/a[\w\d]{14,17}/</code>
-     * @returns {Promise<Response>} Response is a JSON Array of Contact objects
-     * @memberof WorkshopsController
-     */
-    @Get('/:id/facilitators')
-    public async facilitators( @Response() res, @Param('id') id): Promise<Response> {
-
-        // Check the id
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const facilitators = await this.workshopsService.facilitators(id);
-            return res.status(HttpStatus.OK).json(facilitators);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.facilitators(): ', error);
-        }
-
+    // Check for valid SF ID on Organizing_Affiliate\__c
+    if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/)) {
+      throw new BadRequestException(`${body.Organizing_Affiliate__c} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    /**
-     * @desc <h5>POST: /workshops</h5> Calls {@link WorkshopsService#create} to create a new workshop in Salesforce and permissions for the workshop in the Shingo Auth API
-     * <br><br>
-     * NOTE: <code>"facilitators"</code> is exptected to be of type <code>[{"Id", "Email"}]</code>. Where <code>"Id"</code> is a Salesforce Contact Id.
-     * @param {Body} body - Required fields <code>[ "Name", "Organizing_Affiliate\__c", "Start_Date\__c", "End_Date\__c", "Host_Site\__c", "Event_Country\__c", "Event_City\__c", "facilitators" ]</code>
-     * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
-     * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
-     * @memberof WorkshopsController
-     */
-    @Post()
-    public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
-        // Check required parameters
-        this.log.debug('Trying to create workshop:\n%j', body);
-        let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'Course_Manager__c', 'facilitators']);
-        if (!valid.valid)
-            return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, HttpStatus.BAD_REQUEST);
-
-        // Check for valid SF ID on Organizing_Affiliate\__c
-        if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/))
-            return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        // Check can create for Organizing_Affiliate\__c
-        if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c)
-            return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'PERM_DENIDED', message: `You are not allowed to post workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, HttpStatus.FORBIDDEN);
-
-        try {
-            const sfSuccess = await this.workshopsService.create(body);
-            session.user.permissions.push({ resource: `/workshops/${sfSuccess.id}`, level: 2 });
-            return res.status(HttpStatus.CREATED).json(sfSuccess);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.create(): ', error);
-        }
+    // Check can create for Organizing_Affiliate\__c
+    if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c) {
+      throw new ForbiddenException(
+        `You are not allowed to post workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}`,
+        'PERM_DENIDED'
+      )
     }
 
-    /**
-     * @desc <h5>PUT: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#update} to update a workshop's fields. This function also updates facilitator associations and permissions
-     *
-     * @param {Body} body - Required fields <code>[ "Id", "Organizing_Affiliate\__c" ]</code>
-     * @param {Session} session - Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
-     * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
-     * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
-     * @memberof WorkshopsController
-     */
-    @Put('/:id')
-    public async update( @Response() res, @Param('id') id, @Body() body, @Session() session): Promise<Response> {
-        // Check required parameters
-        let required = checkRequired(body, ['Id', 'Organizing_Affiliate__c']);
-        if (!required.valid)
-            return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'MISSING_FIELD', fields: required.missing }, HttpStatus.BAD_REQUEST);
+    return this.workshopsService.create(body).then(sfSuccess => {
+      session.user.permissions.push({ resource: `/workshops/${sfSuccess.id}`, level: 2 });
+      return sfSuccess
+    })
+  }
 
-        // Check the id
-        const pattern = /[\w\d]{15,18}/;
-        if (!pattern.test(id) || !pattern.test(body.Id) || id !== body.Id || !pattern.test(body.Organizing_Affiliate__c))
-            return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'INVALID_SF_ID', message: `${body.Organizing_Affiliate__c} or ${id} or ${body.Id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        // Check can update for Organizing_Affiliate\__c
-        if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c)
-            return this.handleError(res, 'Error in WorkshopsController.update(): ', { error: 'PERM_DENIDED', message: `You are not allowed to update workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}` }, HttpStatus.FORBIDDEN);
-
-        try {
-            const result = await this.workshopsService.update(body);
-            return res.status(HttpStatus.OK).json(result);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.update(): ', error);
-        }
+  /**
+   * ### PUT: /workshops/:id
+   * Updates a workshop based on fields. Also updates facilitator associations and permissions
+   *
+   * @param body Required fields [ "Id", "Organizing_Affiliate\__c" ]
+   * @param session Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
+   * @param id Workshop__c salesforce id
+   */
+  @Put('/:id')
+  update(@Param('id') id, @Body() body, @Session() session) {
+    // Check required parameters
+    const required = checkRequired(body, ['Id', 'Organizing_Affiliate__c'])
+    if (!required.valid) {
+      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELD')
     }
 
-    /**
-     * @desc <h5>POST: /workshops/<em>:id</em>/attendee_file</h5> Calls {@link WorkshopsService#upload} to upload a file (containing the Attendee List) as an attachment to the Workshop\__c record in Salesforce
-     * <br>NOTE: Expecting attached file to be in the field attendeeList and <= 25MB in size
-     * @param {SalesforceId} id - The record Id of the Workshop to attach the file to
-     * @returns {Promise<Response>}
-     * @memberof WorkshopsController
-     */
-    @Post('/:id/attendee_file')
-    public async uploadAttendeeFile( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        const upload = this.multer.getUploadFunction('attendeeList');
-
-        return upload(req, res, error => {
-            if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
-
-            try {
-                const ext: string = req.file.originalname.split('.').pop();
-
-                this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')], req.file.mimetype);
-
-                return res.status(HttpStatus.ACCEPTED).json({success: true});
-            } catch (error) {
-                return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
-            }
-
-        });
+    // Check the id
+    const pattern = /[\w\d]{15,18}/;
+    if (!pattern.test(id)
+      || !pattern.test(body.Id)
+      || id !== body.Id
+      || !pattern.test(body.Organizing_Affiliate__c)) {
+      throw new BadRequestException(
+        `${body.Organizing_Affiliate__c} or ${id} or ${body.Id} is not a valid Salesforce ID.`,
+        'INVALID_SF_ID'
+      )
     }
 
-    /**
-     * @desc <h5>POST: /workshops/<em>:id</em>/evaluation_files</h5> Calls {@link WorkshopsService#upload} to upload an array of files (containing workshop evaluations) as attachments to the Workshop\__c record in Salesforce
-     *
-     * @param {SalesforceId} id - The record Id of the Workshop to attach the files to
-     * @returns {Promise<Response>}
-     * @memberof WorkshopsController
-     */
-    @Post('/:id/evaluation_files')
-    public async uploadEvaluations( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        const upload = this.multer.getUploadFunction('evaluationFiles', 'array');
-
-        return upload(req, res, error => {
-            if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
-
-            try {
-                const files = req.files.map(file => { return file.buffer.toString('base64'); });
-                const ext: string = req.files[0].originalname.split('.').pop();
-
-                this.workshopsService.upload(id, `evaluation.${ext}`, files, req.files[0].mimetype);
-
-                return res.status(HttpStatus.ACCEPTED).json({success: true});
-            } catch (error) {
-                return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
-            }
-
-        });
+    // Check can update for Organizing_Affiliate\__c
+    if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c) {
+      throw new ForbiddenException(
+        `You are not allowed to post workshops for the Affiliate with Id ${body.Organizing_Affiliate__c}`,
+        'PERM_DENIDED'
+      )
     }
 
-    /**
-     * @desc <h5>DELETE: /workshops/<em>:id</eM></h5> Calls {@link WorkshopsService#delete} to delete the workshop given by <em>:id</em>
-     *
-     * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
-     * @returns {Promise<Response>} Response is a JSON Object from the resulting Salesforce operation
-     * @memberof WorkshopsController
-     */
-    @Delete('/:id')
-    public async delete( @Response() res, @Param('id') id): Promise<Response> {
-        // Check the id
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    return this.workshopsService.update(body)
+  }
 
-        try {
-            const result = await this.workshopsService.delete(id);
-            return res.status(HttpStatus.OK).json(result);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.delete(): ', error);
-        }
+  /**
+   * ### POST: /workshops/:id/attendee_file
+   * Uploads a file containing the attendee list as an attachment to the Workshop__c record in Salesforce
+   * NOTE: Expecting attached file to be in the field attendeeList and <= 25MB in size
+   *
+   * @param id The record Id of the Workshop to attach the file to
+   */
+  @Post('/:id/attendee_file')
+  @UseInterceptors(FileInterceptor('attendeeList'))
+  async uploadAttendeeFile(@UploadedFile() file: Express.Multer.File, @Param('id') id: string) {
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
-    @Put('/:id/cancel')
-    public async cancel( @Response() res, @Param('id') id, @Body() body): Promise<Response> {
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.cancel(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
+    const ext = file.originalname.split('.').pop()
 
-        let required = checkRequired(body, ['reason']);
-        if (!required.valid)
-            return this.handleError(res, 'Error in WorkshopsController.cancel(): ', { error: 'MISSING_FIELD', fields: required.missing }, HttpStatus.BAD_REQUEST);
+    return this.workshopsService
+      .upload(id, `attendee_list.${ext}`, [file.buffer.toString('base64')], file.mimetype)
+      .then(results => results.length > 0 ? results[0] : { success: false })
+  }
 
-        try {
-            const result = await this.workshopsService.cancel(id, body.reason);
-            return res.status(HttpStatus.OK).json(result);
-        } catch (error) {
-            return this.handleError(res, 'Error in WorkshopsController.cancel(): ', error);
-        }
+  /**
+   * ### POST: /workshops/:id/evaluation_files
+   * Upload an array of files containing workshop evaluations as attachments to the Workshop__c record in Salesforce
+   *
+   * @param id The record Id of the Workshop to attach the files to
+   */
+  @Post('/:id/evaluation_files')
+  @UseInterceptors(FilesInterceptor('evaluationFiles', 30))
+  uploadEvaluations(@UploadedFiles() files: Express.Multer.File[], @Param('id') id: string) {
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
+
+    const buffFiles = files.map(file => file.buffer.toString('base64'))
+    const ext = files[0].originalname.split('.').pop()
+
+    return this.workshopsService
+      .upload(id, `evaluation.${ext}`, buffFiles, files[0].mimetype)
+      .then(results =>
+            results.length > 0 && results.every(r => r.success)
+              ? results[0]
+              : results.find(r => !r.success) || { success: false }
+          )
+  }
+
+  /**
+   * ### DELETE: /workshops/:id
+   * Deletes the workshop identified by :id
+   *
+   * @param id Workshop__c id
+   */
+  @Delete('/:id')
+  async delete(@Param('id') id: string) {
+    // Check the id
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+    }
+
+    return this.workshopsService.delete(id)
+  }
+
+  @Put('/:id/cancel')
+  async cancel(@Param('id') id, @Body() body) {
+    if (!id.match(/a[\w\d]{14,17}/)) {
+      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+    }
+
+    const required = checkRequired(body, ['reason'])
+    if (!required.valid) {
+      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELD')
+    }
+
+    return this.workshopsService.cancel(id, body.reason)
+  }
 
 }

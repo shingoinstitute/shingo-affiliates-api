@@ -2,6 +2,7 @@
   "extends": "@shingo/tslint-rules",
   "rules": {
     // there are too many instances to go and change at once
-    "semicolon": false
+    "semicolon": false,
+    "no-inferrable-types": true
   }
 }
