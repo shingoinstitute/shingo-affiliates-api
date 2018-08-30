@@ -11,11 +11,7 @@ import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 
 /**
- * @desc Controller of the REST API logic for Facilitators
- *
- * @export
- * @class FacilitatorsController
- * @extends {BaseController}
+ * Controller of the REST API logic for Facilitators
  */
 @Controller('facilitators')
 export class FacilitatorsController {
@@ -74,7 +70,7 @@ export class FacilitatorsController {
          @Headers('x-force-refresh') refresh = 'false') {
     const isAfMan = session.user.role.name === 'Affiliate Manager'
 
-    if (!isAfMan) isMapped = 'true'
+    const mapped = !isAfMan ? 'true' : isMapped
 
     if (!isAfMan && !session.affiliate) {
       throw new ForbiddenException('', 'SESSION_EXPIRED')
@@ -90,8 +86,8 @@ export class FacilitatorsController {
 
     return this.facilitatorsService.search(
       search,
-      retrieve,
-      isMapped === 'true',
+      retrieve.split(',').map(r => r.trim()),
+      mapped === 'true',
       (isAfMan ? '' : session.affiliate), refresh === 'true'
     )
   }

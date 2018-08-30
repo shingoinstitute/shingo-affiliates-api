@@ -3,6 +3,7 @@
   "rules": {
     // there are too many instances to go and change at once
     "semicolon": false,
-    "no-inferrable-types": true
+    "no-inferrable-types": true,
+    "no-parameter-reassignment": true
   }
 }
