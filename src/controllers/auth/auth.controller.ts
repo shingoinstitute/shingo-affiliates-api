@@ -1,150 +1,143 @@
 import {
     Controller,
-    Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session, Inject
-} from '@nestjs/common';
-import { BaseController } from '../base.controller';
+    Get, Post,
+    Request, Response,
+    Body, Inject, BadRequestException,
+    ForbiddenException, InternalServerErrorException, NotFoundException
+} from '@nestjs/common'
 
-import _ from 'lodash';
-import { parseError } from '../../util';
-import { SalesforceClient } from '@shingo/shingo-sf-api';
-import { AuthClient, User } from '@shingo/shingo-auth-api';
-import { LoggerInstance } from 'winston';
+import _ from 'lodash'
+import { parseError } from '../../util'
+import { SalesforceClient } from '@shingo/shingo-sf-api'
+import { AuthClient } from '@shingo/shingo-auth-api'
+import { LoggerInstance } from 'winston'
 
 /**
- * @desc Provides the controller of the Auth REST logic
- *
- * @export
- * @class AuthController
- * @extends {BaseController}
+ * Provides the controller of the Auth REST logic
  */
 @Controller('auth')
-export class AuthController extends BaseController {
+export class AuthController {
 
-    constructor(private sfService: SalesforceClient,
-                private authService: AuthClient,
-                @Inject('LoggerService') logger: LoggerInstance) {
-        super(logger);
-    };
+  constructor(
+    private sfService: SalesforceClient,
+    private authService: AuthClient,
+    @Inject('LoggerService') private log: LoggerInstance
+  ) { }
 
-    /**
-     * @desc <h5>POST: /auth/login</h5>
-     *
-     * @param {any} body - Required fields: <code>[ 'email', 'password' ]</code>
-     * @returns {Promise<Response>} Response body is an object with the user's JWT
-     * @memberof AuthController
-     */
-    @Post('login')
-    public async login( @Request() req, @Response() res, @Body() body): Promise<Response> {
-        if (!body.email || !body.password) return this.handleError(res, 'Error in AuthController.login(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
-
-        let user: User | undefined;
-
-        try {
-            user = await this.authService.login(body);
-        } catch (e) {
-            this.log.debug(e)
-            const parsed = parseError(e);
-            return this.handleError(res, 'Error in AuthController.login(): ', e,
-            parsed.error && (parsed.error === 'INVALID_PASSWORD' || parsed.error === 'EMAIL_NOT_FOUND')
-                ? HttpStatus.FORBIDDEN
-                : HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        if (user === undefined) {
-            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'INVALID_LOGIN' }, HttpStatus.FORBIDDEN);
-        }
-
-        if (!user.services.includes('affiliate-portal')) {
-            return this.handleError(res, 'Error in AuthController.login(): ', { error: 'NOT_REGISTERED' }, HttpStatus.NOT_FOUND);
-        }
-
-        try {
-            req.session.user = await this.getSessionUser(user);
-            req.session.affiliate = req.session.user['AccountId'];
-
-            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
-        } catch (error) {
-            return this.handleError(res, 'Error in AuthController.login(): ', error);
-        }
+  /**
+   * ### POST: /auth/login
+   *
+   * @param body - Required fields: <code>[ 'email', 'password' ]</code>
+   */
+  @Post('login')
+  async login(@Request() req, @Body() body) {
+    if (!body.email || !body.password) {
+      throw new BadRequestException(
+        `Missing fields: email, password`,
+        'MISSING_FIELDS'
+      )
     }
 
-    private async getSessionUser(user): Promise<any> {
-        const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
-        let sessionUser = _.omit(user, ['password', 'roles']);
-        sessionUser = _.merge(contact, _.omit(sessionUser, ['email']));
-        sessionUser.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
+    const user = await this.authService.login(body).catch(e => {
+      this.log.debug(e)
+      const parsed = parseError(e)
+      if (parsed.error === 'INVALID_PASSWORD' || parsed.error === 'EMAIL_NOT_FOUND') {
+        throw new ForbiddenException(parsed.message || '', parsed.error)
+      }
 
-        return sessionUser;
+      throw new InternalServerErrorException(parsed.message || '', parsed.error)
+    })
+
+    if (typeof user === 'undefined') {
+      throw new ForbiddenException('', 'INVALID_LOGIN')
     }
 
-
-    /**
-     * <h5>GET: /auth/valid</h5> Protected by isValid middleware. Returns the user's JWT
-     *
-     * @returns {Promise<Response>}
-     * @memberof AuthController
-     */
-    @Get('valid')
-    public async valid( @Request() req, @Response() res): Promise<Response> {
-        return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
+    if (!user.services.includes('affiliate-portal')) {
+      throw new ForbiddenException('', 'NOT_REGISTERED')
     }
 
-    /**
-     * @desc <h5>GET: /auth/logout</h5> Sets the user's JWT to '' and removes the user from the session
-     *
-     * @returns {Promise<Response>}
-     * @memberof AuthController
-     */
-    @Get('logout')
-    public async logout( @Request() req, @Response() res): Promise<Response> {
-        if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
-        try {
-            req.session.user.jwt = `${Math.random()}`;
-            req.session.user.email = req.session.user.Email;
-            await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']));
-            req.session.user = null;
-            return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
-        } catch (error) {
-            return this.handleError(res, 'Error in AuthController.logout(): ', error);
-        }
+    req.session.user = await this.getSessionUser(user)
+    req.session.affiliate = req.session.user.AccountId
+
+    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions'])
+  }
+
+  private async getSessionUser(user): Promise<any> {
+    const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0]
+    let sessionUser = _.omit(user, ['password', 'roles'])
+    sessionUser = _.merge(contact, _.omit(sessionUser, ['email']))
+    sessionUser.role = user.roles.map(role => {
+      if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service'])
+      return role
+    })[0]
+
+    return sessionUser
+  }
+
+  /**
+   * ### GET: /auth/valid
+   * Protected by isValid middleware. Returns the user's JWT
+   *
+   * @memberof AuthController
+   */
+  @Get('valid')
+  async valid(@Request() req) {
+    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions'])
+  }
+
+  /**
+   * ### GET: /auth/logout
+   * Sets the user's JWT to '' and removes the user from the session
+   */
+  @Get('logout')
+  async logout(@Request() req, @Response() res) {
+    if (!req.session.user) throw new NotFoundException('', 'NO_LOGIN_FOUND')
+    req.session.user.jwt = `${Math.random()}`; // WHYYY
+    req.session.user.email = req.session.user.Email;
+    await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']))
+    req.session.user = null
+    return { message: 'LOGOUT_SUCCESS' }
+  }
+
+  @Post('/changepassword')
+  async changePassword(@Request() req, @Body() body) {
+    if (!body.password) {
+      throw new BadRequestException(
+        `Missing fields: password`,
+        'MISSING_FIELDS'
+      )
     }
 
-    @Post('/changepassword')
-    public async changePassword( @Request() req, @Response() res, @Body() body): Promise<Response> {
-        if (!body.password) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'MISSING_FIELDS', fields: ['password'] }, HttpStatus.BAD_REQUEST);
+    req.session.user.password = body.password
 
-        try {
-            req.session.user.password = body.password;
+    const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']))
 
-            const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']));
+    req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`)
+    req.session.user = await this.getSessionUser(req.session.user)
 
-            req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`);
-            req.session.user = await this.getSessionUser(req.session.user);
+    return { jwt: req.session.user.jwt }
+  }
 
-            return res.status(HttpStatus.OK).json({ jwt: req.session.user.jwt });
-        } catch (error) {
-            return this.handleError(res, 'Error in AuthController.changePassword', error);
-        }
+  @Post('/loginas')
+  async loginAs(@Request() req, @Response() res, @Body() body): Promise<Response> {
+    if (!body.adminId || !body.userId) {
+      throw new BadRequestException(
+        `Missing fields: userId, adminId`,
+        'MISSING_FIELDS'
+      )
     }
 
-    @Post('/loginas')
-    public async loginAs(@Request() req, @Response() res, @Body() body): Promise<Response> {
-        if(!body.adminId || !body.userId) return this.handleError(res, 'Error in AuthController.loginAs(): ', { error: 'MISSING_FIELDS', fields: ['adminId', 'userId']}, HttpStatus.BAD_REQUEST);
-        if(req.session.user.id != body.adminId) return this.handleError(res, 'Error in AuthController.loginAs(): ', {error: 'UNAUTHORIZED'}, HttpStatus.FORBIDDEN);
-
-        try {
-            const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId});
-            req.session.user = await this.getSessionUser(user);
-            req.session.user.adminToken = req.headers['x-jwt'];
-            req.session.affiliate = req.session.user['AccountId'];
-
-            this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`);
-
-            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password']));
-        } catch(error) {
-            return this.handleError(res, 'Error in AuthController.loginAs', error);
-        }
+    if (req.session.user.id !== body.adminId) {
+      throw new ForbiddenException('', 'UNAUTHORIZED')
     }
+
+    const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId})
+    req.session.user = await this.getSessionUser(user)
+    req.session.user.adminToken = req.headers['x-jwt']
+    req.session.affiliate = req.session.user.AccountId
+
+    this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`)
+
+    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password'])
+  }
 }
