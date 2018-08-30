@@ -101,26 +101,13 @@ export class AffiliatesService {
      * Uses the Salesforce REST API to describe the Account object.
      * See the Salesforce documentation for more about 'describe'
      *
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>}
-     * @memberof AffiliatesService
+     * @param refresh Force the refresh of the cache
      */
-    async describe(refresh: boolean = false): Promise<any> {
-        // Set the key for the cache
-        const key = 'describeAccounts'
+    async describe(refresh = false) {
+      // Set the key for the cache
+      const key = 'describeAccounts'
 
-        // If no cached result, use the shingo-sf-api to get the result
-        if (!this.cache.isCached(key) || refresh) {
-            const describeObject = await this.sfService.describe('Account');
-
-            // Cache describe
-            this.cache.cache(key, describeObject);
-
-            return Promise.resolve(describeObject);
-        } else {
-          // else return the cachedResult
-            return Promise.resolve(this.cache.getCache(key));
-        }
+      return tryCache(this.cache, key, () => this.sfService.describe('Account'), refresh)
     }
 
     /**
@@ -252,30 +239,32 @@ export class AffiliatesService {
     }
 
     /**
-     * @desc Updates an Affiliate's fields: Returns the following:<br><br>
-     * <code>{<br>
-     *      &emsp;"id": SalesforceId,<br>
-     *      &emsp;"success": boolean,<br>
-     *      &emsp;"errors": []<br>
-     *  }</code>
+     * Updates an Affiliate's fields:
      *
-     * @param {Affiliate} affiliate - Affiliate's fields to update
-     * @returns {Promise<SFSuccessObject>}
-     * @memberof AffiliatesService
+     * Returns the following:
+     * ```
+     * {
+     *      "id": SalesforceId,
+     *      "success": boolean,
+     *      "errors": []
+     *  }
+     * ```
+     *
+     * @param affiliate - Affiliate's fields to update
      */
-    public async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>) {
-        // Use the shingo-sf-api to create the new record
-        const data = {
-            object: 'Account',
-            records: [{ contents: JSON.stringify(affiliate) }]
-        }
+    async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>) {
+      // Use the shingo-sf-api to create the new record
+      const data = {
+        object: 'Account',
+        records: [{ contents: JSON.stringify(affiliate) }],
+      }
 
-        const result = (await this.sfService.update(data))[0];
+      const result = (await this.sfService.update(data))[0]
 
-        this.cache.invalidate(affiliate.Id);
-        this.cache.invalidate('AffiliatesService.getAll');
+      this.cache.invalidate(affiliate.Id)
+      this.cache.invalidate('AffiliatesService.getAll')
 
-        return Promise.resolve(result);
+      return result
     }
 
     /**
