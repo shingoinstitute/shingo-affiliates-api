@@ -4,11 +4,12 @@ import {
     Param, Query, Headers, Body, Session, Inject,
     ForbiddenException, BadRequestException, InternalServerErrorException
 } from '@nestjs/common'
-import { FacilitatorsService, MailerService } from '../../components'
+import { FacilitatorsService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import _ from 'lodash'
 import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
+import { Transporter as MailTransport } from 'nodemailer'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -18,7 +19,7 @@ export class FacilitatorsController {
 
   constructor(
     private facilitatorsService: FacilitatorsService,
-    private mailer: MailerService,
+    @Inject('MailerService') private mailer: MailTransport,
     @Inject('LoggerService') private log: LoggerInstance
   ) { }
 
@@ -115,6 +116,7 @@ export class FacilitatorsController {
   > {
     const token = await this.facilitatorsService.generateReset(email);
     return this.mailer.sendMail({
+        from: 'shingo.it@usu.edu',
         to: email,
         subject: 'Password Reset -- Affiliate Portal',
         text: `Hello,
@@ -187,6 +189,7 @@ This message was an automated response`,
       const result = await this.facilitatorsService.create(body)
 
       this.mailer.sendMail({
+        from: 'shingo.it@usu.edu',
         to: (process.env.NODE_ENV === 'development'
           ? 'shingo.it@usu.edu,abe.white@usu.edu' : 'shingo.coord@usu.edu'),
         subject: 'New Shingo Affiliate Portal Account',
@@ -195,6 +198,7 @@ This message was an automated response`,
       });
 
       return this.mailer.sendMail({
+        from: 'shingo.it@usu.edu',
         to: body.Email,
         subject: 'New Shingo Affiliate Portal Account',
         text: `Hello ${body.FirstName} ${body.LastName},

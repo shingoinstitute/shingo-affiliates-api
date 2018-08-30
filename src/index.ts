@@ -6,7 +6,7 @@ import bodyParser from 'body-parser'
 import session from 'express-session'
 import cors from 'cors'
 import connectRedis from 'connect-redis'
-import { loggerFactory } from './components';
+import { loggerFactory } from './factories/logger.factory';
 
 // tslint:disable-next-line:variable-name
 const RedisStore = connectRedis(session)
