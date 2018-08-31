@@ -73,7 +73,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.search(search, retrieve, refresh === 'true')
+    return this.affService.search(search, retrieve.split(',').map(r => r.trim()), refresh === 'true')
   }
 
   /**
@@ -103,7 +103,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.searchCM(id, search, retrieve, refresh === 'true')
+    return this.affService.searchCM(id, search, retrieve.split(',').map(r => r.trim()), refresh === 'true')
   }
 
   /**
