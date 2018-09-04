@@ -5,7 +5,7 @@ import {
 import { SupportService } from '../../components'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh } from '../../decorators'
+import { Refresh, ArrayParam } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -54,7 +54,7 @@ export class SupportController {
   @Get('/search')
   async search(@Session() session,
                @Headers('x-search') search: string,
-               @Headers('x-retrieve') retrieve: string,
+               @ArrayParam('retrieve') retrieve: string[],
                @Refresh() refresh: boolean) {
 
     // Check for required fields
@@ -65,11 +65,11 @@ export class SupportController {
       )
     }
 
-    if (!retrieve.includes('Restricted_To__c')) retrieve += ',Restricted_To__c';
+    const realRetrieve = [...new Set([...retrieve, 'Restricted_To__c'])]
 
     const role = this.getRole(session)
 
-    return this.supportService.search(search, retrieve, role, refresh);
+    return this.supportService.search(search, realRetrieve, role, refresh);
   }
 
   @Get('/:id')

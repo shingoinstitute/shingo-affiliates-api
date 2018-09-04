@@ -6,7 +6,7 @@ import { AffiliatesService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh } from '../../decorators'
+import { Refresh, ArrayParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -64,7 +64,7 @@ export class AffiliatesController {
    */
   @Get('/search')
   async search(@Headers('x-search') search: string,
-               @Headers('x-retrieve') retrieve: string,
+               @ArrayParam('retrieve') retrieve: string[],
                @Refresh() refresh: boolean) {
     // Check for required fields
     if (!search || !retrieve) {
@@ -74,7 +74,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.search(search, retrieve.split(',').map(r => r.trim()), refresh)
+    return this.affService.search(search, retrieve, refresh)
   }
 
   /**
@@ -89,7 +89,7 @@ export class AffiliatesController {
   @Get('/:id/coursemanagers')
   searchCMS(@Param('id', SalesforceIdValidator) id: string,
             @Headers('x-search') search: string,
-            @Headers('x-retrieve') retrieve: string,
+            @ArrayParam('retrieve') retrieve: string[],
             @Refresh() refresh: boolean) {
 
     if (!search || !retrieve) {
@@ -99,7 +99,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.searchCM(id, search, retrieve.split(',').map(r => r.trim()), refresh)
+    return this.affService.searchCM(id, search, retrieve, refresh)
   }
 
   /**

@@ -10,7 +10,7 @@ import { WorkshopsService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh } from '../../decorators'
+import { Refresh, ArrayParam } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -73,7 +73,7 @@ export class WorkshopsController {
    */
   @Get('/search')
   search(@Headers('x-search') search: string,
-         @Headers('x-retrieve') retrieve: string,
+         @ArrayParam('retrieve') retrieve: string[],
          @Refresh() refresh: boolean) {
     if (!search || !retrieve) {
       throw new BadRequestException(

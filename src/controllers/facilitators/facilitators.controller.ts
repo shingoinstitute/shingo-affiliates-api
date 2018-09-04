@@ -11,7 +11,7 @@ import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh } from '../../decorators'
+import { Refresh, ArrayParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -68,7 +68,7 @@ export class FacilitatorsController {
   @Get('/search')
   search(@Session() session,
          @Headers('x-search') search: string,
-         @Headers('x-retrieve') retrieve: string,
+         @ArrayParam('retrieve') retrieve: string[],
          @Headers('x-is-mapped') isMapped = 'true',
          @Refresh() refresh: boolean) {
     const isAfMan = session.user.role.name === 'Affiliate Manager'
@@ -89,7 +89,7 @@ export class FacilitatorsController {
 
     return this.facilitatorsService.search(
       search,
-      retrieve.split(',').map(r => r.trim()),
+      retrieve,
       mapped === 'true',
       (isAfMan ? '' : session.affiliate), refresh
     )

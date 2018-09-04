@@ -72,11 +72,11 @@ export class SupportService {
     return tryCache(this.cache, key, () => this.sfService.describe('Support_Page__c'), refresh);
   }
 
-  async search(search: string, retrieve: string, role: string, refresh = false) {
+  async search(search: string, retrieve: string[], role: string, refresh = false) {
     // Generate the data parameter for the RPC call
     const data: SearchRequest = {
       search: `{${search}}`,
-      retrieve: `Support_Page__c(${retrieve})`,
+      retrieve: `Support_Page__c(${retrieve.join(',')})`,
     }
 
     return (await tryCache(

@@ -161,7 +161,7 @@ export class WorkshopsService {
 
     if (!this.cache.isCached(id)) {
       const workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
-      workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
+      workshop.facilitators = (await this.facilitators(id)).map(f => f.Instructor__r) || [];
 
       if (workshop.Course_Manager__c) {
         // tslint:disable-next-line:max-line-length
@@ -255,11 +255,11 @@ export class WorkshopsService {
    * @param retrieve A comma seperated list of the Workshop__c fields to retrieve (i.e. 'Id, Name, Start_Date__c')
    * @param refresh Used to force the refresh of the cache
    */
-  async search(search: string, retrieve: string, refresh = false) {
+  async search(search: string, retrieve: string[], refresh = false) {
     // Generate the data parameter for the RPC call
     const data = {
         search: `{${search}}`,
-        retrieve: `Workshop__c(${retrieve})`,
+        retrieve: `Workshop__c(${retrieve.join(',')})`,
     }
 
     // If no cached result, use the shingo-sf-api to get result
@@ -458,7 +458,7 @@ export class WorkshopsService {
   async cancel(id: string, reason: string): Promise<any> {
     const updateData = {
       object: 'Workshop__c',
-      records: [{ contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) }]
+      records: [{ contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) }],
     }
 
     await this.sfService.update(updateData)
