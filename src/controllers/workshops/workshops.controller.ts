@@ -10,6 +10,7 @@ import { WorkshopsService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
+import { Refresh } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -44,22 +45,22 @@ export class WorkshopsController {
    * ### GET: /workshops/public
    * Get all public workshops
    *
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh
    */
   @Get('public')
-  readPublic(@Headers('x-force-refresh') refresh = 'false') {
-    return this.workshopsService.getAll(true, refresh === 'true', null)
+  readPublic(@Refresh() refresh: boolean) {
+    return this.workshopsService.getAll(true, refresh, null)
   }
 
   /**
    * ### GET: /workshops/describe
    * Describe the Workshop__c object
    *
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh
    */
   @Get('/describe')
-  describe(@Headers('x-force-refresh') refresh = 'false') {
-    return this.workshopsService.describe(refresh === 'true')
+  describe(@Refresh() refresh: boolean) {
+    return this.workshopsService.describe(refresh)
   }
 
   /**
@@ -68,12 +69,12 @@ export class WorkshopsController {
    *
    * @param search SOSL search expresssion found in header 'x-search'
    * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh
    */
   @Get('/search')
   search(@Headers('x-search') search: string,
          @Headers('x-retrieve') retrieve: string,
-         @Headers('x-force-refresh') refresh = 'false') {
+         @Refresh() refresh: boolean) {
     if (!search || !retrieve) {
       throw new BadRequestException(
         `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
@@ -81,7 +82,7 @@ export class WorkshopsController {
       )
     }
 
-    return this.workshopsService.search(search, retrieve, refresh === 'true')
+    return this.workshopsService.search(search, retrieve, refresh)
   }
 
   /**

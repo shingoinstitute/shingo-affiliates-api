@@ -11,8 +11,8 @@ import {
 } from './components'
 import { mailerFactory } from './factories/mailer.factory'
 import { loggerFactory } from './factories/logger.factory'
-import { defaultPort } from './util';
-import { SalesforceIdValidator } from './validators/SalesforceId.validator';
+import { defaultPort } from './util'
+import { SalesforceIdValidator } from './validators/SalesforceId.validator'
 
 /**
  * The NestJS application module ties together the controllers and components. It also configures any nest middleware.

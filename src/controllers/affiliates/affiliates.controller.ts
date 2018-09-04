@@ -6,6 +6,7 @@ import { AffiliatesService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
+import { Refresh } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -24,34 +25,33 @@ export class AffiliatesController {
    *
    * @param isPublicQ Should public affiliates be returned (Query parameter 'isPublic')
    * @param isPublicH Should public affiliates be returned (Header 'x-is-public')
-   * @param refresh Force cache reset using header x-force-refresh
+   * @param refresh Force cache reset
    */
   @Get()
   async readAll(
     @Session() session,
     @Query('isPublic') isPublicQ: string,
     @Headers('x-is-public') isPublicH: string,
-    @Headers('x-force-refresh') refresh = 'false'
+    @Refresh() refresh: boolean
   ) {
     const isPublic = (isPublicQ === 'true' || isPublicH === 'true')
-    const forceRefresh = refresh === 'true'
 
     if (!isPublic && (!session.user || session.user.role.name !== 'Affiliate Manager')) {
       throw new ForbiddenException('', 'NOT_AFFILIATE_MANAGER')
     }
 
-    return this.affService.getAll(isPublic, forceRefresh)
+    return this.affService.getAll(isPublic, refresh)
   }
 
   /**
    * ### GET: /affiliates/describe
    * Describe the salesforce Account object
    *
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh
    */
   @Get('/describe')
-  describe(@Headers('x-force-refresh') refresh = 'false') {
-    return this.affService.describe(refresh === 'true')
+  describe(@Refresh() refresh: boolean) {
+    return this.affService.describe(refresh)
   }
 
   /**
@@ -60,12 +60,12 @@ export class AffiliatesController {
    *
    * @param search SOSL search expresssion found in header 'x-search'
    * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh using header
    */
   @Get('/search')
   async search(@Headers('x-search') search: string,
                @Headers('x-retrieve') retrieve: string,
-               @Headers('x-force-refresh') refresh = 'false') {
+               @Refresh() refresh: boolean) {
     // Check for required fields
     if (!search || !retrieve) {
       throw new BadRequestException(
@@ -74,7 +74,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.search(search, retrieve.split(',').map(r => r.trim()), refresh === 'true')
+    return this.affService.search(search, retrieve.split(',').map(r => r.trim()), refresh)
   }
 
   /**
@@ -84,13 +84,13 @@ export class AffiliatesController {
    * @param id - The Salesforce Id of the affiliate
    * @param search SOSL search expresssion found in header 'x-search'
    * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
-   * @param refresh Force cache refresh using header x-force-refresh
+   * @param refresh Force cache refresh using header
    */
   @Get('/:id/coursemanagers')
   searchCMS(@Param('id', SalesforceIdValidator) id: string,
             @Headers('x-search') search: string,
             @Headers('x-retrieve') retrieve: string,
-            @Headers('x-force-refresh') refresh = 'false') {
+            @Refresh() refresh: boolean) {
 
     if (!search || !retrieve) {
       throw new BadRequestException(
@@ -99,7 +99,7 @@ export class AffiliatesController {
       )
     }
 
-    return this.affService.searchCM(id, search, retrieve.split(',').map(r => r.trim()), refresh === 'true')
+    return this.affService.searchCM(id, search, retrieve.split(',').map(r => r.trim()), refresh)
   }
 
   /**

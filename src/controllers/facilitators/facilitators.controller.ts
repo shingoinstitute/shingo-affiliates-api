@@ -11,6 +11,7 @@ import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
+import { Refresh } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -29,12 +30,12 @@ export class FacilitatorsController {
    * Get a list of facilitators for given `'x-affiliate' || session.affiliate`
    *
    * @param xAffiliate Afilliate to query facilitators for from header 'x-affiliate'
-   * @param refresh Force cache refresh using header 'x-force-refresh'
+   * @param refresh Force cache refresh
    */
   @Get()
   async readAll(@Session() session,
                 @Headers('x-affiliate') xAffiliate = '',
-                @Headers('x-force-refresh') refresh = 'false') {
+                @Refresh() refresh: boolean) {
     const isAfMan = session.user && session.user.role.name === 'Affiliate Manager'
 
     if (!isAfMan && !session.affiliate) {
@@ -49,11 +50,11 @@ export class FacilitatorsController {
    *
    * Describes Contact
    *
-   * @param refresh Force cache refresh using header 'x-force-refresh'
+   * @param refresh Force cache refresh
    */
   @Get('/describe')
-  async describe(@Headers('x-force-refresh') refresh = 'false') {
-    return this.facilitatorsService.describe(refresh === 'true')
+  async describe(@Refresh() refresh: boolean) {
+    return this.facilitatorsService.describe(refresh)
   }
 
   /**
@@ -62,14 +63,14 @@ export class FacilitatorsController {
    *
    * @param search SOSL search expresssion found in header 'x-search'
    * @param retrieve a comma separated list of fields to retrieve found in header 'x-retrieve'
-   * @param refresh Force cache refresh using header 'x-force-refresh'
+   * @param refresh Force cache refresh
    */
   @Get('/search')
   search(@Session() session,
          @Headers('x-search') search: string,
          @Headers('x-retrieve') retrieve: string,
          @Headers('x-is-mapped') isMapped = 'true',
-         @Headers('x-force-refresh') refresh = 'false') {
+         @Refresh() refresh: boolean) {
     const isAfMan = session.user.role.name === 'Affiliate Manager'
 
     const mapped = !isAfMan ? 'true' : isMapped
@@ -90,7 +91,7 @@ export class FacilitatorsController {
       search,
       retrieve.split(',').map(r => r.trim()),
       mapped === 'true',
-      (isAfMan ? '' : session.affiliate), refresh === 'true'
+      (isAfMan ? '' : session.affiliate), refresh
     )
   }
 

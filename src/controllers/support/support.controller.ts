@@ -5,6 +5,7 @@ import {
 import { SupportService } from '../../components'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
+import { Refresh } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -22,20 +23,20 @@ export class SupportController {
   }
 
   @Get()
-  async readAll(@Session() session, @Headers('x-force-refresh') refresh = 'false') {
+  async readAll(@Session() session, @Refresh() refresh: boolean) {
     const role = this.getRole(session)
 
-    return this.supportService.getAll(role, refresh === 'true')
+    return this.supportService.getAll(role, refresh)
   }
 
   @Get('/category/:name')
   async readCategory(@Session() session,
                      @Param('name') category: string,
-                     @Headers('x-force-refresh') refresh = 'false') {
+                     @Refresh() refresh: boolean) {
     const role = this.getRole(session)
 
     return this.supportService
-      .getAll(role, refresh === 'true')
+      .getAll(role, refresh)
       .then(pages => pages.filter(page => page.Category__c.toLowerCase() === category.toLowerCase()))
   }
 
@@ -43,18 +44,18 @@ export class SupportController {
    * ### GET: /support/describe
    * Describes Support_Page__c
    *
-   * @param refresh Force cache refresh using header 'x-force-refresh'
+   * @param refresh Force cache refresh
    */
   @Get('/describe')
-  async describe(@Headers('x-force-refresh') refresh = 'false') {
-    return this.supportService.describe(refresh === 'true')
+  async describe(@Refresh() refresh: boolean) {
+    return this.supportService.describe(refresh)
   }
 
   @Get('/search')
   async search(@Session() session,
                @Headers('x-search') search: string,
                @Headers('x-retrieve') retrieve: string,
-               @Headers('x-force-refresh') refresh = 'false') {
+               @Refresh() refresh: boolean) {
 
     // Check for required fields
     if (!search || !retrieve) {
@@ -68,16 +69,16 @@ export class SupportController {
 
     const role = this.getRole(session)
 
-    return this.supportService.search(search, retrieve, role, refresh === 'true');
+    return this.supportService.search(search, retrieve, role, refresh);
   }
 
   @Get('/:id')
   async read(@Session() session,
              @Param('id', SalesforceIdValidator) id: string,
-             @Headers('x-force-refresh') refresh = 'false') {
+             @Refresh() refresh: boolean) {
     const role = this.getRole(session)
 
-    const page = await this.supportService.get(id, refresh === 'true');
+    const page = await this.supportService.get(id, refresh);
 
     if (!page.Restricted_To__c.includes(role)) {
       throw new ForbiddenException('You do not have permission to read this support page!', 'ACCESS_FORBIDDEN')
