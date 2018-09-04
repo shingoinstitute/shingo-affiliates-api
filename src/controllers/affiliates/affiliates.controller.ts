@@ -5,6 +5,7 @@ import { AffiliatesService } from '../../components'
 
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
+import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -86,15 +87,10 @@ export class AffiliatesController {
    * @param refresh Force cache refresh using header x-force-refresh
    */
   @Get('/:id/coursemanagers')
-  searchCMS(@Param('id') id,
+  searchCMS(@Param('id', SalesforceIdValidator) id: string,
             @Headers('x-search') search: string,
             @Headers('x-retrieve') retrieve: string,
             @Headers('x-force-refresh') refresh = 'false') {
-
-    // Check the id
-    if (!id.match(/a[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
 
     if (!search || !retrieve) {
       throw new BadRequestException(
@@ -113,12 +109,7 @@ export class AffiliatesController {
    * @param id - Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Get(':id')
-  async read(@Param('id') id) {
-    // Check the id
-    if (!id.match(/a[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async read(@Param('id', SalesforceIdValidator) id: string) {
     return this.affService.get(id)
   }
 
@@ -144,8 +135,8 @@ export class AffiliatesController {
    * @param id Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Post(':id/map')
-  async map(@Param('id') id, @Body() affiliate) {
-    if (!id.match(/[\w\d]{15,18}/) || !affiliate.Id.match(/[\w\d]{15,18}/) || id !== affiliate.Id) {
+  async map(@Param('id', SalesforceIdValidator) id: string, @Body() affiliate) {
+    if (!affiliate.Id.match(/[\w\d]{15,18}/) || id !== affiliate.Id) {
       throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
     await this.affService.map(affiliate)
@@ -160,8 +151,8 @@ export class AffiliatesController {
    * @param id - Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Put(':id')
-  update(@Body() body, @Param('id') id) {
-    if (!id.match(/[\w\d]{15,17}/) || id !== body.Id) {
+  update(@Body() body, @Param('id', SalesforceIdValidator) id: string) {
+    if (id !== body.Id) {
       throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
     }
 
@@ -186,11 +177,7 @@ export class AffiliatesController {
    * @param id - Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Delete(':id')
-  delete(@Param('id') id) {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  delete(@Param('id', SalesforceIdValidator) id: string) {
     return this.affService.delete(id)
   }
 }

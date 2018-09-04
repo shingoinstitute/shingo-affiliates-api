@@ -16,6 +16,8 @@
     "@shingo/shingo-sf-api": "^1.0.0",
     "bluebird": "^3.5.0",
     "body-parser": "^1.18.3",
+    "class-transformer": "^0.1.9",
+    "class-validator": "^0.9.1",
     "connect-redis": "^3.3.2",
     "cors": "^2.8.4",
     "express": "^4.16.3",
@@ -34,13 +36,14 @@
     "winston": "^2.4.4"
   },
   "devDependencies": {
-    "@nestjs/testing": "^5.1.0",
+    "@nestjs/testing": "^5.3.1",
     "@shingo/tslint-rules": "^1.0.1",
     "@types/bluebird": "^3.5.23",
     "@types/body-parser": "^1.17.0",
     "@types/connect-redis": "0.0.6",
     "@types/cors": "^2.8.4",
     "@types/express": "^4.16.0",
+    "@types/jest": "^23.3.1",
     "@types/jsforce": "^1.8.16",
     "@types/jsonwebtoken": "^7.2.8",
     "@types/jwt-simple": "^0.5.33",
@@ -53,8 +56,12 @@
     "@types/winston": "^2.4.4",
     "alsatian": "^2.0.0",
     "ink-docstrap": "^1.3.0",
+    "jest": "^23.5.0",
+    "jest-junit": "^5.1.0",
     "jsdoc": "^3.5.3",
-    "nodemon": "^1.18.3",
+    "nodemon": "^1.18.4",
+    "npm-run-all": "^4.1.3",
+    "ts-jest": "^23.1.4",
     "ts-mockito": "^2.0.2",
     "tslint": "^5.11.0"
   },
@@ -63,7 +70,16 @@
     "debug": "nodemon --watch ./build --inspect=0.0.0.0:9229 --nolazy ./build/index.js",
     "docker-debug": "docker-compose -f docker-compose.debug.yml up",
     "build": "tsc -p ./tsconfig.json",
-    "test": "tsc -p ./tsconfig.spec.json; cd spec; alsatian ./**/*.spec.js",
+    "test": "run-s build test:*",
+    "test:lint": "tslint --project .",
+    "test:unit": "node ./scripts/test.js",
+    "test:unit:ci": "node ./scripts/test.js -i --ci --testResultsProcessor='jest-junit'",
+    "test:unit:watch": "node ./scripts/test.js --watch",
+    "test:security": "npm audit",
+    "cov": "run-s cov:html && opn coverage/index.html",
+    "cov:html": "node ./scripts/test.js --coverage --coverageReporters='html'",
+    "cov:send": "node ./scripts/test.js --coverage --coverageReporters='lcov'; codecov",
+    "cov:check": "node ./scripts/test.js --coverage",
     "coverage": "nyc --reporter=lcov --reporter=html npm run test && nyc report",
     "docs": "tsc && jsdoc -t ./node_modules/ink-docstrap/template/ -r build/ -d docs -c jsdoc.conf.json --readme ./README-DOCS.md && cp Shingo_Logo.png ./docs",
     "clean": "rm -r build/ && rm -r coverage && rm -r .nyc_output && rm -r spec"
@@ -74,6 +90,58 @@
     "exclude": [
       "**/*.spec.js",
       "**/*mock*"
+    ]
+  },
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "tsconfig.spec.json"
+      }
+    },
+    "coverageThreshold": {
+      "global": {
+        "branches": 95,
+        "functions": 95,
+        "lines": 95,
+        "statements": -15
+      }
+    },
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx,mjs,ts,tsx}"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      ".*\\.d\\.ts",
+      "<rootDir>/src/(.*)?/__tests__/(.*)?\\.helper\\.ts",
+      "<rootDir>/src/(.*)?/__tests__/(.*)?__helper__(.*)"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/src/(.*)?/__tests__/(.*)?\\.helper\\.ts",
+      "<rootDir>/src/(.*)?/__tests__/(.*)?__helper__(.*)"
+    ],
+    "testMatch": [
+      "<rootDir>/src/**/__tests__/**/*.{js,jsx,mjs,ts,tsx}",
+      "<rootDir>/src/**/?(*.)(spec|test).{js,jsx,mjs,ts,tsx}"
+    ],
+    "testEnvironment": "node",
+    "testURL": "http://localhost",
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|ts|tsx)$"
+    ],
+    "moduleFileExtensions": [
+      "web.js",
+      "js",
+      "json",
+      "web.jsx",
+      "jsx",
+      "node",
+      "mjs",
+      "ts",
+      "tsx"
     ]
   }
 }

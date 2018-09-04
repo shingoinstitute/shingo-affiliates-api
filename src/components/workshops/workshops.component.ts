@@ -1,15 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
-import {
-    CacheService, UserService,
-} from '../';
+import { Inject, Injectable } from '@nestjs/common'
+import { CacheService } from '../'
 import { Workshop } from './workshop'
-import _, { chunk } from 'lodash';
-import { RequireKeys } from '../../util';
-import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api';
-import { AuthClient } from '@shingo/shingo-auth-api';
+import _, { chunk } from 'lodash'
+import { RequireKeys, getWorkshopIds } from '../../util'
+import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
+import { AuthClient } from '@shingo/shingo-auth-api'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
-import { DescribeSObjectResult } from 'jsforce';
+import { DescribeSObjectResult } from 'jsforce'
 
 export { Workshop }
 
@@ -26,7 +24,6 @@ export class WorkshopsService {
     private sfService: SalesforceClient,
     private authService: AuthClient,
     private cache: CacheService,
-    private userService: UserService,
     @Inject('LoggerService') private log: LoggerInstance
   ) {}
 
@@ -95,7 +92,7 @@ export class WorkshopsService {
       if (!isPublic) {
         // tslint:disable-next-line:max-line-length
         query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
-        const ids = this.userService.getWorkshopIds(user);
+        const ids = getWorkshopIds(user)
         if (ids.length === 0) return []
 
         for (const chunkedIds of chunk(ids, 200)) {

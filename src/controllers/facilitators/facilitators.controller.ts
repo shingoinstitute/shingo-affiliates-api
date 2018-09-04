@@ -10,6 +10,7 @@ import _ from 'lodash'
 import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
+import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -100,12 +101,7 @@ export class FacilitatorsController {
    * @param id - Contact salesforce id
    */
   @Get('/:id')
-  read(@Param('id') id: string) {
-    // Check the id
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  read(@Param('id', SalesforceIdValidator) id: string) {
     return this.facilitatorsService.get(id)
   }
 
@@ -248,11 +244,7 @@ Thank you,
    * @param id SalesforceId of the Contact to map
    */
   @Post('/:id')
-  async map(@Body() body, @Param('id') id: string): Promise<Response> {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async map(@Body() body, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
     const required = checkRequired(body, ['AccountId', 'Email']);
     if (!required.valid) {
       throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
@@ -272,11 +264,7 @@ Thank you,
    * @param id - Contact id. match <code>/[\w\d]{15,17}/</code>
    */
   @Put('/:id')
-  async update(@Body() body, @Param('id') id: string): Promise<Response> {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async update(@Body() body, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
     if (!body.Id || body.Id !== id) {
       throw new BadRequestException('Missing Fields: Id', 'MISSING_FIELDS')
     }
@@ -299,11 +287,7 @@ Thank you,
    * @memberof FacilitatorsController
    */
   @Delete('/:id')
-  async delete(@Param('id') id: string, @Query('deleteAuth') deleteAuth = 'true') {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async delete(@Param('id', SalesforceIdValidator) id: string, @Query('deleteAuth') deleteAuth = 'true') {
     const record = await this.facilitatorsService.delete(id)
 
     const deleted = deleteAuth === 'true'
@@ -322,11 +306,7 @@ Thank you,
    * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
    */
   @Delete('/:id/login')
-  async deleteLogin(@Param('id') id: string) {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async deleteLogin(@Param('id', SalesforceIdValidator) id: string) {
     return { deleted: await this.facilitatorsService.deleteAuth(id) }
   }
 
@@ -337,11 +317,7 @@ Thank you,
    * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
    */
   @Delete('/:id/unmap')
-  async unmap(@Param('id') id: string) {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async unmap(@Param('id', SalesforceIdValidator) id: string) {
     return { unmaped: await this.facilitatorsService.unmapAuth(id) }
   }
 
@@ -353,11 +329,7 @@ Thank you,
    * @param roleId Id of the role to change too
    */
   @Post('/:id/roles/:roleId')
-  async changeRole(@Param('id') id: string, @Param('roleId') roleId: string) {
-    if (!id.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async changeRole(@Param('id', SalesforceIdValidator) id: string, @Param('roleId') roleId: string) {
     return { added: await this.facilitatorsService.changeRole(id, roleId) }
   }
 

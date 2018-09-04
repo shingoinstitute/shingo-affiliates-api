@@ -6,7 +6,8 @@ import bodyParser from 'body-parser'
 import session from 'express-session'
 import cors from 'cors'
 import connectRedis from 'connect-redis'
-import { loggerFactory } from './factories/logger.factory';
+import { loggerFactory } from './factories/logger.factory'
+import { ValidationPipe } from '@nestjs/common'
 
 // tslint:disable-next-line:variable-name
 const RedisStore = connectRedis(session)
@@ -14,9 +15,10 @@ const RedisStore = connectRedis(session)
 const port = process.env.PORT || 3000
 const log = loggerFactory()
 
-if (!process.env.AUTH_API || !process.env.SF_API) {
-    log.error(`Environment variables missing. AUTH: ${process.env.AUTH_API} SF: ${process.env.SF_API}`)
-    process.exit(1)
+if (!process.env.AUTH_API || !process.env.SF_API || !process.env.EMAIL_PASS) {
+  // tslint:disable-next-line:max-line-length
+  log.error(`Environment variables missing. AUTH: ${process.env.AUTH_API}; SF: ${process.env.SF_API}; EMAIL_PASS: ${process.env.EMAIL_PASS}`)
+  process.exit(1)
 }
 
 // Set up CORS whitelist
@@ -79,8 +81,12 @@ server.use(session(options))
 InitService.init()
     .then(async () => {
         const app = await NestFactory.create(ApplicationModule, server)
-        app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '/')
-        app.listen(port, () => log.info(`Application is listening on port ${port}`))
+        app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '')
+        app.useGlobalPipes(new ValidationPipe({
+          transform: true,
+          disableErrorMessages: process.env.NODE_ENV === 'production',
+        }))
+        app.listen(port).then(() => log.info(`Application is listening on port ${port}`))
     })
     .catch(error => {
         log.error('Error in lifting application!')

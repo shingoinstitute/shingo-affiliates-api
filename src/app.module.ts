@@ -7,10 +7,12 @@ import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddle
 import {
     CacheService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService, SupportService
+    SupportService
 } from './components'
 import { mailerFactory } from './factories/mailer.factory'
 import { loggerFactory } from './factories/logger.factory'
+import { defaultPort } from './util';
+import { SalesforceIdValidator } from './validators/SalesforceId.validator';
 
 /**
  * The NestJS application module ties together the controllers and components. It also configures any nest middleware.
@@ -27,28 +29,24 @@ import { loggerFactory } from './factories/logger.factory'
     SupportController,
   ],
   providers: [
+    SalesforceIdValidator,
     AuthMiddleware,
     { provide: 'LoggerService', useFactory: loggerFactory },
     CacheService,
-    UserService,
     WorkshopsService,
     FacilitatorsService,
     AffiliatesService,
     { provide: 'MailerService',
       useFactory: () => {
-        if (!process.env.EMAIL_PASS) {
-          throw new Error('EMAIL_PASS environment variable was not provided')
-        }
-
         return mailerFactory({
           user: 'shingo.it@aggies.usu.edu',
-          pass: process.env.EMAIL_PASS,
+          pass: process.env.EMAIL_PASS!,
         }, process.env.NODE_ENV !== 'production')
       },
     },
     SupportService,
-    { provide: AuthClient, useFactory: () => new AuthClient(`${process.env.AUTH_API}:80`) },
-    { provide: SalesforceClient, useFactory: () => new SalesforceClient(`${process.env.SF_API}:80`) },
+    { provide: AuthClient, useFactory: () => new AuthClient(defaultPort(process.env.AUTH_API!, 80)) },
+    { provide: SalesforceClient, useFactory: () => new SalesforceClient(defaultPort(process.env.SF_API!, 80)) },
   ],
 })
 export class ApplicationModule {

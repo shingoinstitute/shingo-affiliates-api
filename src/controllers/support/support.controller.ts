@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common'
 import { SupportService } from '../../components'
 import { LoggerInstance } from 'winston'
+import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -71,7 +72,9 @@ export class SupportController {
   }
 
   @Get('/:id')
-  async read(@Session() session, @Param('id') id: string, @Headers('x-force-refresh') refresh = 'false') {
+  async read(@Session() session,
+             @Param('id', SalesforceIdValidator) id: string,
+             @Headers('x-force-refresh') refresh = 'false') {
     const role = this.getRole(session)
 
     const page = await this.supportService.get(id, refresh === 'true');

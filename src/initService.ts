@@ -1,8 +1,9 @@
 import _ from 'lodash'
 import { AuthClient } from '@shingo/shingo-auth-api'
 import { loggerFactory } from './factories/logger.factory'
+import { defaultPort } from './util'
 
-const authService = new AuthClient(`${process.env.AUTH_API}:80`)
+const authService = new AuthClient(defaultPort(process.env.AUTH_API!, 80))
 const log = loggerFactory()
 
 /**

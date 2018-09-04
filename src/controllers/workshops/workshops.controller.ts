@@ -9,6 +9,7 @@ import { WorkshopsService } from '../../components'
 
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
+import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -90,12 +91,7 @@ export class WorkshopsController {
    * @param id Workshop__c Salesforce id
    */
   @Get('/:id')
-  read(@Param('id') id: string) {
-    // Check the id
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  read(@Param('id', SalesforceIdValidator) id: string) {
     return this.workshopsService.get(id).then(w => {
       this.log.debug(`GET: /workshops/${id} => %j`, w)
       return w
@@ -109,12 +105,7 @@ export class WorkshopsController {
    * @param id Workshop__c Salesforce id
    */
   @Get('/:id/facilitators')
-  facilitators(@Param('id') id) {
-    // Check the id
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  facilitators(@Param('id', SalesforceIdValidator) id: string) {
     return this.workshopsService.facilitators(id)
   }
 
@@ -176,7 +167,7 @@ export class WorkshopsController {
    * @param id Workshop__c salesforce id
    */
   @Put('/:id')
-  update(@Param('id') id, @Body() body, @Session() session) {
+  update(@Param('id', SalesforceIdValidator) id: string, @Body() body, @Session() session) {
     // Check required parameters
     const required = checkRequired(body, ['Id', 'Organizing_Affiliate__c'])
     if (!required.valid) {
@@ -184,9 +175,8 @@ export class WorkshopsController {
     }
 
     // Check the id
-    const pattern = /[\w\d]{15,18}/;
-    if (!pattern.test(id)
-      || !pattern.test(body.Id)
+    const pattern = /[\w\d]{15,18}/
+    if (!pattern.test(body.Id)
       || id !== body.Id
       || !pattern.test(body.Organizing_Affiliate__c)) {
       throw new BadRequestException(
@@ -215,11 +205,7 @@ export class WorkshopsController {
    */
   @Post('/:id/attendee_file')
   @UseInterceptors(FileInterceptor('attendeeList'))
-  async uploadAttendeeFile(@UploadedFile() file: Express.Multer.File, @Param('id') id: string) {
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async uploadAttendeeFile(@UploadedFile() file: Express.Multer.File, @Param('id', SalesforceIdValidator) id: string) {
     const ext = file.originalname.split('.').pop()
 
     return this.workshopsService
@@ -235,11 +221,7 @@ export class WorkshopsController {
    */
   @Post('/:id/evaluation_files')
   @UseInterceptors(FilesInterceptor('evaluationFiles', 30))
-  uploadEvaluations(@UploadedFiles() files: Express.Multer.File[], @Param('id') id: string) {
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  uploadEvaluations(@UploadedFiles() files: Express.Multer.File[], @Param('id', SalesforceIdValidator) id: string) {
     const buffFiles = files.map(file => file.buffer.toString('base64'))
     const ext = files[0].originalname.split('.').pop()
 
@@ -259,21 +241,12 @@ export class WorkshopsController {
    * @param id Workshop__c id
    */
   @Delete('/:id')
-  async delete(@Param('id') id: string) {
-    // Check the id
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async delete(@Param('id', SalesforceIdValidator) id: string) {
     return this.workshopsService.delete(id)
   }
 
   @Put('/:id/cancel')
-  async cancel(@Param('id') id, @Body() body) {
-    if (!id.match(/a[\w\d]{14,17}/)) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async cancel(@Param('id', SalesforceIdValidator) id: string, @Body() body) {
     const required = checkRequired(body, ['reason'])
     if (!required.valid) {
       throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELD')

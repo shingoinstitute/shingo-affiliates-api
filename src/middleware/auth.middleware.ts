@@ -30,7 +30,7 @@ export class AuthMiddleware implements NestMiddleware {
       if (isAfMan) return next && next();
 
       let realResource =
-          resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
+          resource && resource.match(/^.*\s--\s$/) ? resource + req.session!.affiliate
           : !resource ? `${req.path}`
           : resource;
 
@@ -53,7 +53,7 @@ export class AuthMiddleware implements NestMiddleware {
 
             throw new ForbiddenException(
               // tslint:disable-next-line:max-line-length
-              `Insufficent permission to access ${messageResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}`,
+              `Insufficent permission to access ${messageResource} at level ${level} by user: ${req.session!.user ? req.session!.user.Email : 'anonymous'}`,
               'ACCESS_FORBIDDEN'
             )
           })
