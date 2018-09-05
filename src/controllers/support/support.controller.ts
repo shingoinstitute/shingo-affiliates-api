@@ -23,7 +23,7 @@ export class SupportController {
   }
 
   @Get()
-  async readAll(@Session() session, @Refresh() refresh: boolean) {
+  async readAll(@Session() session, @Refresh() refresh: boolean | undefined) {
     const role = this.getRole(session)
 
     return this.supportService.getAll(role, refresh)
@@ -32,7 +32,7 @@ export class SupportController {
   @Get('/category/:name')
   async readCategory(@Session() session,
                      @Param('name') category: string,
-                     @Refresh() refresh: boolean) {
+                     @Refresh() refresh: boolean | undefined) {
     const role = this.getRole(session)
 
     return this.supportService
@@ -47,15 +47,15 @@ export class SupportController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  async describe(@Refresh() refresh: boolean) {
+  async describe(@Refresh() refresh: boolean | undefined) {
     return this.supportService.describe(refresh)
   }
 
   @Get('/search')
   async search(@Session() session,
                @Headers('x-search') search: string,
-               @ArrayParam('retrieve') retrieve: string[],
-               @Refresh() refresh: boolean) {
+               @ArrayParam('retrieve') retrieve: string[] | undefined,
+               @Refresh() refresh: boolean | undefined) {
 
     // Check for required fields
     if (!search || !retrieve) {
@@ -75,7 +75,7 @@ export class SupportController {
   @Get('/:id')
   async read(@Session() session,
              @Param('id', SalesforceIdValidator) id: string,
-             @Refresh() refresh: boolean) {
+             @Refresh() refresh: boolean | undefined) {
     const role = this.getRole(session)
 
     const page = await this.supportService.get(id, refresh);

@@ -11,7 +11,7 @@ import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam } from '../../decorators'
+import { Refresh, ArrayParam, BooleanParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -35,7 +35,7 @@ export class FacilitatorsController {
   @Get()
   async readAll(@Session() session,
                 @Headers('x-affiliate') xAffiliate = '',
-                @Refresh() refresh: boolean) {
+                @Refresh() refresh: boolean | undefined) {
     const isAfMan = session.user && session.user.role.name === 'Affiliate Manager'
 
     if (!isAfMan && !session.affiliate) {
@@ -53,7 +53,7 @@ export class FacilitatorsController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  async describe(@Refresh() refresh: boolean) {
+  async describe(@Refresh() refresh: boolean | undefined) {
     return this.facilitatorsService.describe(refresh)
   }
 
@@ -68,12 +68,12 @@ export class FacilitatorsController {
   @Get('/search')
   search(@Session() session,
          @Headers('x-search') search: string,
-         @ArrayParam('retrieve') retrieve: string[],
-         @Headers('x-is-mapped') isMapped = 'true',
-         @Refresh() refresh: boolean) {
+         @ArrayParam('retrieve') retrieve: string[] | undefined,
+         @BooleanParam({ query: 'isMapped', header: 'is-mapped' }) isMapped: boolean | undefined,
+         @Refresh() refresh: boolean | undefined) {
     const isAfMan = session.user.role.name === 'Affiliate Manager'
 
-    const mapped = !isAfMan ? 'true' : isMapped
+    const mapped = !isAfMan ? true : isMapped
 
     if (!isAfMan && !session.affiliate) {
       throw new ForbiddenException('', 'SESSION_EXPIRED')
@@ -90,7 +90,7 @@ export class FacilitatorsController {
     return this.facilitatorsService.search(
       search,
       retrieve,
-      mapped === 'true',
+      mapped,
       (isAfMan ? '' : session.affiliate), refresh
     )
   }

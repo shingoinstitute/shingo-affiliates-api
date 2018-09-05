@@ -48,7 +48,7 @@ export class WorkshopsController {
    * @param refresh Force cache refresh
    */
   @Get('public')
-  readPublic(@Refresh() refresh: boolean) {
+  readPublic(@Refresh() refresh: boolean | undefined) {
     return this.workshopsService.getAll(true, refresh, null)
   }
 
@@ -59,7 +59,7 @@ export class WorkshopsController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  describe(@Refresh() refresh: boolean) {
+  describe(@Refresh() refresh: boolean | undefined) {
     return this.workshopsService.describe(refresh)
   }
 
@@ -73,8 +73,8 @@ export class WorkshopsController {
    */
   @Get('/search')
   search(@Headers('x-search') search: string,
-         @ArrayParam('retrieve') retrieve: string[],
-         @Refresh() refresh: boolean) {
+         @ArrayParam('retrieve') retrieve: string[] | undefined,
+         @Refresh() refresh: boolean | undefined) {
     if (!search || !retrieve) {
       throw new BadRequestException(
         `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,

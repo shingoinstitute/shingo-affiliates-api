@@ -6,7 +6,7 @@ import { AffiliatesService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam } from '../../decorators'
+import { Refresh, ArrayParam, BooleanParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -30,12 +30,9 @@ export class AffiliatesController {
   @Get()
   async readAll(
     @Session() session,
-    @Query('isPublic') isPublicQ: string,
-    @Headers('x-is-public') isPublicH: string,
-    @Refresh() refresh: boolean
+    @BooleanParam({ query: 'isPublic', header: 'is-public' }) isPublic: boolean | undefined,
+    @Refresh() refresh: boolean | undefined
   ) {
-    const isPublic = (isPublicQ === 'true' || isPublicH === 'true')
-
     if (!isPublic && (!session.user || session.user.role.name !== 'Affiliate Manager')) {
       throw new ForbiddenException('', 'NOT_AFFILIATE_MANAGER')
     }
@@ -50,7 +47,7 @@ export class AffiliatesController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  describe(@Refresh() refresh: boolean) {
+  describe(@Refresh() refresh: boolean | undefined) {
     return this.affService.describe(refresh)
   }
 
@@ -64,8 +61,8 @@ export class AffiliatesController {
    */
   @Get('/search')
   async search(@Headers('x-search') search: string,
-               @ArrayParam('retrieve') retrieve: string[],
-               @Refresh() refresh: boolean) {
+               @ArrayParam('retrieve') retrieve: string[] | undefined,
+               @Refresh() refresh: boolean | undefined) {
     // Check for required fields
     if (!search || !retrieve) {
       throw new BadRequestException(
@@ -89,8 +86,8 @@ export class AffiliatesController {
   @Get('/:id/coursemanagers')
   searchCMS(@Param('id', SalesforceIdValidator) id: string,
             @Headers('x-search') search: string,
-            @ArrayParam('retrieve') retrieve: string[],
-            @Refresh() refresh: boolean) {
+            @ArrayParam('retrieve') retrieve: string[] | undefined,
+            @Refresh() refresh: boolean | undefined) {
 
     if (!search || !retrieve) {
       throw new BadRequestException(
