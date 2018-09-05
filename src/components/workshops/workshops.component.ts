@@ -345,7 +345,7 @@ export class WorkshopsService {
    * @param workshop The workshop to be created
    */
   // tslint:disable-next-line:max-line-length
-  async create(workshop: RequireKeys<Workshop, 'Name' | 'Start_Date__c' | 'End_Date__c' | 'Organizing_Affiliate__c' | 'facilitators'>) {
+  async create(workshop: RequireKeys<Partial<Workshop>, 'Name' | 'Start_Date__c' | 'End_Date__c' | 'Organizing_Affiliate__c' | 'Course_Manager__c' | 'facilitators'>) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
@@ -368,7 +368,7 @@ export class WorkshopsService {
    *
    * @param workshop The workshop
    */
-  async update(workshop: RequireKeys<Workshop, 'Id'>) {
+  async update(workshop: RequireKeys<Partial<Workshop>, 'Id'>) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
@@ -482,7 +482,9 @@ export class WorkshopsService {
    *
    * @param workshop Workshop
    */
-  private async grantPermissions(workshop: RequireKeys<Workshop, 'Id' | 'facilitators'>) {
+  private async grantPermissions(
+    workshop: RequireKeys<Partial<Workshop>, 'Id' | 'facilitators' | 'Organizing_Affiliate__c'>
+  ) {
     const roles = await this.authService.getRoles(
       `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${workshop.Organizing_Affiliate__c}'`
     )
@@ -507,17 +509,19 @@ export class WorkshopsService {
    * @param workshop - Requires [ 'Id' ]
    * @param remove List of facilitators to remove
    */
-  private async removePermissions(workshop: Workshop,
-                                  remove: ReadonlyArray<{ Id: string, Instructor__r: { Id: string }}>) {
-    const resource = `/workshops/${workshop.Id}`;
+  private async removePermissions(
+    workshop: RequireKeys<Partial<Workshop>, 'Id'>,
+    remove: ReadonlyArray<{ Id: string, Instructor__r: { Id: string }}>
+  ) {
+    const resource = `/workshops/${workshop.Id}`
 
-    const ids = remove.map(facilitator => facilitator.Id);
+    const ids = remove.map(facilitator => facilitator.Id)
 
-    await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids });
+    await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids })
 
-    const instructors = remove.map(facilitator => `'${facilitator.Instructor__r.Id}'`);
+    const instructors = remove.map(facilitator => `'${facilitator.Instructor__r.Id}'`)
     if (instructors.length === 0) return
-    const users = await this.authService.getUsers(`user.extId IN (${instructors.join()})`);
+    const users = await this.authService.getUsers(`user.extId IN (${instructors.join()})`)
     await Promise.all(users.map(user => this.authService.revokePermissionFromUser(resource, 2, user.id)))
   }
 

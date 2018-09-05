@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common'
 import { WorkshopsService } from '../../components'
 
-import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { Refresh, ArrayParam, StringParam } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
 import { missingParam } from '../../util'
+import { CancelBody, UpdateBody, CreateBody } from './workshopInterfaces'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -115,29 +115,8 @@ export class WorkshopsController {
    * @param session Accesses the affiliate id from the session to compare to the Organizing_Affiliate__c on the body
    */
   @Post()
-  async create(@Body() body, @Session() session) {
-    // Check required parameters
+  async create(@Body() body: CreateBody, @Session() session) {
     this.log.debug('Trying to create workshop:\n%j', body)
-
-    const valid = checkRequired(body, [
-      'Organizing_Affiliate__c',
-      'Start_Date__c',
-      'End_Date__c',
-      'Host_Site__c',
-      'Event_Country__c',
-      'Event_City__c',
-      'Course_Manager__c',
-      'facilitators',
-    ])
-
-    if (!valid.valid) {
-      throw new BadRequestException(`Missing Fields: ${valid.missing.join()}`, 'MISSING_FIELD')
-    }
-
-    // Check for valid SF ID on Organizing_Affiliate\__c
-    if (!body.Organizing_Affiliate__c.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${body.Organizing_Affiliate__c} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
 
     // Check can create for Organizing_Affiliate\__c
     if (session.user.role.name !== 'Affiliate Manager' && session.affiliate !== body.Organizing_Affiliate__c) {
@@ -157,25 +136,16 @@ export class WorkshopsController {
    * ### PUT: /workshops/:id
    * Updates a workshop based on fields. Also updates facilitator associations and permissions
    *
-   * @param body Required fields [ "Id", "Organizing_Affiliate\__c" ]
-   * @param session Accesses the affiliate id from the session to compare to the Organizaing_Affiliate\__c on the body
+   * @param body A partial workshop, with required fields [ "Id", "Organizing_Affiliate__c" ]
+   * @param session Accesses the affiliate id from the session to compare to the Organizaing_Affiliate__c on the body
    * @param id Workshop__c salesforce id
    */
   @Put('/:id')
-  update(@Param('id', SalesforceIdValidator) id: string, @Body() body, @Session() session) {
-    // Check required parameters
-    const required = checkRequired(body, ['Id', 'Organizing_Affiliate__c'])
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELD')
-    }
-
+  update(@Param('id', SalesforceIdValidator) id: string, @Body() body: UpdateBody, @Session() session) {
     // Check the id
-    const pattern = /[\w\d]{15,18}/
-    if (!pattern.test(body.Id)
-      || id !== body.Id
-      || !pattern.test(body.Organizing_Affiliate__c)) {
+    if (id !== body.Id) {
       throw new BadRequestException(
-        `${body.Organizing_Affiliate__c} or ${id} or ${body.Id} is not a valid Salesforce ID.`,
+        `id parameter ${id} does not match field Id ${body.Id}`,
         'INVALID_SF_ID'
       )
     }
@@ -241,12 +211,7 @@ export class WorkshopsController {
   }
 
   @Put('/:id/cancel')
-  async cancel(@Param('id', SalesforceIdValidator) id: string, @Body() body) {
-    const required = checkRequired(body, ['reason'])
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELD')
-    }
-
+  async cancel(@Param('id', SalesforceIdValidator) id: string, @Body() body: CancelBody) {
     return this.workshopsService.cancel(id, body.reason)
   }
 
