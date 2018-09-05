@@ -13,6 +13,7 @@ import { Transporter as MailTransport } from 'nodemailer'
 import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
 import { missingParam } from '../../util'
+import { ChangePasswordBody, CreateBody, MapBody, UpdateBody } from './facilitatorInterfaces'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -144,13 +145,7 @@ This message was an automated response`,
   }
 
   @Post('/resetpassword/token')
-  async changePassword(@Body() body) {
-    const valid = checkRequired(body, ['password', 'token']);
-
-    if (!valid.valid) {
-      throw new BadRequestException(`Missing Fields: ${valid.missing.join()}`, 'MISSING_FIELDS')
-    }
-
+  async changePassword(@Body() body: ChangePasswordBody) {
     return this.facilitatorsService
       .resetPassword(body.token, body.password)
       .then(user => ({ id: user.id, email: user.email }))
@@ -164,27 +159,18 @@ This message was an automated response`,
    * Optional fields: [ 'roleId' ]
    */
   @Post()
-  async create(@Body() body) {
-    const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
-    }
-
-    if (!body.AccountId.match(/[\w\d]{15,17}/)) {
-      throw new BadRequestException(`${body.AccountId} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
+  async create(@Body() body: CreateBody) {
     try {
-      body.password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
-      const result = await this.facilitatorsService.create(body)
+      const password = generator.generate({ length: 12, numbers: true, symbols: true, uppercase: true, strict: true });
+      const result = await this.facilitatorsService.create({ ...body, password })
 
       this.mailer.sendMail({
         from: 'shingo.it@usu.edu',
         to: (process.env.NODE_ENV === 'development'
           ? 'shingo.it@usu.edu,abe.white@usu.edu' : 'shingo.coord@usu.edu'),
         subject: 'New Shingo Affiliate Portal Account',
-        text: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
-        html: `A new account has been created for ${result.id}:${body.Email}:${body.password}.`,
+        text: `A new account has been created for ${result.id}:${body.Email}:${password}.`,
+        html: `A new account has been created for ${result.id}:${body.Email}:${password}.`,
       });
 
       return this.mailer.sendMail({
@@ -197,7 +183,7 @@ Your account for the Shingo Affiliate Portal has been created!
 
 Your temporary password is:
 
-  ${body.password}
+  ${password}
 
 Please change it when you first log in.
 
@@ -208,7 +194,7 @@ Thank you,
         <p>Hello ${body.FirstName} ${body.LastName},</p>
         <p>Your account for the Shingo Affiliate Portal has been created!</p>
         <p>Your temporary password is:</p>
-        <p>&emsp;${body.password}</p>
+        <p>&emsp;${password}</p>
         <p>Please change it when you first log in.</p>
         <p>Thank you,</p>
         <br>
@@ -238,12 +224,7 @@ Thank you,
    * @param id SalesforceId of the Contact to map
    */
   @Post('/:id')
-  async map(@Body() body, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
-    const required = checkRequired(body, ['AccountId', 'Email']);
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
-    }
-
+  async map(@Body() body: MapBody, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
     return this.facilitatorsService.mapContact(id, body)
   }
 
@@ -252,15 +233,13 @@ Thank you,
    * Updates a Facilitator.
    * If `body` contains `Email` or `password` the associated auth is also updated
    *
-   * @param body Required fields { ['Id'],
-   * oneof: ['FirstName', 'LastName', 'Email', 'password', 'Biography__c', etc..]
-   * }
-   * @param id - Contact id. match <code>/[\w\d]{15,17}/</code>
+   * @param body The update body. Id is required
+   * @param id Contact salesforce id
    */
   @Put('/:id')
-  async update(@Body() body, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
-    if (!body.Id || body.Id !== id) {
-      throw new BadRequestException('Missing Fields: Id', 'MISSING_FIELDS')
+  async update(@Body() body: UpdateBody, @Param('id', SalesforceIdValidator) id: string): Promise<Response> {
+    if (body.Id !== id) {
+      throw new BadRequestException(`Parameter id ${id} does not match field Id ${body.Id}`, 'MISSING_FIELDS')
     }
 
     if (body.hasOwnProperty('Biography__c')) {
@@ -297,7 +276,7 @@ Thank you,
    * ### DELETE: /facilitators/:id/login
    * Deletes a faciliators login only
    *
-   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   * @param id Contact salesforce id
    */
   @Delete('/:id/login')
   async deleteLogin(@Param('id', SalesforceIdValidator) id: string) {
@@ -308,7 +287,7 @@ Thank you,
    * ### DELETE: /facilitators/:id/unmap
    * Removes the Affiliate Portal service from a login
    *
-   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   * @param id Contact salesforce id
    */
   @Delete('/:id/unmap')
   async unmap(@Param('id', SalesforceIdValidator) id: string) {
@@ -319,7 +298,7 @@ Thank you,
    * @desc ### POST: /facilitators/:id/roles/:roleId
    * Changes a faciliatator's role
    *
-   * @param id Contact id. match <code>/[\w\d]{15,17}/</code>
+   * @param id Contact salesforce id
    * @param roleId Id of the role to change too
    */
   @Post('/:id/roles/:roleId')

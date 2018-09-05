@@ -9,6 +9,7 @@ import { AuthClient, Role, User } from '@shingo/shingo-auth-api'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
 import { tryCache } from '../../util'
+import { MapBody } from '../../controllers/facilitators/facilitatorInterfaces';
 
 interface Facilitator {
   Id: string
@@ -334,9 +335,9 @@ export class FacilitatorsService {
    * Maps an existing Contact record to a new/current login
    *
    * @param id  The Salesforce Id of the Contact to map
-   * @param user
+   * @param user The newly created user
    */
-  async mapContact(id: string, user): Promise<any> {
+  async mapContact(id: string, user: MapBody & { password?: string }): Promise<any> {
     const data = {
       object: 'Contact',
       ids: [id],
@@ -366,10 +367,10 @@ export class FacilitatorsService {
    * @param id Salesforce Id of the associated contact
    * @param user
    */
-  async createOrMapAuth(id: string, user): Promise<any> {
+  async createOrMapAuth(id: string, user: MapBody & { password?: string }) {
     // FIXME: remove this use of global
     // tslint:disable-next-line:no-string-literal
-    let roleId = global['facilitatorId']
+    let roleId: number = global['facilitatorId']
     if (user.role) {
       const role = await this.authService.getRole(`name='${user.role.name}'`)
       if (role.id > 0) roleId = role.id
@@ -378,7 +379,7 @@ export class FacilitatorsService {
     const initialAuth = await this.authService.getUser(`user.email='${user.Email}'`);
 
     const auth = initialAuth.email === ''
-      ? await this.createNewAuth(user.Email, user.password, roleId, id)
+      ? await this.createNewAuth(user.Email, user.password!, roleId, id)
       : await this.mapCurrentAuth(user.Email, roleId, id)
 
     await this.authService.addRoleToUser({ userEmail: user.Email, roleId })
@@ -399,7 +400,7 @@ export class FacilitatorsService {
    * @param roleId
    * @param extId - Salesforce Id of the associated contact
    */
-  createNewAuth(email: string, password: string, roleId: number, extId: string): Promise<any> {
+  createNewAuth(email: string, password: string, roleId: number, extId: string) {
     return this.authService.createUser({ email, password, services: 'affiliate-portal', extId })
       .then(user => {
         this.cache.invalidate(this.getAllKey);
@@ -414,7 +415,7 @@ export class FacilitatorsService {
    * @param roleId
    * @param extId - Salesforce Id of the associated contact
    */
-  async mapCurrentAuth(userEmail: string, roleId: number, extId: string): Promise<any> {
+  async mapCurrentAuth(userEmail: string, roleId: number, extId: string) {
     const user = await this.authService.getUser(`user.email='${userEmail}'`);
 
     if (typeof user === 'undefined') throw new NotFoundException('', 'USER_NOT_FOUND')
