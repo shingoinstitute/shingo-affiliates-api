@@ -1,7 +1,7 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    Param, Headers, Body, Session, Inject,
+    Param, Body, Session, Inject,
     ForbiddenException, BadRequestException,
     UseInterceptors, FileInterceptor, UploadedFile, FilesInterceptor, UploadedFiles
 } from '@nestjs/common'
@@ -10,7 +10,7 @@ import { WorkshopsService } from '../../components'
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam } from '../../decorators'
+import { Refresh, ArrayParam, StringParam } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -72,7 +72,7 @@ export class WorkshopsController {
    * @param refresh Force cache refresh
    */
   @Get('/search')
-  search(@Headers('x-search') search: string,
+  search(@StringParam('search') search: string | undefined,
          @ArrayParam('retrieve') retrieve: string[] | undefined,
          @Refresh() refresh: boolean | undefined) {
     if (!search || !retrieve) {

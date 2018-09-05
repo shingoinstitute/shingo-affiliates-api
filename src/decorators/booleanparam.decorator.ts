@@ -1,6 +1,6 @@
 import { createParamDecorator, BadRequestException } from '@nestjs/common'
 import { Request } from 'express'
-import { ParamOptions, ParamDecorator } from './ParamOptions.interface'
+import { ParamOptions, ParamDecorator, parseOptions } from './ParamOptions.interface'
 
 /**
  * Decorator for a boolean parameter specified by header or query string
@@ -9,11 +9,7 @@ import { ParamOptions, ParamDecorator } from './ParamOptions.interface'
  */
 // tslint:disable-next-line:variable-name
 export const BooleanParam = createParamDecorator((data: ParamOptions, req: Request) => {
-  const headerKey = typeof data === 'string' ? data : (data as {header?: string}).header
-  const queryKey = typeof data === 'string' ? data : (data as {query?: string}).query
-
-  const header = headerKey && req.headers[`x-${headerKey}`]
-  const query: string | object | string[] | undefined = queryKey && req.query[queryKey]
+  const { header, query, headerKey, queryKey } = parseOptions(data, req)
   // for some reason string[] is dropped from the union here. Probably because a string[] is also an object
   const boolParam = header || query
 

@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Put, Delete,
-  Param, Query, Headers, Body, Session,
+  Param, Body, Session,
   Inject, ForbiddenException, BadRequestException } from '@nestjs/common'
 import { AffiliatesService } from '../../components'
 
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam, BooleanParam } from '../../decorators'
+import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -60,7 +60,7 @@ export class AffiliatesController {
    * @param refresh Force cache refresh using header
    */
   @Get('/search')
-  async search(@Headers('x-search') search: string,
+  async search(@StringParam('search') search: string | undefined,
                @ArrayParam('retrieve') retrieve: string[] | undefined,
                @Refresh() refresh: boolean | undefined) {
     // Check for required fields
@@ -85,7 +85,7 @@ export class AffiliatesController {
    */
   @Get('/:id/coursemanagers')
   searchCMS(@Param('id', SalesforceIdValidator) id: string,
-            @Headers('x-search') search: string,
+            @StringParam('search') search: string | undefined,
             @ArrayParam('retrieve') retrieve: string[] | undefined,
             @Refresh() refresh: boolean | undefined) {
 

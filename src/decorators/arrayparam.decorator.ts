@@ -1,7 +1,7 @@
 import { createParamDecorator, BadRequestException } from '@nestjs/common'
 import { Request } from 'express'
 import qs from 'qs'
-import { ParamOptions, ParamDecorator } from './ParamOptions.interface'
+import { ParamOptions, ParamDecorator, parseOptions } from './ParamOptions.interface'
 
 /**
  * Decorator for an array parameter specified by header or query string
@@ -10,11 +10,7 @@ import { ParamOptions, ParamDecorator } from './ParamOptions.interface'
  */
 // tslint:disable-next-line:variable-name
 export const ArrayParam = createParamDecorator((data: ParamOptions, req: Request) => {
-  const headerKey = typeof data === 'string' ? data : (data as {header?: string}).header
-  const queryKey = typeof data === 'string' ? data : (data as {query?: string}).query
-
-  const header = headerKey && req.headers[`x-${headerKey}`]
-  const query: string[] | string | object | undefined = queryKey && req.query[queryKey]
+  const { header, query, headerKey, queryKey } = parseOptions(data, req)
 
   // header was somehow already parsed to array
   if (Array.isArray(header)) {

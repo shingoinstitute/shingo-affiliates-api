@@ -1,11 +1,11 @@
 import {
     Controller,
-    Get, Param, Headers, Session, Inject, BadRequestException, ForbiddenException
+    Get, Param, Session, Inject, BadRequestException, ForbiddenException
 } from '@nestjs/common'
 import { SupportService } from '../../components'
 import { LoggerInstance } from 'winston'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam } from '../../decorators'
+import { Refresh, ArrayParam, StringParam } from '../../decorators'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -53,7 +53,7 @@ export class SupportController {
 
   @Get('/search')
   async search(@Session() session,
-               @Headers('x-search') search: string,
+               @StringParam('search') search: string | undefined,
                @ArrayParam('retrieve') retrieve: string[] | undefined,
                @Refresh() refresh: boolean | undefined) {
 

@@ -1,7 +1,7 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    Param, Query, Headers, Body, Session, Inject,
+    Param, Query, Body, Session, Inject,
     ForbiddenException, BadRequestException, InternalServerErrorException
 } from '@nestjs/common'
 import { FacilitatorsService } from '../../components'
@@ -11,7 +11,7 @@ import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
-import { Refresh, ArrayParam, BooleanParam } from '../../decorators'
+import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -34,7 +34,7 @@ export class FacilitatorsController {
    */
   @Get()
   async readAll(@Session() session,
-                @Headers('x-affiliate') xAffiliate = '',
+                @StringParam('affiliate') xAffiliate = '',
                 @Refresh() refresh: boolean | undefined) {
     const isAfMan = session.user && session.user.role.name === 'Affiliate Manager'
 
@@ -67,7 +67,7 @@ export class FacilitatorsController {
    */
   @Get('/search')
   search(@Session() session,
-         @Headers('x-search') search: string,
+         @StringParam('search') search: string | undefined,
          @ArrayParam('retrieve') retrieve: string[] | undefined,
          @BooleanParam({ query: 'isMapped', header: 'is-mapped' }) isMapped: boolean | undefined,
          @Refresh() refresh: boolean | undefined) {
