@@ -1,16 +1,18 @@
 import {
     Controller,
     Get, Post,
-    Request, Response,
+    Request, Response, Headers,
     Body, Inject, BadRequestException,
-    ForbiddenException, InternalServerErrorException, NotFoundException
+    ForbiddenException, InternalServerErrorException, NotFoundException, Session
 } from '@nestjs/common'
 
 import _ from 'lodash'
-import { parseError } from '../../util'
+import { parseError, getBearerToken } from '../../util'
 import { SalesforceClient } from '@shingo/shingo-sf-api'
 import { AuthClient } from '@shingo/shingo-auth-api'
 import { LoggerInstance } from 'winston'
+import { LoginBody, LoginAsBody } from './authInterfaces';
+import { ChangePasswordBody } from '../facilitators/facilitatorInterfaces';
 
 /**
  * Provides the controller of the Auth REST logic
@@ -30,14 +32,7 @@ export class AuthController {
    * @param body - Required fields: <code>[ 'email', 'password' ]</code>
    */
   @Post('login')
-  async login(@Request() req, @Body() body) {
-    if (!body.email || !body.password) {
-      throw new BadRequestException(
-        `Missing fields: email, password`,
-        'MISSING_FIELDS'
-      )
-    }
-
+  async login(@Session() session, @Body() body: LoginBody) {
     const user = await this.authService.login(body).catch(e => {
       this.log.debug(e)
       const parsed = parseError(e)
@@ -56,10 +51,10 @@ export class AuthController {
       throw new ForbiddenException('', 'NOT_REGISTERED')
     }
 
-    req.session.user = await this.getSessionUser(user)
-    req.session.affiliate = req.session.user.AccountId
+    session.user = await this.getSessionUser(user)
+    session.affiliate = session.user.AccountId
 
-    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions'])
+    return _.omit(session.user, ['permissions', 'extId', 'services', 'role.permissions'])
   }
 
   private async getSessionUser(user): Promise<any> {
@@ -90,7 +85,7 @@ export class AuthController {
    * Sets the user's JWT to '' and removes the user from the session
    */
   @Get('logout')
-  async logout(@Request() req, @Response() res) {
+  async logout(@Request() req) {
     if (!req.session.user) throw new NotFoundException('', 'NO_LOGIN_FOUND')
     req.session.user.jwt = `${Math.random()}`; // WHYYY
     req.session.user.email = req.session.user.Email;
@@ -100,44 +95,37 @@ export class AuthController {
   }
 
   @Post('/changepassword')
-  async changePassword(@Request() req, @Body() body) {
-    if (!body.password) {
-      throw new BadRequestException(
-        `Missing fields: password`,
-        'MISSING_FIELDS'
-      )
-    }
+  async changePassword(@Session() session, @Body() body: ChangePasswordBody) {
+    session.user.password = body.password
 
-    req.session.user.password = body.password
+    const updated = await this.authService.updateUser(_.pick(session.user, ['id', 'password']))
 
-    const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']))
+    session.user = await this.authService.getUser(`user.id=${session.user.id}`)
+    session.user = await this.getSessionUser(session.user)
 
-    req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`)
-    req.session.user = await this.getSessionUser(req.session.user)
-
-    return { jwt: req.session.user.jwt }
+    return { jwt: session.user.jwt }
   }
 
   @Post('/loginas')
-  async loginAs(@Request() req, @Response() res, @Body() body): Promise<Response> {
-    if (!body.adminId || !body.userId) {
-      throw new BadRequestException(
-        `Missing fields: userId, adminId`,
-        'MISSING_FIELDS'
-      )
-    }
+  async loginAs(
+    @Session() session,
+    @Headers('x-jwt') xJwt: string,
+    @Headers('Authorization') auth: string,
+    @Body() body: LoginAsBody
+  ): Promise<Response> {
+    const adminToken = getBearerToken(auth || '') || xJwt
 
-    if (req.session.user.id !== body.adminId) {
+    if (session.user.id !== body.adminId) {
       throw new ForbiddenException('', 'UNAUTHORIZED')
     }
 
     const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId})
-    req.session.user = await this.getSessionUser(user)
-    req.session.user.adminToken = req.headers['x-jwt']
-    req.session.affiliate = req.session.user.AccountId
+    session.user = await this.getSessionUser(user)
+    session.user.adminToken = adminToken
+    session.affiliate = session.user.AccountId
 
     this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`)
 
-    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password'])
+    return _.omit(session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password'])
   }
 }

@@ -98,7 +98,7 @@ export const parseError = (error: any, errHandler?: (e: { error: string }) => vo
   return error
 }
 
-export const getBearerToken = (header: string): string | null => {
+export const getBearerToken = (header: string): string | undefined => {
   const parts = header.split('Bearer ')
-  return parts.length > 0 ? parts[1] : null
+  return parts.length === 2 ? parts[1] : undefined
 }
