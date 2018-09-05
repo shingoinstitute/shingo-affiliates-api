@@ -1,11 +1,12 @@
 import {
     Controller,
-    Get, Param, Session, Inject, BadRequestException, ForbiddenException
+    Get, Param, Session, Inject, ForbiddenException
 } from '@nestjs/common'
 import { SupportService } from '../../components'
 import { LoggerInstance } from 'winston'
-import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 import { Refresh, ArrayParam, StringParam } from '../../decorators'
+import { RequiredValidator, SalesforceIdValidator } from '../../validators'
+import { missingParam } from '../../util'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -53,18 +54,9 @@ export class SupportController {
 
   @Get('/search')
   async search(@Session() session,
-               @StringParam('search') search: string | undefined,
-               @ArrayParam('retrieve') retrieve: string[] | undefined,
+               @StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
+               @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
                @Refresh() refresh: boolean | undefined) {
-
-    // Check for required fields
-    if (!search || !retrieve) {
-      throw new BadRequestException(
-        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
-        'MISSING_PARAMETERS'
-      )
-    }
-
     const realRetrieve = [...new Set([...retrieve, 'Restricted_To__c'])]
 
     const role = this.getRole(session)

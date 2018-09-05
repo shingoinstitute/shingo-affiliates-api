@@ -10,8 +10,9 @@ import _ from 'lodash'
 import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
-import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
+import { RequiredValidator, SalesforceIdValidator } from '../../validators'
+import { missingParam } from '../../util'
 
 /**
  * Controller of the REST API logic for Facilitators
@@ -67,8 +68,8 @@ export class FacilitatorsController {
    */
   @Get('/search')
   search(@Session() session,
-         @StringParam('search') search: string | undefined,
-         @ArrayParam('retrieve') retrieve: string[] | undefined,
+         @StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
+         @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
          @BooleanParam({ query: 'isMapped', header: 'is-mapped' }) isMapped: boolean | undefined,
          @Refresh() refresh: boolean | undefined) {
     const isAfMan = session.user.role.name === 'Affiliate Manager'
@@ -77,14 +78,6 @@ export class FacilitatorsController {
 
     if (!isAfMan && !session.affiliate) {
       throw new ForbiddenException('', 'SESSION_EXPIRED')
-    }
-
-    // Check for required fields
-    if (!search || !retrieve) {
-      throw new BadRequestException(
-        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
-        'MISSING_FIELDS'
-      )
     }
 
     return this.facilitatorsService.search(

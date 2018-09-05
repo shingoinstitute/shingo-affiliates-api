@@ -1,8 +1,12 @@
 import { CacheService } from './components'
+import { BadRequestException } from '@nestjs/common';
 
 export type Lazy<T> = () => T
 export type Overwrite<A extends object, B extends object> = Pick<A, Exclude<keyof A, keyof B>> & B
 export type RequireKeys<T extends object, K extends keyof T> = Overwrite<T, { [key in K]-?: T[key] }>
+
+export const missingParam = (name: string) =>
+  new BadRequestException(`Missing parameters: ${name}`, 'MISSING_PARAMETERS')
 
 /**
  * Gets some data from a cache if a key exists or stores new data in the cache

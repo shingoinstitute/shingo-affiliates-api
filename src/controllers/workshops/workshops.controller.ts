@@ -9,8 +9,9 @@ import { WorkshopsService } from '../../components'
 
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
-import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 import { Refresh, ArrayParam, StringParam } from '../../decorators'
+import { RequiredValidator, SalesforceIdValidator } from '../../validators'
+import { missingParam } from '../../util'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -72,16 +73,9 @@ export class WorkshopsController {
    * @param refresh Force cache refresh
    */
   @Get('/search')
-  search(@StringParam('search') search: string | undefined,
-         @ArrayParam('retrieve') retrieve: string[] | undefined,
+  search(@StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
+         @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
          @Refresh() refresh: boolean | undefined) {
-    if (!search || !retrieve) {
-      throw new BadRequestException(
-        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
-        'MISSING_PARAMETERS'
-      )
-    }
-
     return this.workshopsService.search(search, retrieve, refresh)
   }
 

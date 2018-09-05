@@ -5,8 +5,9 @@ import { AffiliatesService } from '../../components'
 
 import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
-import { SalesforceIdValidator } from '../../validators/SalesforceId.validator'
 import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
+import { RequiredValidator, SalesforceIdValidator } from '../../validators'
+import { missingParam } from '../../util'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -60,17 +61,9 @@ export class AffiliatesController {
    * @param refresh Force cache refresh using header
    */
   @Get('/search')
-  async search(@StringParam('search') search: string | undefined,
-               @ArrayParam('retrieve') retrieve: string[] | undefined,
+  async search(@StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
+               @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
                @Refresh() refresh: boolean | undefined) {
-    // Check for required fields
-    if (!search || !retrieve) {
-      throw new BadRequestException(
-        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
-        'MISSING_PARAMETERS'
-      )
-    }
-
     return this.affService.search(search, retrieve, refresh)
   }
 
@@ -85,17 +78,9 @@ export class AffiliatesController {
    */
   @Get('/:id/coursemanagers')
   searchCMS(@Param('id', SalesforceIdValidator) id: string,
-            @StringParam('search') search: string | undefined,
-            @ArrayParam('retrieve') retrieve: string[] | undefined,
+            @StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
+            @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
             @Refresh() refresh: boolean | undefined) {
-
-    if (!search || !retrieve) {
-      throw new BadRequestException(
-        `Missing parameters: ${!search ? 'x-search ' : ''}${!retrieve ? 'x-retrieve' : ''}`,
-        'MISSING_PARAMETERS'
-      )
-    }
-
     return this.affService.searchCM(id, search, retrieve, refresh)
   }
 
