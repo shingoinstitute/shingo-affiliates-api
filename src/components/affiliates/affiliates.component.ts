@@ -6,6 +6,7 @@ import { tryCache, RequireKeys } from '../../util'
 import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
 import { AuthClient } from '@shingo/shingo-auth-api'
 import { LoggerInstance } from 'winston'
+import { CreateBody, UpdateBody } from '../../controllers/affiliates/affiliateInterfaces'
 
 export { Affiliate }
 
@@ -168,7 +169,7 @@ export class AffiliatesService {
    *
    * @param affiliate - Affiliate to create
    */
-  async create(affiliate: Affiliate) {
+  async create(affiliate: CreateBody) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Account',
@@ -179,7 +180,7 @@ export class AffiliatesService {
 
     if (result.success) {
       // tslint:disable-next-line:no-object-literal-type-assertion
-      await this.map({ Id: result.id } as Affiliate)
+      await this.map(result.id)
     }
 
     this.cache.invalidate('AffiliatesService.getAll')
@@ -192,25 +193,29 @@ export class AffiliatesService {
    *
    * @param id Affiliate's Account Id
    */
-  async map(affiliate: Affiliate) {
+  async map(id: string) {
     const cm = await this.authService.createRole({
-      name: `Course Manager -- ${affiliate.Id}`,
+      name: `Course Manager -- ${id}`,
       service: 'affiliate-portal',
     })
 
     for (const level of [0, 1, 2] as [0, 1, 2]) {
-      this.authService.createPermission({ resource: `workshops -- ${affiliate.Id}`, level }).then(workshopPerm =>
+      this.authService.createPermission({ resource: `workshops -- ${id}`, level }).then(workshopPerm =>
         this.authService.grantPermissionToRole(workshopPerm.resource, 2, cm.id)
       )
 
-      this.authService.createPermission({ resource: `affiliate -- ${affiliate.Id}`, level }).then(affiliatePerm =>
+      this.authService.createPermission({ resource: `affiliate -- ${id}`, level }).then(affiliatePerm =>
         this.authService.grantPermissionToRole(affiliatePerm.resource, 1, cm.id)
       )
     }
 
-    affiliate.RecordTypeId = '012A0000000zpraIAA'
+    // tslint:disable-next-line:variable-name
+    const RecordTypeId = '012A0000000zpraIAA'
 
-    await this.sfService.update({ object: 'Account', records: [{ contents: JSON.stringify(affiliate) }] })
+    await this.sfService.update({
+      object: 'Account',
+      records: [{ contents: JSON.stringify({ Id: id, RecordTypeId }) }],
+    })
 
     this.cache.invalidate('AffiliatesService.getAll')
   }
@@ -229,7 +234,7 @@ export class AffiliatesService {
    *
    * @param affiliate - Affiliate's fields to update
    */
-  async update(affiliate: RequireKeys<Partial<Affiliate>, 'Id'>) {
+  async update(affiliate: UpdateBody) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Account',

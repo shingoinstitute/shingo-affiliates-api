@@ -3,11 +3,11 @@ import { Controller, Get, Post, Put, Delete,
   Inject, ForbiddenException, BadRequestException } from '@nestjs/common'
 import { AffiliatesService } from '../../components'
 
-import { checkRequired } from '../../validators/objKeyValidator'
 import { LoggerInstance } from 'winston'
 import { Refresh, ArrayParam, BooleanParam, StringParam } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
 import { missingParam } from '../../util'
+import { CreateBody, MapBody, UpdateBody } from './affiliateInterfaces'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -102,11 +102,7 @@ export class AffiliatesController {
    * @param body Required fields <code>[ "Name" ]</code>
    */
   @Post()
-  create(@Body() body) {
-    const required = checkRequired(body, ['Name'])
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
-    }
+  create(@Body() body: CreateBody) {
     return this.affService.create(body)
   }
 
@@ -117,11 +113,11 @@ export class AffiliatesController {
    * @param id Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Post(':id/map')
-  async map(@Param('id', SalesforceIdValidator) id: string, @Body() affiliate) {
-    if (!affiliate.Id.match(/[\w\d]{15,18}/) || id !== affiliate.Id) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
+  async map(@Param('id', SalesforceIdValidator) id: string, @Body() affiliate: MapBody) {
+    if (id !== affiliate.Id) {
+      throw new BadRequestException(`Parameter id ${id} does not match field Id ${affiliate.Id}`, 'INVALID_SF_ID')
     }
-    await this.affService.map(affiliate)
+    await this.affService.map(affiliate.Id)
     return { mapped: true }
   }
 
@@ -133,14 +129,9 @@ export class AffiliatesController {
    * @param id - Account id. match <code>/[\w\d]{15,17}/</code>
    */
   @Put(':id')
-  update(@Body() body, @Param('id', SalesforceIdValidator) id: string) {
+  update(@Body() body: UpdateBody, @Param('id', SalesforceIdValidator) id: string) {
     if (id !== body.Id) {
-      throw new BadRequestException(`${id} is not a valid Salesforce ID.`, 'INVALID_SF_ID')
-    }
-
-    const required = checkRequired(body, ['Id'])
-    if (!required.valid) {
-      throw new BadRequestException(`Missing Fields: ${required.missing.join()}`, 'MISSING_FIELDS')
+      throw new BadRequestException(`Parameter id ${id} does not match field Id ${body.Id}`, 'INVALID_SF_ID')
     }
 
     if (body.hasOwnProperty('Summary__c')) {

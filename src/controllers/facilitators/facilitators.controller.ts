@@ -5,7 +5,6 @@ import {
     ForbiddenException, BadRequestException, InternalServerErrorException
 } from '@nestjs/common'
 import { FacilitatorsService } from '../../components'
-import { checkRequired } from '../../validators/objKeyValidator'
 import _ from 'lodash'
 import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
