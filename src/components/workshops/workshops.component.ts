@@ -2,9 +2,15 @@ import { Inject, Injectable } from '@nestjs/common'
 import { CacheService } from '../'
 import { Workshop } from './workshop'
 import _, { chunk } from 'lodash'
-import { RequireKeys, getWorkshopIds } from '../../util'
-import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
-import { AuthClient } from '@shingo/shingo-auth-api'
+import {
+  RequireKeys,
+  getWorkshopIds,
+  First,
+  Arguments,
+  retrieveResult,
+} from '../../util'
+import { SalesforceClient } from '@shingo/sf-api-client'
+import { AuthClient } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
 import { DescribeSObjectResult } from 'jsforce'
@@ -19,12 +25,11 @@ export { Workshop }
  */
 @Injectable()
 export class WorkshopsService {
-
   constructor(
     private sfService: SalesforceClient,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance
+    @Inject('LoggerService') private log: LoggerInstance,
   ) {}
 
   /**
@@ -65,51 +70,59 @@ export class WorkshopsService {
     const keyBase = 'WorkshopsService.getAll'
     const key = isPublic ? keyBase + '_public' : keyBase
 
-    const query: QueryRequest = {
+    const query = {
       fields: [
-          'Id',
-          'Name',
-          'Start_Date__c',
-          'End_Date__c',
-          'Course_Manager__c',
-          'Billing_Contact__c',
-          'Event_City__c',
-          'Event_Country__c',
-          'Organizing_Affiliate__c',
-          'Public__c',
-          'Registration_Website__c',
-          'Status__c',
-          'Host_Site__c',
-          'Workshop_Type__c',
-          'Language__c',
+        'Id',
+        'Name',
+        'Start_Date__c',
+        'End_Date__c',
+        'Course_Manager__c',
+        'Billing_Contact__c',
+        'Event_City__c',
+        'Event_Country__c',
+        'Organizing_Affiliate__c',
+        'Public__c',
+        'Registration_Website__c',
+        'Status__c',
+        'Host_Site__c',
+        'Workshop_Type__c',
+        'Language__c',
       ],
       table: 'Workshop__c',
       clauses: `Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c`,
     }
 
-    let workshops: Workshop[] = [];
+    let workshops: Workshop[] = []
     if (!this.cache.isCached(key) || refresh) {
       if (!isPublic) {
         // tslint:disable-next-line:max-line-length
-        query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
+        query.fields.push(
+          '(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)',
+        )
         const ids = getWorkshopIds(user)
         if (ids.length === 0) return []
 
         for (const chunkedIds of chunk(ids, 200)) {
-          workshops = workshops.concat(await this.queryForWorkshops(chunkedIds, query));
+          workshops = workshops.concat(
+            await this.queryForWorkshops(chunkedIds, query),
+          )
         }
-
       } else {
-        workshops = (await this.sfService.query<Workshop>(query)).records;
+        workshops = (await this.sfService.query<Workshop>(query)).records
       }
 
       for (const workshop of workshops) {
-        if (workshop.Instructors__r && workshop.Instructors__r.records instanceof Array) {
-          workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
+        if (
+          workshop.Instructors__r &&
+          workshop.Instructors__r.records instanceof Array
+        ) {
+          workshop.facilitators = workshop.Instructors__r.records.map(
+            i => i.Instructor__r,
+          )
         }
       }
 
-      this.cache.cache(key, workshops);
+      this.cache.cache(key, workshops)
 
       return workshops
     } else {
@@ -117,8 +130,14 @@ export class WorkshopsService {
     }
   }
 
-  private queryForWorkshops(ids: ReadonlyArray<string>, query: Readonly<QueryRequest>): Promise<Workshop[]> {
-    const newQuery = { ...query, clauses: `Id IN (${ids.join()}) ORDER BY Start_Date__c` }
+  private queryForWorkshops(
+    ids: ReadonlyArray<string>,
+    query: First<Arguments<SalesforceClient['query']>>,
+  ): Promise<Workshop[]> {
+    const newQuery = {
+      ...query,
+      clauses: `Id IN (${ids.join()}) ORDER BY Start_Date__c`,
+    }
     return this.sfService.query<Workshop>(newQuery).then(r => r.records)
   }
 
@@ -160,45 +179,62 @@ export class WorkshopsService {
     // Create the data parameter for the RPC call
 
     if (!this.cache.isCached(id)) {
-      const workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
-      workshop.facilitators = (await this.facilitators(id)).map(f => f.Instructor__r) || [];
+      const workshop: Workshop = (await this.sfService
+        .retrieve({
+          object: 'Workshop__c',
+          ids: [id],
+        })
+        .then(retrieveResult)) as Workshop
+
+      workshop.facilitators =
+        (await this.facilitators(id)).map(f => f.Instructor__r) || []
 
       if (workshop.Course_Manager__c) {
         // tslint:disable-next-line:max-line-length
-        workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
+        workshop.Course_Manager__r = await this.sfService
+          .retrieve({
+            object: 'Contact',
+            ids: [workshop.Course_Manager__c],
+          })
+          .then(retrieveResult)
       }
 
       if (workshop.Organizing_Affiliate__c) {
         // tslint:disable-next-line:max-line-length
-        workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
+        workshop.Organizing_Affiliate__r = await this.sfService
+          .retrieve({
+            object: 'Account',
+            ids: [workshop.Organizing_Affiliate__c],
+          })
+          .then(retrieveResult)
       }
 
-      workshop.files = await this.getFiles(workshop.Id!) || [];
+      workshop.files = (await this.getFiles(workshop.Id!)) || []
 
-      this.cache.cache(id, workshop);
+      this.cache.cache(id, workshop)
 
-      return workshop;
+      return workshop
     } else {
-      return this.cache.getCache(id) as Workshop;
+      return this.cache.getCache(id) as Workshop
     }
   }
 
   private getFiles(id: string) {
-    const query: QueryRequest = {
-      fields: [
-        'Name',
-        'ParentId',
-        'ContentType',
-        'BodyLength',
-      ],
+    const query = {
+      fields: ['Name', 'ParentId', 'ContentType', 'BodyLength'],
       table: 'Attachment',
       clauses: `ParentId='${id}'`,
     }
 
     // tslint:disable-next-line:interface-over-type-literal
-    type Attachment = { Name: string, ParentId: string, ContentType: string, BodyLength: number }
+    type Attachment = {
+      Name: string
+      ParentId: string
+      ContentType: string
+      BodyLength: number
+    }
 
-    return this.sfService.query<Attachment>(query).then(r => r.records || []);
+    return this.sfService.query<Attachment>(query).then(r => r.records || [])
   }
 
   /**
@@ -214,10 +250,10 @@ export class WorkshopsService {
 
     // If no cached result, use the shingo-sf-api to get the result
     if (!this.cache.isCached(key) || refresh) {
-      const describeObject = await this.sfService.describe('Workshop__c');
+      const describeObject = await this.sfService.describe('Workshop__c')
 
       // Cache describe
-      this.cache.cache(key, describeObject);
+      this.cache.cache(key, describeObject)
 
       return describeObject
     } else {
@@ -258,21 +294,22 @@ export class WorkshopsService {
   async search(search: string, retrieve: string[], refresh = false) {
     // Generate the data parameter for the RPC call
     const data = {
-        search: `{${search}}`,
-        retrieve: `Workshop__c(${retrieve.join(',')})`,
+      search: `{${search}}`,
+      retrieve: `Workshop__c(${retrieve.join(',')})`,
     }
 
     // If no cached result, use the shingo-sf-api to get result
     if (!this.cache.isCached(data) || refresh) {
-      const workshops: Workshop[] = (await this.sfService.search(data)).searchRecords as Workshop[] || [];
+      const workshops: Workshop[] =
+        ((await this.sfService.search(data)).searchRecords as Workshop[]) || []
 
       // Cache results
-      this.cache.cache(data, workshops);
+      this.cache.cache(data, workshops)
 
       return workshops
     } else {
       // else return the cached result
-      return this.cache.getCache(data) as Workshop[];
+      return this.cache.getCache(data) as Workshop[]
     }
   }
 
@@ -307,7 +344,7 @@ export class WorkshopsService {
     }
 
     if (!this.cache.isCached(key)) {
-      const query: QueryRequest = {
+      const query = {
         fields: [
           'Id',
           'Instructor__r.Id',
@@ -322,18 +359,21 @@ export class WorkshopsService {
         clauses: `Workshop__c='${id}'`,
       }
 
-      const facilitators = (await this.sfService.query(query)).records as Returned[] || [];
+      const facilitators =
+        ((await this.sfService.query(query)).records as Returned[]) || []
       const ids = facilitators.map(fac => `'${fac.Id}'`)
-      const auths = await this.authService.getUsers(`user.extId IN (${ids.join()})`);
+      const auths = await this.authService.getUsers(
+        `user.extId IN (${ids.join()})`,
+      )
 
       for (const fac of facilitators) {
         const auth = auths.find(a => a.extId === fac.Id)
         if (auth) (fac as any).id = auth.id
       }
 
-      this.cache.cache(id + '_facilitators', facilitators);
+      this.cache.cache(id + '_facilitators', facilitators)
 
-      return facilitators;
+      return facilitators
     } else {
       return this.cache.getCache(key) as Returned[]
     }
@@ -345,20 +385,31 @@ export class WorkshopsService {
    * @param workshop The workshop to be created
    */
   // tslint:disable-next-line:max-line-length
-  async create(workshop: RequireKeys<Partial<Workshop>, 'Name' | 'Start_Date__c' | 'End_Date__c' | 'Organizing_Affiliate__c' | 'Course_Manager__c' | 'facilitators'>) {
+  async create(
+    workshop: RequireKeys<
+      Partial<Workshop>,
+      | 'Name'
+      | 'Start_Date__c'
+      | 'End_Date__c'
+      | 'Organizing_Affiliate__c'
+      | 'Course_Manager__c'
+      | 'facilitators'
+    >,
+  ) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
-      records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }],
+      records: [
+        { contents: JSON.stringify(_.omit(workshop, ['facilitators'])) },
+      ],
     }
 
-    const result = (await this.sfService.create(data))[0];
-    if (!result.success) throw new Error('Failed to create: ' + result.errors.join('\n'))
+    const result = (await this.sfService.create(data))[0]
 
     const newWorkshop = { ...workshop, Id: result.id }
-    await this.grantPermissions(newWorkshop);
+    await this.grantPermissions(newWorkshop)
 
-    this.cache.invalidate('WorkshopsService.getAll');
+    this.cache.invalidate('WorkshopsService.getAll')
 
     return result
   }
@@ -372,29 +423,31 @@ export class WorkshopsService {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
-      records: [{ contents: JSON.stringify(_.omit(workshop, ['facilitators'])) }],
+      records: [
+        { contents: JSON.stringify(_.omit(workshop, ['facilitators'])) },
+      ],
     }
 
-    const result = (await this.sfService.update(data))[0];
+    const result = (await this.sfService.update(data))[0]
 
-    const currFacilitators = await this.facilitators(workshop.Id);
+    const currFacilitators = await this.facilitators(workshop.Id)
     const removeFacilitators = _.differenceWith(
       currFacilitators,
       workshop.facilitators || [],
-      (val: any, other) => other && val.Instructor__r.Id === other.Id
-    );
+      (val: any, other) => other && val.Instructor__r.Id === other.Id,
+    )
     workshop.facilitators = _.differenceWith(
       workshop.facilitators,
       currFacilitators,
-      (val, other: any) => other && val.Id === other.Instructor__r.Id
-    );
+      (val, other: any) => other && val.Id === other.Instructor__r.Id,
+    )
 
-    await this.grantPermissions(workshop as any);
-    await this.removePermissions(workshop, removeFacilitators);
+    await this.grantPermissions(workshop as any)
+    await this.removePermissions(workshop, removeFacilitators)
 
-    this.cache.invalidate(workshop.Id!);
-    this.cache.invalidate(`${workshop.Id}_facilitators`);
-    this.cache.invalidate('WorkshopsService.getAll');
+    this.cache.invalidate(workshop.Id!)
+    this.cache.invalidate(`${workshop.Id}_facilitators`)
+    this.cache.invalidate('WorkshopsService.getAll')
 
     return result
   }
@@ -407,8 +460,12 @@ export class WorkshopsService {
    * @param files The files to attach (base 64)
    * @param contentType The mime type of the files
    */
-  async upload(id: string, fileName: string, files: string[], contentType = 'text/csv') {
-
+  async upload(
+    id: string,
+    fileName: string,
+    files: string[],
+    contentType = 'text/csv',
+  ) {
     const records = files.map((file, fileId) => ({
       contents: JSON.stringify({
         ParentId: id,
@@ -423,10 +480,10 @@ export class WorkshopsService {
       records,
     }
 
-    const result = await this.sfService.create(data);
+    const result = await this.sfService.create(data)
 
-    this.cache.invalidate(id);
-    return result;
+    this.cache.invalidate(id)
+    return result
   }
 
   /**
@@ -437,20 +494,20 @@ export class WorkshopsService {
   async delete(id: string): Promise<any> {
     // Create the data parameter for the RPC call
     const data = {
-        object: 'Workshop__c',
-        ids: [id],
+      object: 'Workshop__c',
+      ids: [id],
     }
 
-    const result = (await this.sfService.delete(data))[0];
+    const result = (await this.sfService.delete(data))[0]
 
     for (const level of [0, 1, 2] as [0, 1, 2]) {
-      this.authService.deletePermission(`/workshops/${id}`, level);
+      this.authService.deletePermission(`/workshops/${id}`, level)
     }
 
-    this.cache.invalidate(id);
-    this.cache.invalidate(`${id}_facilitators`);
-    this.cache.invalidate('WorkshopsService.getAll');
-    this.cache.invalidate('WorkshopsService.getAll_public');
+    this.cache.invalidate(id)
+    this.cache.invalidate(`${id}_facilitators`)
+    this.cache.invalidate('WorkshopsService.getAll')
+    this.cache.invalidate('WorkshopsService.getAll_public')
 
     return result
   }
@@ -458,21 +515,31 @@ export class WorkshopsService {
   async cancel(id: string, reason: string): Promise<any> {
     const updateData = {
       object: 'Workshop__c',
-      records: [{ contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) }],
+      records: [
+        { contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) },
+      ],
     }
 
     await this.sfService.update(updateData)
 
     const noteData = {
       object: 'Note',
-      records: [{ contents: JSON.stringify({ Title: 'Reasons for Cancelling', Body: reason, ParentId: id }) }],
+      records: [
+        {
+          contents: JSON.stringify({
+            Title: 'Reasons for Cancelling',
+            Body: reason,
+            ParentId: id,
+          }),
+        },
+      ],
     }
 
-    const note = (await this.sfService.create(noteData))[0];
+    const note = (await this.sfService.create(noteData))[0]
 
-    this.cache.invalidate(id);
-    this.cache.invalidate('WorkshopsService.getAll');
-    this.cache.invalidate('WorkshopsService.getAll_public');
+    this.cache.invalidate(id)
+    this.cache.invalidate('WorkshopsService.getAll')
+    this.cache.invalidate('WorkshopsService.getAll_public')
 
     return note
   }
@@ -483,24 +550,44 @@ export class WorkshopsService {
    * @param workshop Workshop
    */
   private async grantPermissions(
-    workshop: RequireKeys<Partial<Workshop>, 'Id' | 'facilitators' | 'Organizing_Affiliate__c'>
+    workshop: RequireKeys<
+      Partial<Workshop>,
+      'Id' | 'facilitators' | 'Organizing_Affiliate__c'
+    >,
   ) {
     const roles = await this.authService.getRoles(
-      `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${workshop.Organizing_Affiliate__c}'`
+      `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${
+        workshop.Organizing_Affiliate__c
+      }'`,
     )
 
-    const resource = `/workshops/${workshop.Id}`;
+    const resource = `/workshops/${workshop.Id}`
 
-    await Promise.all(roles.map(role => this.authService.grantPermissionToRole(resource, 2, role.id)))
-    await Promise.all(workshop.facilitators.map(facilitator => {
-      const data = {
-        object: 'WorkshopFacilitatorAssociation__c',
-        records: [{ contents: JSON.stringify({ Workshop__c: workshop.Id, Instructor__c: facilitator.Id }) }],
-      }
-      return this.sfService.create(data).then(() =>
-        this.authService.grantPermissionToUser(resource, 2, facilitator.id)
-      )
-    }))
+    await Promise.all(
+      roles.map(role =>
+        this.authService.grantPermissionToRole(resource, 2, role.id!),
+      ),
+    )
+    await Promise.all(
+      workshop.facilitators.map(facilitator => {
+        const data = {
+          object: 'WorkshopFacilitatorAssociation__c',
+          records: [
+            {
+              contents: JSON.stringify({
+                Workshop__c: workshop.Id,
+                Instructor__c: facilitator.Id,
+              }),
+            },
+          ],
+        }
+        return this.sfService
+          .create(data)
+          .then(() =>
+            this.authService.grantPermissionToUser(resource, 2, facilitator.id),
+          )
+      }),
+    )
   }
 
   /**
@@ -511,18 +598,28 @@ export class WorkshopsService {
    */
   private async removePermissions(
     workshop: RequireKeys<Partial<Workshop>, 'Id'>,
-    remove: ReadonlyArray<{ Id: string, Instructor__r: { Id: string }}>
+    remove: ReadonlyArray<{ Id: string; Instructor__r: { Id: string } }>,
   ) {
     const resource = `/workshops/${workshop.Id}`
 
     const ids = remove.map(facilitator => facilitator.Id)
 
-    await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids })
+    await this.sfService.delete({
+      object: 'WorkshopFacilitatorAssociation__c',
+      ids,
+    })
 
-    const instructors = remove.map(facilitator => `'${facilitator.Instructor__r.Id}'`)
+    const instructors = remove.map(
+      facilitator => `'${facilitator.Instructor__r.Id}'`,
+    )
     if (instructors.length === 0) return
-    const users = await this.authService.getUsers(`user.extId IN (${instructors.join()})`)
-    await Promise.all(users.map(user => this.authService.revokePermissionFromUser(resource, 2, user.id)))
+    const users = await this.authService.getUsers(
+      `user.extId IN (${instructors.join()})`,
+    )
+    await Promise.all(
+      users.map(user =>
+        this.authService.revokePermissionFromUser(resource, 2, user.id!),
+      ),
+    )
   }
-
 }

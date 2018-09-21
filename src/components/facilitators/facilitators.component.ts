@@ -1,15 +1,19 @@
-import { Inject, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
 import {
-    CacheService,
-} from '../'
+  Inject,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common'
+import { CacheService } from '../'
 import _ from 'lodash'
 import * as jwt from 'jwt-simple'
-import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
-import { AuthClient, Role, User } from '@shingo/shingo-auth-api'
+import { SalesforceClient } from '@shingo/sf-api-client'
+import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
-import { tryCache } from '../../util'
-import { MapBody } from '../../controllers/facilitators/facilitatorInterfaces';
+import { tryCache, retrieveResult } from '../../util'
+import { MapBody } from '../../controllers/facilitators/facilitatorInterfaces'
+import { EnsureRoleService } from '../ensurerole.component'
 
 interface Facilitator {
   Id: string
@@ -30,7 +34,7 @@ interface Facilitator {
 }
 interface AuthedFacilitator extends Facilitator {
   id: number
-  role: Role | undefined
+  role: A.Role | undefined
   lastLogin: string
   services: string
 }
@@ -43,15 +47,15 @@ interface AuthedFacilitator extends Facilitator {
  */
 @Injectable()
 export class FacilitatorsService {
-
-  private getAllKey = 'FacilitatorsService.getAll';
+  private getAllKey = 'FacilitatorsService.getAll'
 
   constructor(
     private sfService: SalesforceClient,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance
-  ) { }
+    @Inject('LoggerService') private log: LoggerInstance,
+    private ensure: EnsureRoleService,
+  ) {}
 
   /**
    * Get all facilitators for the affiliate specified.
@@ -75,9 +79,8 @@ export class FacilitatorsService {
    * @param affiliate SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
    */
   getAll(refresh = false, affiliate = '') {
-
     const baseClause = `RecordType.DeveloperName='Affiliate_Instructor'`
-    const query: QueryRequest = {
+    const query = {
       fields: [
         'Id',
         'FirstName',
@@ -92,29 +95,40 @@ export class FacilitatorsService {
         'Biography__c',
       ],
       table: 'Contact',
-      clauses: affiliate !== '' ? baseClause + ` AND Facilitator_For__c='${affiliate}` : baseClause,
+      clauses:
+        affiliate !== ''
+          ? baseClause + ` AND Facilitator_For__c='${affiliate}`
+          : baseClause,
     }
 
-    return tryCache(this.cache, this.getAllKey,
-      async () =>  {
-        const facilitators = (await this.sfService.query<Facilitator>(query)).records
+    return tryCache(
+      this.cache,
+      this.getAllKey,
+      async () => {
+        const facilitators = (await this.sfService.query<Facilitator>(query))
+          .records
         const authFacilitators = await this.addUserAuthInfo(facilitators)
 
-        const authedFacs = authFacilitators.filter((f): f is AuthedFacilitator =>
-          typeof (f as AuthedFacilitator).id !== 'undefined'
-            && !!(f as AuthedFacilitator).services // the empty string is falsy, so we coerce to boolean
-            && (f as AuthedFacilitator).services.includes('affiliate-portal')
+        const authedFacs = authFacilitators.filter(
+          (f): f is AuthedFacilitator =>
+            typeof (f as AuthedFacilitator).id !== 'undefined' &&
+            !!(f as AuthedFacilitator).services && // the empty string is falsy, so we coerce to boolean
+            (f as AuthedFacilitator).services.includes('affiliate-portal'),
         )
 
         return authedFacs
-      }, refresh)
+      },
+      refresh,
+    )
   }
 
-  private addUserInfo<T extends object>(facilitator: T, user: User) {
+  private addUserInfo<T extends object>(facilitator: T, user: A.User) {
     const newObj = {
       ...(facilitator as object),
       id: user.id,
-      role: user.roles.find(role => role.service === 'affiliate-portal'),
+      role: (user.roles || []).find(
+        role => role.service === 'affiliate-portal',
+      ),
       lastLogin: user.lastLogin,
       services: user.services,
     }
@@ -124,9 +138,13 @@ export class FacilitatorsService {
 
   private async addUserAuthInfo(facilitators: Facilitator[]) {
     const ids = facilitators.map(facilitator => `'${facilitator.Id}'`)
-    const usersArr = await this.authService.getUsers(`user.extId IN (${ids.join()})`)
+    const usersArr = await this.authService.getUsers(
+      `user.extId IN (${ids.join()})`,
+    )
     const users = _.keyBy(usersArr, 'extId')
-    const authFacilitators: Array<Facilitator | AuthedFacilitator> = facilitators.map(facilitator => {
+    const authFacilitators: Array<
+      Facilitator | AuthedFacilitator
+    > = facilitators.map(facilitator => {
       if (users[facilitator.Id]) {
         return this.addUserInfo(facilitator, users[facilitator.Id])
       }
@@ -146,9 +164,11 @@ export class FacilitatorsService {
   describe(refresh = false) {
     const key = 'describeContact'
 
-    return tryCache(this.cache, key,
+    return tryCache(
+      this.cache,
+      key,
       () => this.sfService.describe('Contact'),
-      refresh
+      refresh,
     )
   }
 
@@ -187,82 +207,113 @@ export class FacilitatorsService {
     retrieve: ReadonlyArray<string>,
     isMapped = true,
     affiliate = '',
-    refresh = false
+    refresh = false,
   ): Promise<any[]> {
     // // Generate the data parameter for the RPC call
-    const realRetrieve = [...new Set([ ...retrieve, 'AccountId', 'RecordType.DeveloperName', 'Id'])]
+    const realRetrieve = [
+      ...new Set([...retrieve, 'AccountId', 'RecordType.DeveloperName', 'Id']),
+    ]
 
     const data = {
       search: `{${search}}`,
       retrieve: `Contact(${realRetrieve.join()})`,
     }
 
-    return tryCache(this.cache, data,
+    return tryCache(
+      this.cache,
+      data,
       async () => {
-        const facilitators = (await this.sfService.search(data)).searchRecords || []
-        const filteredFacs = facilitators.filter(result => {
-          if (affiliate === '' && isMapped) {
-            return result.RecordType && result.RecordType.DeveloperName === 'Affiliate_Instructor'
-          } else if (affiliate !== '') {
-            return result.AccountId === affiliate
-              && result.RecordType && result.RecordType.DeveloperName === 'Affiliate_Instructor'
-          } else return result
-        })
+        const facilitators =
+          (await this.sfService.search(data)).searchRecords || []
+        const filteredFacs = facilitators.filter(
+          (result): result is Facilitator => {
+            if (typeof result !== 'object')
+              throw new Error(
+                `Expected SF.search() to return object, recieved ${result}`,
+              )
+
+            if (affiliate === '' && isMapped) {
+              return (
+                (result as any).RecordType &&
+                (result as any).RecordType.DeveloperName ===
+                  'Affiliate_Instructor'
+              )
+            } else if (affiliate !== '') {
+              return (
+                (result as any).AccountId === affiliate &&
+                (result as any).RecordType &&
+                (result as any).RecordType.DeveloperName ===
+                  'Affiliate_Instructor'
+              )
+            } else return !!result
+          },
+        )
 
         if (filteredFacs.length > 0) {
           // Add the facilitator's auth id to the object
           const authedFacs = await this.addUserAuthInfo(filteredFacs)
-          const accountIds = authedFacs.filter(f => !!(f as any).AccountId).map((f: any) => `'${f.AccountId}'`)
+          const accountIds = authedFacs
+            .filter(f => !!(f as any).AccountId)
+            .map((f: any) => `'${f.AccountId}'`)
 
-          const query: QueryRequest = {
+          const query = {
             fields: ['Id', 'Name'],
             table: 'Account',
             clauses: `Id IN (${accountIds.join()})`,
           }
 
-          const affiliates = _.keyBy((await this.sfService.query(query)).records || [], 'Id');
+          const affiliates = _.keyBy(
+            (await this.sfService.query(query)).records || [],
+            'Id',
+          )
 
           const affiliateMergedFacs = authedFacs.map(f => ({
             ...f,
-            ...(
-              (f as any).AccountId && typeof affiliates[(f as any).AccountId] !== 'undefined'
-                ? { Account: affiliates[(f as any).AccountId] }
-                : {}
-              ),
+            ...((f as any).AccountId &&
+            typeof affiliates[(f as any).AccountId] !== 'undefined'
+              ? { Account: affiliates[(f as any).AccountId] }
+              : {}),
           }))
 
           if (isMapped) {
-            return affiliateMergedFacs.filter(f =>
-              (f as any).services && (f as any).services.includes('affiliate-portal')
+            return affiliateMergedFacs.filter(
+              f =>
+                (f as any).services &&
+                (f as any).services.includes('affiliate-portal'),
             )
           } else {
-            return affiliateMergedFacs.filter(f =>
-              typeof (f as any).services === 'undefined' || !(f as any).services.includes('affiliate-portal')
-            );
+            return affiliateMergedFacs.filter(
+              f =>
+                typeof (f as any).services === 'undefined' ||
+                !(f as any).services.includes('affiliate-portal'),
+            )
           }
         }
 
         return facilitators
-      }, refresh
+      },
+      refresh,
     )
   }
 
-  private getUserBy(data: { extId: string } | { email: string }): Promise<User> {
-    const { extId, email } = data as { extId?: string, email?: string }
+  private getUserBy(data: { extId: string } | { email: string }) {
+    const { extId, email } = data as { extId?: string; email?: string }
 
     if (extId) return this.authService.getUser(`user.extId='${extId}'`)
     else return this.authService.getUser(`user.email='${email}'`)
   }
 
-  private tryFindUser(extId: string, email: string): Promise<User> {
+  private tryFindUser(extId: string, email: string): Promise<A.User> {
     return this.getUserBy({ extId })
-      .catch(() => {
-        this.log.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`)
-        return this.getUserBy({ email })
-      })
-      .catch(e => {
-        this.log.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
-        throw e
+      .then(u => u || this.getUserBy({ email }))
+      .then(u => {
+        if (typeof u === 'undefined') {
+          this.log.error(
+            'Failed to find user in auth DB using their Salesforce ID and their email address.',
+          )
+          throw new Error('Failed to find user by Salesforce ID and email')
+        }
+        return u
       })
   }
 
@@ -278,22 +329,29 @@ export class FacilitatorsService {
       ids: [id],
     }
 
-    return tryCache(this.cache, data,
-      async () => {
-        const facilitator = await this.sfService.retrieve(data)[0]
-        facilitator.Account = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0]
+    return tryCache(this.cache, data, async () => {
+      const facilitator = await this.sfService
+        .retrieve(data)
+        .then(retrieveResult)
+      facilitator.Account = await this.sfService
+        .retrieve({
+          object: 'Account',
+          ids: [facilitator.AccountId],
+        })
+        .then(retrieveResult)
 
-        const user = await this.tryFindUser(facilitator.Id, facilitator.Email)
+      const user = await this.tryFindUser(facilitator.Id, facilitator.Email)
 
-        if (!user.services || !user.services.includes('affiliate-portal')) throw new NotFoundException('', 'NOT_FOUND')
+      if (!user.services || !user.services.includes('affiliate-portal'))
+        throw new NotFoundException('', 'NOT_FOUND')
 
-        const newFac = user.id !== 0 ? this.addUserInfo(facilitator, user) : facilitator
+      const newFac =
+        user.id !== 0 ? this.addUserInfo(facilitator, user) : facilitator
 
-        _.merge(newFac, _.omit(user, ['email', 'password']))
+      _.merge(newFac, _.omit(user, ['email', 'password']))
 
-        return newFac
-      }
-    )
+      return newFac
+    })
   }
 
   /**
@@ -324,8 +382,6 @@ export class FacilitatorsService {
 
     const record = (await this.sfService.create(data))[0]
 
-    if (!record.success) throw new Error('Failed to create user: ' + (record.errors || []).join('\n'))
-
     this.cache.invalidate(this.getAllKey)
 
     return this.createOrMapAuth(record.id, user)
@@ -337,27 +393,33 @@ export class FacilitatorsService {
    * @param id  The Salesforce Id of the Contact to map
    * @param user The newly created user
    */
-  async mapContact(id: string, user: MapBody & { password?: string }): Promise<any> {
+  async mapContact(
+    id: string,
+    user: MapBody & { password?: string },
+  ): Promise<any> {
     const data = {
       object: 'Contact',
       ids: [id],
     }
 
-    const record = (await this.sfService.retrieve(data))[0];
-    if (typeof record === 'undefined') throw new NotFoundException('', 'CONTACT_NOT_FOUND')
+    const record = await this.sfService.retrieve(data).then(retrieveResult)
+    if (typeof record === 'undefined')
+      throw new NotFoundException('', 'CONTACT_NOT_FOUND')
 
     // another magic string. Why
     record.RecordTypeId = '012A0000000zpqrIAA'
     const updateData = {
       object: 'Contact',
-      records: [{ contents: JSON.stringify(_.merge(_.omit(record, ['Name']), user)) }],
+      records: [
+        { contents: JSON.stringify(_.merge(_.omit(record, ['Name']), user)) },
+      ],
     }
 
-    const successObject = (await this.sfService.update(updateData))[0];
+    const successObject = (await this.sfService.update(updateData))[0]
 
-    this.cache.invalidate(this.getAllKey);
+    this.cache.invalidate(this.getAllKey)
 
-    return this.createOrMapAuth(id, user);
+    return this.createOrMapAuth(id, user)
   }
 
   /**
@@ -368,24 +430,40 @@ export class FacilitatorsService {
    * @param user
    */
   async createOrMapAuth(id: string, user: MapBody & { password?: string }) {
-    // FIXME: remove this use of global
-    // tslint:disable-next-line:no-string-literal
-    let roleId: number = global['facilitatorId']
+    let roleId = this.ensure.facilitatorId
     if (user.role) {
       const role = await this.authService.getRole(`name='${user.role.name}'`)
-      if (role.id > 0) roleId = role.id
+      if (!role) {
+        throw new Error(`Role with name ${user.role.name} does not exist`)
+      }
+      if (role.id! > 0) roleId = role.id!
     }
 
-    const initialAuth = await this.authService.getUser(`user.email='${user.Email}'`);
+    const initialAuth = await this.authService.getUser(
+      `user.email='${user.Email}'`,
+    )
 
-    const auth = initialAuth.email === ''
-      ? await this.createNewAuth(user.Email, user.password!, roleId, id)
-      : await this.mapCurrentAuth(user.Email, roleId, id)
+    if (!initialAuth) {
+      throw new Error(`User with email ${user.Email} does not exist`)
+    }
+
+    const auth =
+      initialAuth.email === ''
+        ? await this.createNewAuth(user.Email, user.password!, roleId, id)
+        : await this.mapCurrentAuth(user.Email, roleId, id)
 
     await this.authService.addRoleToUser({ userEmail: user.Email, roleId })
 
-    await this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, auth.id)
-    await this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, auth.id)
+    await this.authService.grantPermissionToUser(
+      `affiliate -- ${user.AccountId}`,
+      1,
+      auth.id!,
+    )
+    await this.authService.grantPermissionToUser(
+      `workshops -- ${user.AccountId}`,
+      2,
+      auth.id!,
+    )
 
     this.cache.invalidate(this.getAllKey)
 
@@ -400,11 +478,18 @@ export class FacilitatorsService {
    * @param roleId
    * @param extId - Salesforce Id of the associated contact
    */
-  createNewAuth(email: string, password: string, roleId: number, extId: string) {
-    return this.authService.createUser({ email, password, services: 'affiliate-portal', extId })
-      .then(user => {
-        this.cache.invalidate(this.getAllKey);
-        return { jwt: user.jwt, id: user.id };
+  createNewAuth(
+    email: string,
+    password: string,
+    roleId: number,
+    extId: string,
+  ) {
+    return this.authService
+      .createUser({ email, password, services: 'affiliate-portal', extId })
+      .then(async user => {
+        this.cache.invalidate(this.getAllKey)
+        const token = await this.authService.login({ email, password })
+        return { jwt: token, id: user.id }
       })
   }
 
@@ -416,17 +501,23 @@ export class FacilitatorsService {
    * @param extId - Salesforce Id of the associated contact
    */
   async mapCurrentAuth(userEmail: string, roleId: number, extId: string) {
-    const user = await this.authService.getUser(`user.email='${userEmail}'`);
+    const user = (await this.authService.getUser(
+      `user.email='${userEmail}'`,
+    )) as Required<A.User>
 
-    if (typeof user === 'undefined') throw new NotFoundException('', 'USER_NOT_FOUND')
+    if (typeof user === 'undefined')
+      throw new NotFoundException('', 'USER_NOT_FOUND')
 
-    user.extId = extId;
-    user.services = user.services === '' ? 'affiliate-portal' : user.services + ', affiliate-portal'
+    user.extId = extId
+    user.services =
+      user.services === ''
+        ? 'affiliate-portal'
+        : user.services + ', affiliate-portal'
     await this.authService.updateUser(user)
 
     this.cache.invalidate(this.getAllKey)
 
-    return { jwt: user.jwt, id: user.id }
+    return { id: user.id }
   }
 
   /**
@@ -448,15 +539,33 @@ export class FacilitatorsService {
    * @param user The facilitator object to update
    */
   async update(user): Promise<any> {
-    const contact = _.omit(user, ['password', 'Account', 'Facilitator_For__r', 'id', 'role'])
+    const contact = _.omit(user, [
+      'password',
+      'Account',
+      'Facilitator_For__r',
+      'id',
+      'role',
+    ])
 
     if (user.role) {
-      const role = await this.authService.getRole(`role.name='${user.role.name}'`)
+      const role = await this.authService.getRole(
+        `role.name='${user.role.name}'`,
+      )
+
+      if (!role) {
+        throw new Error(`Role with name ${user.role.name} does not exist`)
+      }
+
       await this.changeRole(user.Id, role.id)
     }
 
     // Get current user data to check if email address is being udpated.
-    const prevUser: any = (await this.sfService.retrieve({ object: 'Contact', ids: [ user.Id ] }))[0]
+    const prevUser = await this.sfService
+      .retrieve({
+        object: 'Contact',
+        ids: [user.Id],
+      })
+      .then(retrieveResult)
 
     // Update Contact record in Salesforce
     const data = {
@@ -466,19 +575,34 @@ export class FacilitatorsService {
 
     const record = (await this.sfService.update(data))[0]
 
-    if (!record.success) throw new Error('Failed to update user: ' + (record.errors || []).join('\n'))
-
     // If the users email or password changed, update their user auth
-    const auth = (user.Email !== prevUser.Email) || user.password
-      ? await this.updateAuth(user, record.id)
-      : false
+    const auth =
+      user.Email !== prevUser.Email || user.password
+        ? await this.updateAuth(user, record.id)
+        : false
 
     // Update permissions
     if (user.AccountId !== prevUser.AccountId) {
-      await this.authService.revokePermissionFromUser(`affiliate -- ${prevUser.AccountId}`, 1, user.id)
-      await this.authService.revokePermissionFromUser(`workshops -- ${prevUser.AccountId}`, 2, user.id)
-      await this.authService.grantPermissionToUser(`affiliate -- ${user.AccountId}`, 1, user.id)
-      await this.authService.grantPermissionToUser(`workshops -- ${user.AccountId}`, 2, user.id)
+      await this.authService.revokePermissionFromUser(
+        `affiliate -- ${prevUser.AccountId}`,
+        1,
+        user.id,
+      )
+      await this.authService.revokePermissionFromUser(
+        `workshops -- ${prevUser.AccountId}`,
+        2,
+        user.id,
+      )
+      await this.authService.grantPermissionToUser(
+        `affiliate -- ${user.AccountId}`,
+        1,
+        user.id,
+      )
+      await this.authService.grantPermissionToUser(
+        `workshops -- ${user.AccountId}`,
+        2,
+        user.id,
+      )
     }
 
     this.cache.invalidate(user.Id)
@@ -494,7 +618,7 @@ export class FacilitatorsService {
    * @param extId Facilitator's Contact ID
    */
   async updateAuth(user: any, extId: string): Promise<boolean> {
-    const set: { extId: string, email?: string, password?: string } = { extId }
+    const set: { extId: string; email?: string; password?: string } = { extId }
     if (user.Email) set.email = user.Email
     if (user.password) set.password = user.password
 
@@ -528,10 +652,10 @@ export class FacilitatorsService {
       ids: [id],
     }
 
-    const record = (await this.sfService.delete(data))[0];
+    const record = (await this.sfService.delete(data))[0]
 
-    this.cache.invalidate(id);
-    this.cache.invalidate(this.getAllKey);
+    this.cache.invalidate(id)
+    this.cache.invalidate(this.getAllKey)
 
     return record
   }
@@ -558,14 +682,17 @@ export class FacilitatorsService {
   async unmapAuth(extId: string): Promise<boolean> {
     const user = await this.authService.getUser(`user.extId='${extId}'`)
 
-    if (typeof user === 'undefined') throw new NotFoundException('', 'USER_NOT_FOUND')
+    if (typeof user === 'undefined')
+      throw new NotFoundException('', 'USER_NOT_FOUND')
 
-    const services = user.services.split(',').map(s => s.trim())
-    const newServices = services.map(s => s === 'affiliate-portal' ? 'af-p-disabled' : s)
+    const services = (user.services || '').split(',').map(s => s.trim())
+    const newServices = services.map(
+      s => (s === 'affiliate-portal' ? 'af-p-disabled' : s),
+    )
     user.services = newServices.join()
 
     this.log.warn('Disabling %j', user)
-    const updated = await this.authService.updateUser(user)
+    const updated = await this.authService.updateUser(user as Required<A.User>)
 
     this.cache.invalidate(extId)
     this.cache.invalidate(this.getAllKey)
@@ -583,15 +710,21 @@ export class FacilitatorsService {
   async changeRole(extId: string, roleId): Promise<boolean> {
     const user = await this.authService.getUser(`user.extId='${extId}'`)
 
-    if (user.id === 0) throw new NotFoundException('', 'USER_NOT_FOUND')
+    if (!user || user.id === 0)
+      throw new NotFoundException('', 'USER_NOT_FOUND')
 
-    const currentRole = user.roles.filter(role => role.service === 'affiliate-portal')[0];
+    const currentRole = (user.roles || []).filter(
+      role => role.service === 'affiliate-portal',
+    )[0]
 
-    const set = { userEmail: user.email, roleId }
+    const set = { userEmail: user.email!, roleId }
 
     // remove any existing affiliate-portal role
     if (typeof currentRole !== 'undefined') {
-      await this.authService.removeRoleFromUser({ userEmail: user.email, roleId: currentRole.id })
+      await this.authService.removeRoleFromUser({
+        userEmail: user.email!,
+        roleId: currentRole.id!,
+      })
     }
 
     const added = await this.authService.addRoleToUser(set)
@@ -608,16 +741,21 @@ export class FacilitatorsService {
    */
   async generateReset(email: string): Promise<string> {
     // FIXME: this really should be a function in authService
-    const user = await this.authService.getUser(`user.email='${email}'`)
+    const user = (await this.authService.getUser(
+      `user.email='${email}'`,
+    )) as Required<A.User>
 
     if (user.id === 0) throw new NotFoundException('', 'USER_NOT_FOUND')
 
     const expires = Date.now() + 1000 * 60 * 60
-    const token = jwt.encode({ expires, email }, process.env.JWT_SECRET || 'ilikedogges')
+    const token = jwt.encode(
+      { expires, email },
+      process.env.JWT_SECRET || 'ilikedogges',
+    )
 
     user.resetToken = token
 
-    await this.authService.updateUser(_.omit(user, ['password']))
+    await this.authService.updateUser(user)
 
     return token
   }
@@ -627,20 +765,22 @@ export class FacilitatorsService {
    * @param token jwt token
    * @param password new password
    */
-  async resetPassword(token: string, password: string): Promise<User> {
+  async resetPassword(token: string, password: string): Promise<A.User> {
     // FIXME: this should be a function in authService
+    // FIXME: we shouldn't be storing reset tokens in a database, they should just be a JWT containing email
     const user = await this.authService.getUser(`user.resetToken='${token}'`)
 
     // Why are they checking for the user with id 0 everywhere?
-    if (user.id === 0) throw new NotFoundException('', 'USER_NOT_FOUND')
+    if (!user || user.id === 0)
+      throw new NotFoundException('', 'USER_NOT_FOUND')
 
     const decoded = jwt.decode(token, process.env.JWT_SECRET || 'ilikedogges')
 
-    if (new Date(decoded.expires) < new Date()) throw new ForbiddenException('', 'RESET_TOKEN_EXPIRED')
+    if (new Date(decoded.expires) < new Date())
+      throw new ForbiddenException('', 'RESET_TOKEN_EXPIRED')
 
-    await this.authService.updateUser({ id: user.id, password })
+    await this.authService.updateUser({ id: user.id!, password })
 
     return user
   }
-
 }

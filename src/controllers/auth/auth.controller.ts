@@ -1,72 +1,77 @@
 import {
-    Controller,
-    Get, Post,
-    Request, Response, Headers,
-    Body, Inject, BadRequestException,
-    ForbiddenException, InternalServerErrorException, NotFoundException, Session
+  Controller,
+  Get,
+  Post,
+  Body,
+  Inject,
+  ForbiddenException,
+  InternalServerErrorException,
+  UseGuards,
 } from '@nestjs/common'
 
 import _ from 'lodash'
-import { parseError, getBearerToken } from '../../util'
-import { SalesforceClient } from '@shingo/shingo-sf-api'
-import { AuthClient } from '@shingo/shingo-auth-api'
+import { SalesforceClient } from '@shingo/sf-api-client'
+import { AuthClient } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
-import { LoginBody, LoginAsBody } from './authInterfaces';
-import { ChangePasswordBody } from '../facilitators/facilitatorInterfaces';
+import { LoginBody, LoginAsBody } from './authInterfaces'
+import { ChangePasswordBody } from '../facilitators/facilitatorInterfaces'
+import { AuthUser } from '../../guards/auth.guard'
+import { RoleGuard, AuthGuard } from '../../guards'
+import { IsAffiliateManager, User } from '../../decorators'
 
 /**
  * Provides the controller of the Auth REST logic
  */
 @Controller('auth')
 export class AuthController {
-
   constructor(
     private sfService: SalesforceClient,
     private authService: AuthClient,
-    @Inject('LoggerService') private log: LoggerInstance
-  ) { }
+    @Inject('LoggerService') private log: LoggerInstance,
+  ) {}
 
   /**
    * ### POST: /auth/login
+   * Returns a user object with jwt token as property 'jwt'
    *
-   * @param body - Required fields: <code>[ 'email', 'password' ]</code>
+   * @param body login credentials
    */
   @Post('login')
-  async login(@Session() session, @Body() body: LoginBody) {
-    const user = await this.authService.login(body).catch(e => {
-      this.log.debug(e)
-      const parsed = parseError(e)
-      if (parsed.error === 'INVALID_PASSWORD' || parsed.error === 'EMAIL_NOT_FOUND') {
-        throw new ForbiddenException(parsed.message || '', parsed.error)
-      }
+  async login(@Body() body: LoginBody) {
+    const user = await this.authService
+      .login(body)
+      .then(jwt => ({
+        ...this.authService.getUser(`user.email='${body.email}'`),
+        jwt,
+      }))
+      .catch((e: Error) => {
+        this.log.debug(e as any)
+        if (
+          e.message === 'INVALID_PASSWORD' ||
+          e.message === 'EMAIL_NOT_FOUND'
+        ) {
+          throw new ForbiddenException(e.message || '')
+        }
 
-      throw new InternalServerErrorException(parsed.message || '', parsed.error)
-    })
+        throw new InternalServerErrorException(
+          e.message || 'Unknown error when logging in',
+        )
+      })
 
     if (typeof user === 'undefined') {
       throw new ForbiddenException('', 'INVALID_LOGIN')
     }
 
-    if (!user.services.includes('affiliate-portal')) {
+    if (!(user.services || '').includes('affiliate-portal')) {
       throw new ForbiddenException('', 'NOT_REGISTERED')
     }
 
-    session.user = await this.getSessionUser(user)
-    session.affiliate = session.user.AccountId
-
-    return _.omit(session.user, ['permissions', 'extId', 'services', 'role.permissions'])
-  }
-
-  private async getSessionUser(user): Promise<any> {
-    const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0]
-    let sessionUser = _.omit(user, ['password', 'roles'])
-    sessionUser = _.merge(contact, _.omit(sessionUser, ['email']))
-    sessionUser.role = user.roles.map(role => {
-      if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service'])
-      return role
-    })[0]
-
-    return sessionUser
+    return _.omit(user, [
+      'permissions',
+      'extId',
+      'services',
+      'role.permissions',
+    ])
   }
 
   /**
@@ -76,56 +81,62 @@ export class AuthController {
    * @memberof AuthController
    */
   @Get('valid')
-  async valid(@Request() req) {
-    return _.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions'])
-  }
-
-  /**
-   * ### GET: /auth/logout
-   * Sets the user's JWT to '' and removes the user from the session
-   */
-  @Get('logout')
-  async logout(@Request() req) {
-    if (!req.session.user) throw new NotFoundException('', 'NO_LOGIN_FOUND')
-    req.session.user.jwt = `${Math.random()}`; // WHYYY
-    req.session.user.email = req.session.user.Email;
-    await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']))
-    req.session.user = null
-    return { message: 'LOGOUT_SUCCESS' }
+  @UseGuards(AuthGuard)
+  async valid(@User() user: AuthUser) {
+    return _.omit(user, [
+      'permissions',
+      'extId',
+      'services',
+      'role.permissions',
+    ])
   }
 
   @Post('/changepassword')
-  async changePassword(@Session() session, @Body() body: ChangePasswordBody) {
-    session.user.password = body.password
-
-    const updated = await this.authService.updateUser(_.pick(session.user, ['id', 'password']))
-
-    session.user = await this.authService.getUser(`user.id=${session.user.id}`)
-    session.user = await this.getSessionUser(session.user)
-
-    return { jwt: session.user.jwt }
+  @UseGuards(AuthGuard)
+  async changePassword(
+    @User() user: AuthUser,
+    @Body() body: ChangePasswordBody,
+  ) {
+    const updated = await this.authService.updateUser({
+      id: user.id!,
+      password: body.password,
+    })
+    if (updated) {
+      const jwt = await this.authService.login({
+        email: user.email!,
+        password: body.password,
+      })
+      return { jwt }
+    } else {
+      throw new InternalServerErrorException(
+        `Server was unable to update password for user ${user.email}`,
+      )
+    }
   }
 
   @Post('/loginas')
-  async loginAs(
-    @Session() session,
-    @Headers('x-jwt') xJwt: string,
-    @Headers('Authorization') auth: string,
-    @Body() body: LoginAsBody
-  ): Promise<Response> {
-    const adminToken = getBearerToken(auth || '') || xJwt
-
-    if (session.user.id !== body.adminId) {
+  @IsAffiliateManager()
+  @UseGuards(AuthGuard, RoleGuard)
+  async loginAs(@User() user: AuthUser, @Body() body: LoginAsBody) {
+    if (user.id !== body.adminId) {
       throw new ForbiddenException('', 'UNAUTHORIZED')
     }
 
-    const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId})
-    session.user = await this.getSessionUser(user)
-    session.user.adminToken = adminToken
-    session.affiliate = session.user.AccountId
+    // loginAs should probably return a jwt token, since everything else requires that for auth
+    // client would store the token and use it for future requests, then use old token when switching back
+    const newUser = await this.authService.loginAs({
+      adminId: body.adminId,
+      userId: body.userId,
+    })
 
     this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`)
 
-    return _.omit(session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password'])
+    return _.omit(newUser, [
+      'permissions',
+      'extId',
+      'services',
+      'role.permissions',
+      'password',
+    ])
   }
 }

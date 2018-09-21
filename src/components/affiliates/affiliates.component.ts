@@ -3,10 +3,13 @@ import { CacheService } from '..'
 import { Affiliate } from './affiliate'
 import _ from 'lodash'
 import { tryCache, RequireKeys } from '../../util'
-import { SalesforceClient, QueryRequest } from '@shingo/shingo-sf-api'
-import { AuthClient } from '@shingo/shingo-auth-api'
+import { SalesforceClient } from '@shingo/sf-api-client'
+import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
-import { CreateBody, UpdateBody } from '../../controllers/affiliates/affiliateInterfaces'
+import {
+  CreateBody,
+  UpdateBody,
+} from '../../controllers/affiliates/affiliateInterfaces'
 
 export { Affiliate }
 
@@ -18,13 +21,12 @@ export { Affiliate }
  */
 @Injectable()
 export class AffiliatesService {
-
   constructor(
     private sfService: SalesforceClient,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance
-  ) { }
+    @Inject('LoggerService') private log: LoggerInstance,
+  ) {}
 
   /**
    * @desc Get all Affiliates (minus McKinsey if <code>isPublic</code>).
@@ -46,11 +48,11 @@ export class AffiliatesService {
    * @param refresh Force the refresh of the cache
    */
   async getAll(isPublic = false, refresh = false): Promise<Affiliate[]> {
-    const keyBase = 'AffiliatesService.getAll';
+    const keyBase = 'AffiliatesService.getAll'
     const key = isPublic ? keyBase + '_public' : keyBase
 
     const clauseBase = `RecordType.DeveloperName='Licensed_Affiliate'`
-    const query: QueryRequest = {
+    const query = {
       fields: [
         'Id',
         'Name',
@@ -61,22 +63,31 @@ export class AffiliatesService {
         'Languages__c',
       ],
       table: 'Account',
-      clauses: isPublic ? clauseBase + ` AND (NOT Name Like 'McKinsey%')` : clauseBase,
+      clauses: isPublic
+        ? clauseBase + ` AND (NOT Name Like 'McKinsey%')`
+        : clauseBase,
     }
 
-    const affiliates = await tryCache(
+    const affiliates = (await tryCache(
       this.cache,
       key,
-      () => this.sfService.query(query).then(q => q.records || []), refresh
-    ) as Affiliate[]
+      () => this.sfService.query(query).then(q => q.records || []),
+      refresh,
+    )) as Affiliate[]
 
     if (isPublic) {
       return affiliates
     }
 
-    const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`));
+    const roles = await this.authService.getRoles(
+      `role.name LIKE 'Course Manager -- %'`,
+    )
 
-    return affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
+    return affiliates.filter(
+      aff =>
+        roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !==
+        -1,
+    )
   }
 
   /**
@@ -85,7 +96,11 @@ export class AffiliatesService {
    * @param id Salesforce ID for an Account
    */
   get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
-    return tryCache(this.cache, id, async () => (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0])
+    return tryCache(this.cache, id, () =>
+      this.sfService
+        .retrieve({ object: 'Account', ids: [id] })
+        .then(r => (Array.isArray(r) ? r[0] : r)),
+    )
   }
 
   /**
@@ -98,7 +113,12 @@ export class AffiliatesService {
     // Set the key for the cache
     const key = 'describeAccounts'
 
-    return tryCache(this.cache, key, () => this.sfService.describe('Account'), refresh)
+    return tryCache(
+      this.cache,
+      key,
+      () => this.sfService.describe('Account'),
+      refresh,
+    )
   }
 
   /**
@@ -126,8 +146,12 @@ export class AffiliatesService {
    * @param retrieve A list of the Account fields to retrieve (i.e. 'Id, Name')
    * @param refresh Force the refresh of the cache
    */
-  search(search: string, retrieve: string[], refresh = false): Promise<Affiliate[]> {
-    const newRetrieve = [...(new Set([...retrieve, 'RecordType.DeveloperName']))]
+  search(
+    search: string,
+    retrieve: string[],
+    refresh = false,
+  ): Promise<Affiliate[]> {
+    const newRetrieve = [...new Set([...retrieve, 'RecordType.DeveloperName'])]
     // Generate the data parameter for the RPC call
     const data = {
       search: `{${search}}`,
@@ -135,10 +159,21 @@ export class AffiliatesService {
     }
 
     // If no cached result, use the shingo-sf-api to get result
-    return tryCache(this.cache, data, async () => {
-      const affiliates = (await this.sfService.search(data)).searchRecords as Affiliate[] || []
-      return affiliates.filter(aff => aff.RecordType && aff.RecordType.DeveloperName === 'Licensed_Affiliate')
-    }, refresh)
+    return tryCache(
+      this.cache,
+      data,
+      async () => {
+        const affiliates =
+          ((await this.sfService.search(data)).searchRecords as Affiliate[]) ||
+          []
+        return affiliates.filter(
+          aff =>
+            aff.RecordType &&
+            aff.RecordType.DeveloperName === 'Licensed_Affiliate',
+        )
+      },
+      refresh,
+    )
   }
 
   /**
@@ -150,18 +185,36 @@ export class AffiliatesService {
    * @param retrieve A list of the Account fields to retrieve (i.e. 'Id, Name')
    * @param refresh Force the refresh of the cache
    */
-  async searchCM(id: string, search: string, retrieve: string[], refresh = false): Promise<any[]> {
-    const newRetrieve = [...(new Set([...retrieve, 'AccountId']))]
+  async searchCM(
+    id: string,
+    search: string,
+    retrieve: string[],
+    refresh = false,
+  ): Promise<any[]> {
+    const newRetrieve = [...new Set([...retrieve, 'AccountId'])]
 
     const data = {
       search: `{${search}}`,
       retrieve: `Contact(${newRetrieve.join()})`,
     }
 
-    return tryCache(this.cache, data, async () => {
-      const cms = (await this.sfService.search(data)).searchRecords || []
-      return cms.filter(cm => cm.AccountId === id)
-    }, refresh)
+    return tryCache(
+      this.cache,
+      data,
+      async () => {
+        const cms = (await this.sfService.search(data)).searchRecords || []
+        return cms.filter(cm => {
+          if (typeof cm !== 'object') {
+            throw new Error(
+              `Got unexpected result from SF.search: got ${cm}, expected object`,
+            )
+          }
+
+          return (cm as any).AccountId === id
+        })
+      },
+      refresh,
+    )
   }
 
   /**
@@ -200,13 +253,25 @@ export class AffiliatesService {
     })
 
     for (const level of [0, 1, 2] as [0, 1, 2]) {
-      this.authService.createPermission({ resource: `workshops -- ${id}`, level }).then(workshopPerm =>
-        this.authService.grantPermissionToRole(workshopPerm.resource, 2, cm.id)
-      )
+      this.authService
+        .createPermission({ resource: `workshops -- ${id}`, level })
+        .then(workshopPerm =>
+          this.authService.grantPermissionToRole(
+            workshopPerm.resource!,
+            2,
+            cm.id!,
+          ),
+        )
 
-      this.authService.createPermission({ resource: `affiliate -- ${id}`, level }).then(affiliatePerm =>
-        this.authService.grantPermissionToRole(affiliatePerm.resource, 1, cm.id)
-      )
+      this.authService
+        .createPermission({ resource: `affiliate -- ${id}`, level })
+        .then(affiliatePerm =>
+          this.authService.grantPermissionToRole(
+            affiliatePerm.resource!,
+            1,
+            cm.id!,
+          ),
+        )
     }
 
     // tslint:disable-next-line:variable-name
@@ -281,14 +346,28 @@ export class AffiliatesService {
    */
   private deletePermissions(id: string) {
     // promise resolves when all permissions are deleted for every level
-    return Promise.all(([0, 1, 2] as [0, 1, 2]).map(level => {
-      return [
-        this.authService.deletePermission(`workshops -- ${id}`, level)
-          .then(success => ({ perm: `workshops -- ${id}`, level, success })),
-        this.authService.deletePermission(`affiliate -- ${id}`, level)
-          .then(success => ({ perm: `affiliate -- ${id}`, level, success })),
-      ]
-    }).reduce((p, c) => [...p, ...c], []))
+    return Promise.all(
+      ([0, 1, 2] as [0, 1, 2])
+        .map(level => {
+          return [
+            this.authService
+              .deletePermission(`workshops -- ${id}`, level)
+              .then(success => ({
+                perm: `workshops -- ${id}`,
+                level,
+                success,
+              })),
+            this.authService
+              .deletePermission(`affiliate -- ${id}`, level)
+              .then(success => ({
+                perm: `affiliate -- ${id}`,
+                level,
+                success,
+              })),
+          ]
+        })
+        .reduce((p, c) => [...p, ...c], []),
+    )
   }
 
   /**
@@ -298,8 +377,17 @@ export class AffiliatesService {
    * @param id The Affiliate's Salesforce Id
    */
   private async deleteRoles(id: string) {
-    const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`)
-    return this.authService.deleteRole(cm)
+    const cm = await this.authService.getRole(
+      `role.name='Course Manager -- ${id}'`,
+    )
+    if (!cm) {
+      this.log.warn(
+        `affiliate.deleteRoles(): Role 'Course Manager -- ${id}' does not exist`,
+      )
+      return true
+    }
+
+    return this.authService.deleteRole(cm as Required<A.Role>)
   }
 
   /**
@@ -308,15 +396,20 @@ export class AffiliatesService {
    * @param id The Affiliate's SalesforceId
    */
   private async deleteFacilitators(id: string) {
-    const query: QueryRequest = {
-        fields: ['Id'],
-        table: 'Contact',
-        clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`,
+    const query = {
+      fields: ['Id'],
+      table: 'Contact',
+      clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`,
     }
-    const facilitators = (await this.sfService.query(query)).records as any[] || [];
-    return Promise.all(facilitators.map(fac =>
-      this.authService.deleteUser({ extId: fac.Id })
-        .then(success => ({ facilitator: fac.Id as string, success }))
-    ))
+
+    const facilitators =
+      ((await this.sfService.query(query)).records as any[]) || []
+    return Promise.all(
+      facilitators.map(fac =>
+        this.authService
+          .deleteUser({ extId: fac.Id })
+          .then(success => ({ facilitator: fac.Id as string, success })),
+      ),
+    )
   }
 }

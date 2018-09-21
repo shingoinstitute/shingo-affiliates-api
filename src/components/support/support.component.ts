@@ -1,17 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
-import {
-    CacheService,
-} from '../';
-import { tryCache } from '../../util';
-import { SalesforceClient, QueryRequest, IdRequest, SearchRequest } from '@shingo/shingo-sf-api';
+import { Inject, Injectable } from '@nestjs/common'
+import { CacheService } from '../'
+import { tryCache, retrieveResult } from '../../util'
+import { SalesforceClient } from '@shingo/sf-api-client'
 import { LoggerInstance } from 'winston'
 
 // tslint:disable-next-line:class-name
 interface Support_Page__c {
-  Id: string,
-  Title__c: string,
-  Category__c: string,
-  Content__c: string,
+  Id: string
+  Title__c: string
+  Category__c: string
+  Content__c: string
   Restricted_To__c: string
 }
 
@@ -23,15 +21,14 @@ interface Support_Page__c {
  */
 @Injectable()
 export class SupportService {
-
   constructor(
     private sfService: SalesforceClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance
-  ) { }
+    @Inject('LoggerService') private log: LoggerInstance,
+  ) {}
 
   async getAll(role: string, refresh = false) {
-    const query: QueryRequest = {
+    const query = {
       fields: [
         'Id',
         'Title__c',
@@ -45,18 +42,25 @@ export class SupportService {
 
     return (await tryCache(
       this.cache,
-      query, () => this.sfService.query<Support_Page__c>(query).then(d => d.records || []),
-      refresh
+      query,
+      () =>
+        this.sfService.query<Support_Page__c>(query).then(d => d.records || []),
+      refresh,
     )).filter(page => page.Restricted_To__c.includes(role))
   }
 
   async get(id: string, refresh = false): Promise<any> {
-    const request: IdRequest = {
+    const request = {
       object: 'Support_Page__c',
       ids: [id],
     }
 
-    return tryCache(this.cache, request, () => this.sfService.retrieve(request).then(d => d[0]), refresh)
+    return tryCache(
+      this.cache,
+      request,
+      () => this.sfService.retrieve(request).then(retrieveResult),
+      refresh,
+    )
   }
 
   /**
@@ -67,22 +71,36 @@ export class SupportService {
    * @param refresh Force the refresh of the cache
    */
   async describe(refresh = false) {
-    const key = 'describeSupportPage';
+    const key = 'describeSupportPage'
 
-    return tryCache(this.cache, key, () => this.sfService.describe('Support_Page__c'), refresh);
+    return tryCache(
+      this.cache,
+      key,
+      () => this.sfService.describe('Support_Page__c'),
+      refresh,
+    )
   }
 
-  async search(search: string, retrieve: string[], role: string, refresh = false) {
+  async search(
+    search: string,
+    retrieve: string[],
+    role: string,
+    refresh = false,
+  ) {
     // Generate the data parameter for the RPC call
-    const data: SearchRequest = {
+    const data = {
       search: `{${search}}`,
       retrieve: `Support_Page__c(${retrieve.join(',')})`,
     }
 
     return (await tryCache(
       this.cache,
-      data, () => this.sfService.search(data).then(d => d.searchRecords as Support_Page__c[]),
-      refresh
-    )).filter(page => page.Restricted_To__c.includes(role));
+      data,
+      () =>
+        this.sfService
+          .search(data)
+          .then(d => d.searchRecords as Support_Page__c[]),
+      refresh,
+    )).filter(page => page.Restricted_To__c.includes(role))
   }
 }

@@ -1,23 +1,21 @@
 import { NestFactory } from '@nestjs/core'
 import { ApplicationModule } from './app.module'
-import { InitService } from './initService'
 import express from 'express'
 import bodyParser from 'body-parser'
-import session from 'express-session'
 import cors from 'cors'
-import connectRedis from 'connect-redis'
 import { loggerFactory } from './factories/logger.factory'
 import { ValidationPipe } from '@nestjs/common'
-
-// tslint:disable-next-line:variable-name
-const RedisStore = connectRedis(session)
 
 const port = process.env.PORT || 3000
 const log = loggerFactory()
 
 if (!process.env.AUTH_API || !process.env.SF_API || !process.env.EMAIL_PASS) {
   // tslint:disable-next-line:max-line-length
-  log.error(`Environment variables missing. AUTH: ${process.env.AUTH_API}; SF: ${process.env.SF_API}; EMAIL_PASS: ${process.env.EMAIL_PASS}`)
+  log.error(
+    `Environment variables missing. AUTH: ${process.env.AUTH_API}; SF: ${
+      process.env.SF_API
+    }; EMAIL_PASS: ${process.env.EMAIL_PASS}`,
+  )
   process.exit(1)
 }
 
@@ -33,63 +31,55 @@ let whitelist = [
 ]
 
 if (process.env.NODE_ENV !== 'production') {
-  whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'https://api.shingo.org'])
+  whitelist = whitelist.concat([
+    'http://localhost:4200',
+    'https://localhost',
+    'https://api.shingo.org',
+  ])
 }
 
 // Set up ExpressJS Server
 const server = express()
 
 // Set up CORS using specified options
-server.use(cors({
-        origin: (origin, callback) => {
-            if (process.env.NODE_ENV !== 'production') return callback(null, true)
+server.use(
+  cors({
+    origin: (origin, callback) => {
+      if (process.env.NODE_ENV !== 'production') return callback(null, true)
 
-            if (whitelist.indexOf(origin) > -1) {
-                log.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin)
-                callback(null, true)
-            } else {
-                log.warn(`${origin} was not in the whitelist: %j`, whitelist)
-                callback(new Error('Not allowed by CORS'))
-            }
-        },
-        credentials: true,
-    })
+      if (whitelist.indexOf(origin) > -1) {
+        log.debug("Setting 'Access-Control-Allow-Origin' to %s", origin)
+        callback(null, true)
+      } else {
+        log.warn(`${origin} was not in the whitelist: %j`, whitelist)
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    credentials: true,
+  }),
 )
 
 // Set up bodyParser to handle json and urlencoded bodies
 server.use(bodyParser.json())
 server.use(bodyParser.urlencoded({ extended: false }))
 
-// Set up express-session
-const options: any = {
-    secret: process.env.SESSION_SECRET || 'ilikedogz',
-    resave: true,
-    saveUninitialized: true,
-    proxy: true,
-}
-
-if (process.env.SHINGO_REDIS) {
-    options.store = new RedisStore({
-        host: process.env.SHINGO_REDIS,
-        port: 6379,
-    })
-}
-
-server.use(session(options))
-
 // Initialize the NestJS application and start the server
-InitService.init()
-    .then(async () => {
-        const app = await NestFactory.create(ApplicationModule, server)
-        app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '')
-        app.useGlobalPipes(new ValidationPipe({
-          transform: true,
-          disableErrorMessages: process.env.NODE_ENV === 'production',
-        }))
-        app.listen(port).then(() => log.info(`Application is listening on port ${port}`))
-    })
-    .catch(error => {
-        log.error('Error in lifting application!')
-        log.error(error)
-        process.exit(1)
-    })
+const bootstrap = async () => {
+  const app = await NestFactory.create(ApplicationModule, server)
+  app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '')
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      disableErrorMessages: process.env.NODE_ENV === 'production',
+    }),
+  )
+  app
+    .listen(port)
+    .then(() => log.info(`Application is listening on port ${port}`))
+}
+
+bootstrap().catch(error => {
+  log.error('Error in lifting application!')
+  log.error(error)
+  process.exit(1)
+})
