@@ -69,7 +69,7 @@ export class WorkshopsController {
    */
   @Get('public')
   readPublic(@Refresh() refresh: boolean | undefined) {
-    return this.workshopsService.getAll(true, refresh, null)
+    return this.workshopsService.getAll(true, refresh)
   }
 
   /**

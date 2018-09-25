@@ -14,6 +14,7 @@ import { AuthClient } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
 import { DescribeSObjectResult } from 'jsforce'
+import { AuthUser } from '../../guards/auth.guard'
 
 export { Workshop }
 
@@ -66,7 +67,11 @@ export class WorkshopsService {
    * @param user The user to filter permissions for (isPublic === false)
    * user needs permissions[] and roles[].permissions[]
    */
-  async getAll(isPublic = false, refresh = false, user?): Promise<Workshop[]> {
+  async getAll(
+    isPublic = false,
+    refresh = false,
+    user?: AuthUser,
+  ): Promise<Workshop[]> {
     const keyBase = 'WorkshopsService.getAll'
     const key = isPublic ? keyBase + '_public' : keyBase
 
@@ -99,7 +104,7 @@ export class WorkshopsService {
         query.fields.push(
           '(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)',
         )
-        const ids = getWorkshopIds(user)
+        const ids = (user && getWorkshopIds(user)) || []
         if (ids.length === 0) return []
 
         for (const chunkedIds of chunk(ids, 200)) {

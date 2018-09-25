@@ -78,16 +78,22 @@ export const defaultPort = (host: string, defPort: number) => {
  * @param user Requires user.permissions[] and user.roles[].permissions[]
  */
 // tslint:disable-next-line:max-line-length
-export function getWorkshopIds(user: {
-  permissions: Array<{ resource: string }>
-  roles: { permissions: Array<{ resource: string }> }
-}): string[] {
-  const ids = [...user.permissions, ...user.roles.permissions]
-    .filter(p => p.resource.includes('/workshops/'))
-    .map(p => `'${p.resource.replace('/worshops/', '')}'`)
+export function getWorkshopIds(user: AuthUser): string[] {
+  // permissions for affiliate portal roles
+  const affPermissions = flatten(
+    (user.roles || [])
+      .filter(r => r.service === 'affiliate-portal')
+      .map(r => r.permissions || []),
+  )
+  const ids = [...(user.permissions || []), ...affPermissions]
+    .filter(p => p.resource && p.resource.includes('/workshops/'))
+    .map(p => `'${p.resource!.replace('/worshops/', '')}'`)
 
   return [...new Set(ids)] // Only return unique ids
 }
+
+export const flatten = <T>(a: T[][]): T[] =>
+  a.reduce((p, c) => [...p, ...c], [])
 
 // taken from gcanti/fp-ts function.ts, all credit to gcanti/fp-ts
 // tslint:disable:max-line-length

@@ -11,7 +11,7 @@ import {
 
 import _ from 'lodash'
 import { SalesforceClient } from '@shingo/sf-api-client'
-import { AuthClient } from '@shingo/auth-api-client'
+import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 import { LoginBody, LoginAsBody } from './authInterfaces'
 import { ChangePasswordBody } from '../facilitators/facilitatorInterfaces'
@@ -40,10 +40,14 @@ export class AuthController {
   async login(@Body() body: LoginBody) {
     const user = await this.authService
       .login(body)
-      .then(jwt => ({
-        ...this.authService.getUser(`user.email='${body.email}'`),
-        jwt,
-      }))
+      .then(jwt =>
+        this.authService
+          .getUser(`user.email='${body.email}'`)
+          .then<{ jwt: string } & authservices.User>(u => ({
+            ...u,
+            jwt,
+          })),
+      )
       .catch((e: Error) => {
         this.log.debug(e as any)
         if (

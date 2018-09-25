@@ -15,6 +15,13 @@ export class ChangePasswordBody {
   @IsString()
   token!: string
 }
+export class Role {
+  @IsNumber()
+  id!: number
+
+  @IsString()
+  name!: string
+}
 
 export class CreateBody {
   @IsSalesforceId()
@@ -36,14 +43,6 @@ export class CreateBody {
   @IsOptional()
   @ValidateNested()
   role?: Role
-}
-
-export class Role {
-  @IsNumber()
-  id!: number
-
-  @IsString()
-  name!: string
 }
 
 export class MapBody {
