@@ -200,7 +200,7 @@ export class FacilitatorsController {
   async changePassword(@Body() body: ChangePasswordBody) {
     return this.facilitatorsService
       .resetPassword(body.token, body.password)
-      .then(user => ({ id: user.id, email: user.email }))
+      .then(jwt => ({ jwt }))
   }
 
   /**
@@ -301,7 +301,7 @@ export class FacilitatorsController {
   async map(
     @Body() body: MapBody,
     @Param('id', SalesforceIdValidator) id: string,
-  ): Promise<Response> {
+  ) {
     return this.facilitatorsService.mapContact(id, body)
   }
 
@@ -319,7 +319,7 @@ export class FacilitatorsController {
   async update(
     @Body() body: UpdateBody,
     @Param('id', SalesforceIdValidator) id: string,
-  ): Promise<Response> {
+  ) {
     if (body.Id !== id) {
       throw new BadRequestException(
         `Parameter id ${id} does not match field Id ${body.Id}`,

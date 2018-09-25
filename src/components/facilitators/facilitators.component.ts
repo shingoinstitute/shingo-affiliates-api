@@ -322,7 +322,7 @@ export class FacilitatorsService {
    *
    * @param id Salesforce ID for a Contact
    */
-  async get(id: string): Promise<any> {
+  async get(id: string) {
     // Create the data parameter for the RPC call
     const data = {
       object: 'Contact',
@@ -368,7 +368,7 @@ export class FacilitatorsService {
    *
    * @param user User to create
    */
-  async create(user): Promise<any> {
+  async create(user) {
     const contact = _.omit(user, ['Id', 'password', 'roleId', 'role'])
 
     // Create the contact in Salesforce
@@ -393,10 +393,7 @@ export class FacilitatorsService {
    * @param id  The Salesforce Id of the Contact to map
    * @param user The newly created user
    */
-  async mapContact(
-    id: string,
-    user: MapBody & { password?: string },
-  ): Promise<any> {
+  async mapContact(id: string, user: MapBody & { password?: string }) {
     const data = {
       object: 'Contact',
       ids: [id],
@@ -415,7 +412,7 @@ export class FacilitatorsService {
       ],
     }
 
-    const successObject = (await this.sfService.update(updateData))[0]
+    await this.sfService.update(updateData)
 
     this.cache.invalidate(this.getAllKey)
 
@@ -489,7 +486,7 @@ export class FacilitatorsService {
       .then(async user => {
         this.cache.invalidate(this.getAllKey)
         const token = await this.authService.login({ email, password })
-        return { jwt: token, id: user.id }
+        return { jwt: token, id: user.id! }
       })
   }
 
@@ -512,7 +509,7 @@ export class FacilitatorsService {
     user.services =
       user.services === ''
         ? 'affiliate-portal'
-        : user.services + ', affiliate-portal'
+        : [...new Set([...user.services.split(','), 'affiliate-portal'])].join()
     await this.authService.updateUser(user)
 
     this.cache.invalidate(this.getAllKey)
@@ -538,7 +535,7 @@ export class FacilitatorsService {
    *
    * @param user The facilitator object to update
    */
-  async update(user): Promise<any> {
+  async update(user) {
     const contact = _.omit(user, [
       'password',
       'Account',
@@ -739,25 +736,8 @@ export class FacilitatorsService {
    * Generates a reset token for a user
    * @param email user email
    */
-  async generateReset(email: string): Promise<string> {
-    // FIXME: this really should be a function in authService
-    const user = (await this.authService.getUser(
-      `user.email='${email}'`,
-    )) as Required<A.User>
-
-    if (user.id === 0) throw new NotFoundException('', 'USER_NOT_FOUND')
-
-    const expires = Date.now() + 1000 * 60 * 60
-    const token = jwt.encode(
-      { expires, email },
-      process.env.JWT_SECRET || 'ilikedogges',
-    )
-
-    user.resetToken = token
-
-    await this.authService.updateUser(user)
-
-    return token
+  async generateReset(email: string) {
+    return this.authService.generateResetToken(email)
   }
 
   /**
@@ -765,22 +745,7 @@ export class FacilitatorsService {
    * @param token jwt token
    * @param password new password
    */
-  async resetPassword(token: string, password: string): Promise<A.User> {
-    // FIXME: this should be a function in authService
-    // FIXME: we shouldn't be storing reset tokens in a database, they should just be a JWT containing email
-    const user = await this.authService.getUser(`user.resetToken='${token}'`)
-
-    // Why are they checking for the user with id 0 everywhere?
-    if (!user || user.id === 0)
-      throw new NotFoundException('', 'USER_NOT_FOUND')
-
-    const decoded = jwt.decode(token, process.env.JWT_SECRET || 'ilikedogges')
-
-    if (new Date(decoded.expires) < new Date())
-      throw new ForbiddenException('', 'RESET_TOKEN_EXPIRED')
-
-    await this.authService.updateUser({ id: user.id!, password })
-
-    return user
+  async resetPassword(token: string, password: string) {
+    return this.authService.resetPassword(token, password)
   }
 }

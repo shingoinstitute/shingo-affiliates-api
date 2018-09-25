@@ -1,4 +1,10 @@
-import { IsString, IsEmail, ValidateNested, IsBase64, IsOptional, IsNumberString, IsNumber } from 'class-validator'
+import {
+  IsString,
+  IsEmail,
+  ValidateNested,
+  IsOptional,
+  IsNumber,
+} from 'class-validator'
 import { IsSalesforceId } from '../../validators'
 // tslint:disable:max-classes-per-file variable-name
 
@@ -6,7 +12,7 @@ export class ChangePasswordBody {
   @IsString()
   password!: string
 
-  @IsBase64()
+  @IsString()
   token!: string
 }
 

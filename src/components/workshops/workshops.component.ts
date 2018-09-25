@@ -491,7 +491,7 @@ export class WorkshopsService {
    *
    * @param id The workshop id
    */
-  async delete(id: string): Promise<any> {
+  async delete(id: string) {
     // Create the data parameter for the RPC call
     const data = {
       object: 'Workshop__c',
@@ -512,7 +512,7 @@ export class WorkshopsService {
     return result
   }
 
-  async cancel(id: string, reason: string): Promise<any> {
+  async cancel(id: string, reason: string) {
     const updateData = {
       object: 'Workshop__c',
       records: [

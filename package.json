@@ -12,7 +12,7 @@
     "@nestjs/cqrs": "^5.1.1",
     "@nestjs/microservices": "^5.1.0",
     "@nestjs/websockets": "^5.1.0",
-    "@shingo/auth-api-client": "^1.0.0-alpha.3",
+    "@shingo/auth-api-client": "^1.0.0-alpha.4",
     "@shingo/sf-api-client": "^1.0.0-alpha.1",
     "body-parser": "^1.18.3",
     "class-transformer": "^0.1.9",

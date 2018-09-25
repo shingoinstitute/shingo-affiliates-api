@@ -49,7 +49,7 @@ export class SupportService {
     )).filter(page => page.Restricted_To__c.includes(role))
   }
 
-  async get(id: string, refresh = false): Promise<any> {
+  async get(id: string, refresh = false) {
     const request = {
       object: 'Support_Page__c',
       ids: [id],

@@ -232,7 +232,6 @@ export class AffiliatesService {
     const result = (await this.sfService.create(data))[0]
 
     if (result.success) {
-      // tslint:disable-next-line:no-object-literal-type-assertion
       await this.map(result.id)
     }
 
@@ -252,27 +251,30 @@ export class AffiliatesService {
       service: 'affiliate-portal',
     })
 
-    for (const level of [0, 1, 2] as [0, 1, 2]) {
-      this.authService
-        .createPermission({ resource: `workshops -- ${id}`, level })
-        .then(workshopPerm =>
-          this.authService.grantPermissionToRole(
-            workshopPerm.resource!,
-            2,
-            cm.id!,
-          ),
-        )
-
-      this.authService
-        .createPermission({ resource: `affiliate -- ${id}`, level })
-        .then(affiliatePerm =>
-          this.authService.grantPermissionToRole(
-            affiliatePerm.resource!,
-            1,
-            cm.id!,
-          ),
-        )
-    }
+    await Promise.all(
+      ([0, 1, 2] as [0, 1, 2]).map(level =>
+        Promise.all([
+          this.authService
+            .createPermission({ resource: `workshops -- ${id}`, level })
+            .then(workshopPerm =>
+              this.authService.grantPermissionToRole(
+                workshopPerm.resource!,
+                2,
+                cm.id!,
+              ),
+            ),
+          this.authService
+            .createPermission({ resource: `affiliate -- ${id}`, level })
+            .then(affiliatePerm =>
+              this.authService.grantPermissionToRole(
+                affiliatePerm.resource!,
+                1,
+                cm.id!,
+              ),
+            ),
+        ]),
+      ),
+    )
 
     // tslint:disable-next-line:variable-name
     const RecordTypeId = '012A0000000zpraIAA'
