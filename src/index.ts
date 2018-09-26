@@ -15,14 +15,13 @@ const log = new LoggerService();
 
 // Set up CORS whitelist
 let whitelist = ['https://affiliates.shingo.org', 'http://affiliates.shingo.org', 'https://beta-affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
-if (process.env.NODE_ENV !== 'production') whitelist = whitelist.concat(['http://localhost:4200', 'https://localhost', 'http://172.18.0.5', 'http://129.123.47.167']);
 
 // Set up ExpressJS Server
 const server = express();
 
 const corsOptions = {
     origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) > -1) {
+        if (whitelist.indexOf(origin) > -1 || process.env.NODE_ENV !== 'production') {
             log.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
             callback(null, true);
         } else {
