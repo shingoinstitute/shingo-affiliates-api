@@ -26,7 +26,7 @@ const mockLogin = (
 const mockGetUser = (users: {
   [clause: string]: authservices.User
 }): AuthClient['getUser'] => async clause =>
-  clause === ''
+  typeof clause === 'undefined' || clause === ''
     ? (Object.keys(users).length && users[Object.keys(users)[0]]) || undefined
     : users[clause]
 
@@ -122,6 +122,7 @@ describe('AuthController', () => {
         .mockImplementation(
           mockGetUser({ "user.email='abe.white@usu.edu'": abeUser }),
         )
+
       return expect(await authController.login(credential)).toEqual({
         ...abeUser,
         jwt: abeUser.email,
@@ -139,13 +140,15 @@ describe('AuthController', () => {
           mockGetUser({ "user.email='abe.white@usu.edu'": abeUser }),
         )
 
-      expect(
-        authController.login({ ...credential, password: 'asdfasd' }),
-      ).rejects.toThrowError(ForbiddenException)
+      return Promise.all([
+        expect(
+          authController.login({ ...credential, password: 'asdfasd' }),
+        ).rejects.toThrowError(ForbiddenException),
 
-      expect(
-        authController.login({ ...credential, email: 'a@a.com' }),
-      ).rejects.toThrowError(ForbiddenException)
+        expect(
+          authController.login({ ...credential, email: 'a@a.com' }),
+        ).rejects.toThrowError(ForbiddenException),
+      ])
     })
 
     it('throws a forbidden exception if services does not contain affiliate-portal', () => {
@@ -159,7 +162,7 @@ describe('AuthController', () => {
         }),
       )
 
-      expect(authController.login(credential)).rejects.toThrowError(
+      return expect(authController.login(credential)).rejects.toThrowError(
         ForbiddenException,
       )
     })
@@ -266,7 +269,7 @@ describe('AuthController', () => {
         },
       }
 
-      expect(authController.valid(user)).resolves.toEqual(user)
+      return expect(authController.valid(user)).resolves.toEqual(user)
     })
   })
 
@@ -279,7 +282,7 @@ describe('AuthController', () => {
 
     it('gets the jwt for a requested user', () => {
       jest.spyOn(authService, 'login').mockImplementation(mockLoginAs(users))
-      expect(
+      return expect(
         authController.loginAs({ id: 1 } as any, { userId: 2 }),
       ).resolves.toEqual('jwt-2')
     })
@@ -318,11 +321,9 @@ describe('AuthController', () => {
       const oldUser = { ...users[0] }
       const body = { password: 'some-password' }
 
-      expect(
-        authController.changePassword(users[0] as any, body),
-      ).resolves.toEqual({ jwt: users[0].email })
-
-      expect(users[0]).toEqual({ ...oldUser, ...body })
+      return expect(authController.changePassword(users[0] as any, body))
+        .resolves.toEqual({ jwt: users[0].email })
+        .then(() => expect(users[0]).toEqual({ ...oldUser, ...body }))
     })
   })
 })

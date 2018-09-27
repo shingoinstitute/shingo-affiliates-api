@@ -5,7 +5,7 @@ import { SalesforceClient } from '@shingo/sf-api-client'
 import { LoggerInstance } from 'winston'
 
 // tslint:disable-next-line:class-name
-interface Support_Page__c {
+export interface Support_Page__c {
   Id: string
   Title__c: string
   Category__c: string
