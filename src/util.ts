@@ -16,7 +16,6 @@ export type RequireKeys<T extends object, K extends keyof T> = Overwrite<
 >
 
 export type Arguments<T> = T extends (...args: infer A) => any ? A : never
-export type First<T extends any[]> = T extends [infer A, ...any[]] ? A : never
 
 export class Token<T = never> {
   constructor(public name?: string) {}

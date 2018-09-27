@@ -19,8 +19,9 @@ export class ChangePasswordBody {
 }
 
 export class LoginAsBody {
+  @IsOptional()
   @IsNumber()
-  adminId!: number
+  adminId?: number
 
   @IsNumber()
   userId!: number

@@ -1,106 +1,328 @@
-import { Test as NestTest } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService, LoggerService, SalesforceService } from '../../components';
-import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockLoggerInstance } from '../../components/mock';
-import { MockExpressInstance, MockServiceFactory } from '../../factories/index.mock';
-import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
+import { Test } from '@nestjs/testing'
+import { AuthController } from './auth.controller'
+import { AuthClient, authservices } from '@shingo/auth-api-client'
+import { LoggerServiceProvider } from '../../providers'
+import { ForbiddenException } from '@nestjs/common'
+import { SalesforceClient } from '@shingo/sf-api-client'
+import { AuthUser } from '../../guards/auth.guard'
+import { Arguments } from '../../util'
+import { id } from '../../util/fp'
 
-function getController() {
-    const controller: AuthController = NestTest.get<AuthController>(AuthController);
-    const handleError = SpyOn(controller, 'handleError');
-    handleError.andStub();
-    return { controller, handleError };
+const mockLogin = (
+  database: Array<{ email: string; password: string }>,
+  jwt: (email: string) => string = id,
+): AuthClient['login'] => async creds => {
+  const foundUser = database.find(e => e.email === creds.email)
+  if (!foundUser) {
+    throw new Error('EMAIL_NOT_FOUND')
+  }
+  if (foundUser.password !== creds.password) {
+    throw new Error('INVALID_PASSWORD')
+  }
+
+  return jwt(foundUser.email)
 }
 
-@TestFixture('Auth Controller')
-export class AuthControllerFixture {
+const mockGetUser = (users: {
+  [clause: string]: authservices.User
+}): AuthClient['getUser'] => async clause =>
+  clause === ''
+    ? (Object.keys(users).length && users[Object.keys(users)[0]]) || undefined
+    : users[clause]
 
-    private mockAuthService: MockAuthServiceInstance;
-    private mockSFService: MockSalesforceServiceInstance;
-    private mockExpress: MockExpressInstance;
+const mockLoginAs = (
+  users: Array<{ id: number; jwt: string; permissionFor: number[] }>,
+): AuthClient['loginAs'] => async req => {
+  const adminUser = users.find(u => u.id === req.adminId)
+  if (!adminUser) {
+    throw new Error()
+  }
 
-    @Setup
-    public Setup() {
-        this.mockAuthService = MockServiceFactory.getMockInstance<MockAuthServiceInstance>(MockAuthServiceInstance);
-        this.mockSFService = MockServiceFactory.getMockInstance<MockSalesforceServiceInstance>(MockSalesforceServiceInstance);
-        this.mockExpress = MockServiceFactory.getMockInstance<MockExpressInstance>(MockExpressInstance);
+  if (!adminUser.permissionFor.includes(req.userId)) {
+    throw new Error(`Invalid permissions for 'user -- ${req.userId}'`)
+  }
 
-        NestTest.createTestingModule({
-            controllers: [AuthController],
-            components: [
-                { provide: AuthService, useValue: this.mockAuthService },
-                { provide: SalesforceService, useValue: this.mockSFService },
-                { provide: LoggerService, useValue: MockServiceFactory.getMockInstance<MockLoggerInstance>(MockLoggerInstance) }
-            ]
-        });
-    }
+  const reqUser = users.find(u => u.id === req.userId)
 
-    @Test('Controller initilized correclty')
-    public initialized() {
-        const { controller } = getController();
+  if (!reqUser) {
+    throw new Error('Invalid User ID')
+  }
 
-        Expect(controller).toBeDefined();
-        Expect(controller.login).toBeDefined();
-        Expect(controller.valid).toBeDefined();
-        Expect(controller.logout).toBeDefined();
-    }
-
-    @TestCase({ email: 'test.user@example.com', password: 'password' }, true)
-    @TestCase({ password: 'password' }, false) // Missing email
-    @TestCase({ email: 'test.user@example.com' }, false) // Missing password
-    @AsyncTest('Login a user')
-    public async login(body: any, isValid: boolean) {
-        const { controller, handleError } = getController();
-
-        await controller.login(this.mockExpress.req, this.mockExpress.res, body);
-
-        if (isValid) {
-            Expect(this.mockAuthService.login).toHaveBeenCalledWith(body).exactly(1).times;
-            Expect(this.mockSFService.query).toHaveBeenCalledWith(Any).exactly(1).times;
-            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
-        } else {
-            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in AuthController.login(): ', Any, HttpStatus.BAD_REQUEST).exactly(1).times;
-            Expect(this.mockAuthService.login).not.toHaveBeenCalled();
-            Expect(this.mockSFService.query).not.toHaveBeenCalled();
-
-            // Because we "stubbed" the handleError, res.status never gets called
-            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
-        }
-    }
-
-    @AsyncTest('Validate a user')
-    public async valid() {
-        const { controller, handleError } = getController();
-
-        await controller.valid(this.mockExpress.req, this.mockExpress.res);
-
-        Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-        Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
-    }
-
-    @TestCase({ id: 1 }, true)
-    @TestCase(undefined, false)
-    @AsyncTest('Logout a user')
-    public async logout(user: any, isValid: boolean) {
-        const { controller, handleError } = getController();
-
-        this.mockExpress.req.session.user = user;
-
-        await controller.logout(this.mockExpress.req, this.mockExpress.res);
-
-        if (isValid) {
-            Expect(this.mockAuthService.updateUser).toHaveBeenCalledWith(Any).exactly(1).times;
-            Expect(this.mockExpress.res.status).toHaveBeenCalledWith(HttpStatus.OK).exactly(1).times;
-            Expect(this.mockExpress.res.json).toHaveBeenCalledWith(Any).exactly(1).times;
-        } else {
-            Expect(handleError).toHaveBeenCalledWith(Any, 'Error in AuthController.logout(): ', Any, HttpStatus.NOT_FOUND).exactly(1).times;
-            Expect(this.mockAuthService.updateUser).not.toHaveBeenCalled();
-
-            // Because we "stubbed" the handleError, res.status never gets called
-            Expect(this.mockExpress.res.status).not.toHaveBeenCalled();
-        }
-    }
+  return reqUser.jwt
 }
 
+const mockUpdateUser = (
+  users: Array<Required<authservices.User>>,
+): AuthClient['updateUser'] => async updateData => {
+  // don't bother searching by extId since none of the mocked methods use extId
+  // will add later if tests start failing
+  const userIdx = users.findIndex(u => u.id === updateData.id)
+  if (userIdx < 0) {
+    throw new Error(`Id, ${updateData.id} did not map to a user.`)
+  }
+
+  users[userIdx] = { ...users[userIdx], ...updateData }
+
+  return true
+}
+
+describe('AuthController', () => {
+  let authController: AuthController
+  let authService: AuthClient
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      controllers: [AuthController],
+      providers: [
+        LoggerServiceProvider,
+        {
+          provide: AuthClient,
+          // very unlikely to be a service running on this port,
+          // so if any method is not mocked we definitely will fail
+          useFactory: () => new AuthClient('localhost:65535'),
+        },
+        {
+          provide: SalesforceClient,
+          useFactory: () => new SalesforceClient('localhost:65535'),
+        },
+      ],
+    }).compile()
+
+    authController = module.get<AuthController>(AuthController)
+    authService = module.get<AuthClient>(AuthClient)
+  })
+
+  describe('login', () => {
+    const abeUser = {
+      id: 1,
+      email: 'abe.white@usu.edu',
+      services: 'affiliate-portal',
+      roles: [
+        {
+          id: 2,
+          name: 'Affiliate-Manager',
+          service: 'affiliate-portal',
+        },
+      ],
+      isEnabled: true,
+      extId: 'someId',
+      resetToken: '',
+      lastLogin: 'Thur, 27 Sep 2018 18:00:43 GMT',
+    }
+
+    const credential = { email: 'abe.white@usu.edu', password: 'Password123' }
+
+    it('returns a logged in user', async () => {
+      jest
+        .spyOn(authService, 'login')
+        .mockImplementation(mockLogin([credential]))
+
+      jest
+        .spyOn(authService, 'getUser')
+        .mockImplementation(
+          mockGetUser({ "user.email='abe.white@usu.edu'": abeUser }),
+        )
+      return expect(await authController.login(credential)).toEqual({
+        ...abeUser,
+        jwt: abeUser.email,
+      })
+    })
+
+    it('throws a forbidden exception with invalid email or password', () => {
+      jest
+        .spyOn(authService, 'login')
+        .mockImplementation(mockLogin([credential]))
+
+      jest
+        .spyOn(authService, 'getUser')
+        .mockImplementation(
+          mockGetUser({ "user.email='abe.white@usu.edu'": abeUser }),
+        )
+
+      expect(
+        authController.login({ ...credential, password: 'asdfasd' }),
+      ).rejects.toThrowError(ForbiddenException)
+
+      expect(
+        authController.login({ ...credential, email: 'a@a.com' }),
+      ).rejects.toThrowError(ForbiddenException)
+    })
+
+    it('throws a forbidden exception if services does not contain affiliate-portal', () => {
+      jest
+        .spyOn(authService, 'login')
+        .mockImplementation(mockLogin([credential]))
+
+      jest.spyOn(authService, 'getUser').mockImplementation(
+        mockGetUser({
+          "user.email='abe.white@usu.edu'": { ...abeUser, services: 'asdfa' },
+        }),
+      )
+
+      expect(authController.login(credential)).rejects.toThrowError(
+        ForbiddenException,
+      )
+    })
+  })
+
+  describe('valid', () => {
+    it('just returns the injected user object', () => {
+      const user: AuthUser = {
+        sfContact: {
+          Id: '003m00000127OppAAE',
+          IsDeleted: false,
+          MasterRecordId: null,
+          AccountId: '001m000000cRfixAAC',
+          LastName: 'White',
+          FirstName: 'Abraham',
+          Salutation: 'Mr.',
+          Name: 'Abraham White',
+          RecordTypeId: '012A0000000zpqwIAA',
+          OtherStreet: null,
+          OtherCity: null,
+          OtherState: null,
+          OtherPostalCode: null,
+          OtherCountry: null,
+          OtherLatitude: null,
+          OtherLongitude: null,
+          OtherGeocodeAccuracy: null,
+          OtherAddress: null,
+          MailingStreet: null,
+          MailingCity: null,
+          MailingState: null,
+          MailingPostalCode: null,
+          MailingCountry: null,
+          MailingLatitude: null,
+          MailingLongitude: null,
+          MailingGeocodeAccuracy: null,
+          MailingAddress: null,
+          Phone: null,
+          Fax: null,
+          MobilePhone: null,
+          HomePhone: null,
+          OtherPhone: null,
+          AssistantPhone: null,
+          ReportsToId: null,
+          Email: 'abe.white@usu.edu',
+          Title: null,
+          Department: null,
+          AssistantName: null,
+          LeadSource: null,
+          Birthdate: null,
+          Description: null,
+          OwnerId: '0051H000007hn6tQAA',
+          HasOptedOutOfEmail: false,
+          CreatedDate: '2018-08-01T18:12:59.000+0000',
+          CreatedById: '0051H000007hn6tQAA',
+          LastModifiedDate: '2018-08-01T18:12:59.000+0000',
+          LastModifiedById: '0051H000007hn6tQAA',
+          SystemModstamp: '2018-08-01T18:12:59.000+0000',
+          LastActivityDate: null,
+          LastCURequestDate: null,
+          LastCUUpdateDate: null,
+          LastViewedDate: '2018-09-27T18:17:41.000+0000',
+          LastReferencedDate: '2018-09-27T18:17:41.000+0000',
+          EmailBouncedReason: null,
+          EmailBouncedDate: null,
+          IsEmailBounced: false,
+          PhotoUrl: null,
+          Jigsaw: null,
+          JigsawContactId: null,
+          Suffix__c: null,
+          Middle_Names__c: 'Douglas',
+          Became_a_Research_Examiner__c: null,
+          Mail_Preference__c: null,
+          Instructor__c: false,
+          Offered_Services__c: null,
+          Shingo_Prize_Relationship__c: null,
+          Plan__c: null,
+          Do__c: null,
+          Check__c: null,
+          Act__c: null,
+          Recipient__c: null,
+          A_Number__c: null,
+          Description__c: null,
+          Media_Contact__c: false,
+          Publication__c: null,
+          Asst_Email__c: null,
+          Other_Email__c: null,
+          Contact_Quality__c: 80,
+          Date_Last_Reviewed__c: null,
+          Shirt_Size__c: null,
+          Industry_Type__c: 'Services',
+          Industry__c: 'Academic',
+          Start_Date__c: null,
+          End_Date__c: null,
+          Biography__c: null,
+          Photograph__c:
+            'http://res.cloudinary.com/shingo/image/upload/c_fill,g_center,h_300,w_300/v1414874243/silhouette_vzugec.png',
+          Facilitator_For__c: null,
+          Qualified_Industry__c: null,
+          Qualified_Language__c: null,
+          Qualified_Regions__c: null,
+          Qualified_Workshops__c: null,
+          Has_Watched_Most_Recent_Webinar__c: false,
+          Job_History__c: null,
+        },
+      }
+
+      expect(authController.valid(user)).resolves.toEqual(user)
+    })
+  })
+
+  describe('loginas', () => {
+    const users: Arguments<typeof mockLoginAs>[0] = [
+      { id: 1, jwt: 'jwt-admin-1', permissionFor: [2, 3] },
+      { id: 2, jwt: 'jwt-2', permissionFor: [] },
+      { id: 3, jwt: 'jwt-3', permissionFor: [] },
+    ]
+
+    it('gets the jwt for a requested user', () => {
+      jest.spyOn(authService, 'login').mockImplementation(mockLoginAs(users))
+      expect(
+        authController.loginAs({ id: 1 } as any, { userId: 2 }),
+      ).resolves.toEqual('jwt-2')
+    })
+  })
+
+  describe('changepassword', () => {
+    const users: Array<Required<authservices.User>> = [
+      {
+        id: 1,
+        email: 'abe.white@usu.edu',
+        services: 'affiliate-portal',
+        roles: [
+          {
+            id: 2,
+            name: 'Affiliate-Manager',
+            service: 'affiliate-portal',
+          },
+        ],
+        isEnabled: true,
+        extId: 'someId',
+        resetToken: '',
+        lastLogin: 'Thur, 27 Sep 2018 18:00:43 GMT',
+        password: 'Password123',
+        permissions: [],
+        _TagEmpty: false,
+      },
+    ]
+
+    it('updates only the password', () => {
+      jest.spyOn(authService, 'login').mockImplementation(mockLogin(users))
+
+      jest
+        .spyOn(authService, 'updateUser')
+        .mockImplementation(mockUpdateUser(users))
+
+      const oldUser = { ...users[0] }
+      const body = { password: 'some-password' }
+
+      expect(
+        authController.changePassword(users[0] as any, body),
+      ).resolves.toEqual({ jwt: users[0].email })
+
+      expect(users[0]).toEqual({ ...oldUser, ...body })
+    })
+  })
+})

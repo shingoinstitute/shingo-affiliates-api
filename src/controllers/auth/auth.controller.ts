@@ -10,11 +10,9 @@ import {
 } from '@nestjs/common'
 
 import _ from 'lodash'
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
-import { LoginBody, LoginAsBody } from './authInterfaces'
-import { ChangePasswordBody } from '../facilitators/facilitatorInterfaces'
+import { LoginBody, LoginAsBody, ChangePasswordBody } from './authInterfaces'
 import { AuthUser } from '../../guards/auth.guard'
 import { RoleGuard, AuthGuard } from '../../guards'
 import { IsAffiliateManager, User } from '../../decorators'
@@ -25,7 +23,6 @@ import { IsAffiliateManager, User } from '../../decorators'
 @Controller('auth')
 export class AuthController {
   constructor(
-    private sfService: SalesforceClient,
     private authService: AuthClient,
     @Inject('LoggerService') private log: LoggerInstance,
   ) {}
@@ -57,9 +54,7 @@ export class AuthController {
           throw new ForbiddenException(e.message || '')
         }
 
-        throw new InternalServerErrorException(
-          e.message || 'Unknown error when logging in',
-        )
+        throw e
       })
 
     if (typeof user === 'undefined') {
@@ -70,29 +65,17 @@ export class AuthController {
       throw new ForbiddenException('', 'NOT_REGISTERED')
     }
 
-    return _.omit(user, [
-      'permissions',
-      'extId',
-      'services',
-      'role.permissions',
-    ])
+    return user
   }
 
   /**
    * ### GET: /auth/valid
-   * Protected by isValid middleware. Returns the user's JWT
-   *
-   * @memberof AuthController
+   * Protected by isValid middleware. Returns the user object
    */
   @Get('valid')
   @UseGuards(AuthGuard)
   async valid(@User() user: AuthUser) {
-    return _.omit(user, [
-      'permissions',
-      'extId',
-      'services',
-      'role.permissions',
-    ])
+    return user
   }
 
   @Post('/changepassword')
@@ -122,25 +105,13 @@ export class AuthController {
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
   async loginAs(@User() user: AuthUser, @Body() body: LoginAsBody) {
-    if (user.id !== body.adminId) {
-      throw new ForbiddenException('', 'UNAUTHORIZED')
-    }
-
-    // loginAs should probably return a jwt token, since everything else requires that for auth
-    // client would store the token and use it for future requests, then use old token when switching back
-    const newUser = await this.authService.loginAs({
-      adminId: body.adminId,
+    const newToken = await this.authService.loginAs({
+      adminId: user.id!,
       userId: body.userId,
     })
 
-    this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`)
+    this.log.debug(`Admin ${user.id} logged in as ${body.userId}`)
 
-    return _.omit(newUser, [
-      'permissions',
-      'extId',
-      'services',
-      'role.permissions',
-      'password',
-    ])
+    return newToken
   }
 }

@@ -5,7 +5,6 @@ import _, { chunk } from 'lodash'
 import {
   RequireKeys,
   getWorkshopIds,
-  First,
   Arguments,
   retrieveResult,
 } from '../../util'
@@ -137,7 +136,7 @@ export class WorkshopsService {
 
   private queryForWorkshops(
     ids: ReadonlyArray<string>,
-    query: First<Arguments<SalesforceClient['query']>>,
+    query: Arguments<SalesforceClient['query']>[0],
   ): Promise<Workshop[]> {
     const newQuery = {
       ...query,

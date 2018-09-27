@@ -1,16 +1,96 @@
+type maybe<T> = null | undefined | T
 export interface Contact {
-  Account: object
-  AccountId: string
-  ReportsTo: Contact
   Id: string
+  IsDeleted: boolean
+  MasterRecordId?: maybe<string>
+  AccountId: string
   LastName: string
   FirstName: string
   Salutation: string
   Name: string
-  Suffix__c: string
-  Middle_Names__c: string
-  Mail_Preference__c: string
+  RecordTypeId: string
+  OtherStreet?: null
+  OtherCity?: null
+  OtherState?: null
+  OtherPostalCode?: null
+  OtherCountry?: null
+  OtherLatitude?: null
+  OtherLongitude?: null
+  OtherGeocodeAccuracy?: null
+  OtherAddress?: null
+  MailingStreet?: null
+  MailingCity?: null
+  MailingState?: null
+  MailingPostalCode?: null
+  MailingCountry?: null
+  MailingLatitude?: null
+  MailingLongitude?: null
+  MailingGeocodeAccuracy?: null
+  MailingAddress?: null
+  Phone?: null
+  Fax?: null
+  MobilePhone?: null
+  HomePhone?: null
+  OtherPhone?: null
+  AssistantPhone?: null
+  ReportsToId?: null
+  Email: 'abe.white@usu.edu'
+  Title?: null
+  Department?: null
+  AssistantName?: null
+  LeadSource?: null
+  Birthdate?: null
+  Description?: null
+  OwnerId: string
+  HasOptedOutOfEmail: boolean
+  CreatedDate: string
+  CreatedById: string
+  LastModifiedDate: string
+  LastModifiedById: string
+  SystemModstamp: string
+  LastActivityDate?: null
+  LastCURequestDate?: null
+  LastCUUpdateDate?: null
+  LastViewedDate: string
+  LastReferencedDate: string
+  EmailBouncedReason?: null
+  EmailBouncedDate?: null
+  IsEmailBounced: boolean
+  PhotoUrl?: null
+  Jigsaw?: null
+  JigsawContactId?: null
+  Suffix__c?: maybe<string>
+  Middle_Names__c?: maybe<string>
+  Became_a_Research_Examiner__c?: maybe<boolean>
+  Mail_Preference__c?: null
   Instructor__c: boolean
-  Description__c: string
-  Biography__c: string
+  Offered_Services__c?: null
+  Shingo_Prize_Relationship__c?: null
+  Plan__c?: null
+  Do__c?: null
+  Check__c?: null
+  Act__c?: null
+  Recipient__c?: null
+  A_Number__c?: maybe<string>
+  Description__c?: maybe<string>
+  Media_Contact__c?: false
+  Publication__c?: null
+  Asst_Email__c?: null
+  Other_Email__c?: null
+  Contact_Quality__c?: maybe<number>
+  Date_Last_Reviewed__c?: null
+  Shirt_Size__c?: null
+  Industry_Type__c?: maybe<string>
+  Industry__c?: maybe<string>
+  Start_Date__c?: null
+  End_Date__c?: null
+  Biography__c?: null
+  Photograph__c?: maybe<string>
+  Facilitator_For__c?: null
+  Qualified_Industry__c?: null
+  Qualified_Language__c?: null
+  Qualified_Regions__c?: null
+  Qualified_Workshops__c?: null
+  Has_Watched_Most_Recent_Webinar__c?: maybe<boolean>
+  Job_History__c?: null
 }
