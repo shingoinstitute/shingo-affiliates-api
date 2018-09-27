@@ -1,0 +1,13 @@
+// vscode doesn't look for overloaded tsconfig files, so to exclude test files
+// when building, and still have correct behavior in the editor for test files, we need
+// to have a general tsconfig.json that includes both build and test files,
+// then extend for building
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "**/*.mock.ts",
+    "**/*.spec.ts",
+    "src/components/mock/index.ts"
+  ]
+}

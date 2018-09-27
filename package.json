@@ -71,7 +71,7 @@
     "start": "node ./build/index.js",
     "debug": "nodemon --watch ./build --inspect=0.0.0.0:9229 --nolazy ./build/index.js",
     "docker-debug": "docker-compose -f docker-compose.debug.yml up",
-    "build": "tsc -p ./tsconfig.json",
+    "build": "tsc -p ./tsconfig.build.json",
     "test": "run-s build test:*",
     "test:lint": "tslint --project .",
     "test:unit": "node ./scripts/test.js",
