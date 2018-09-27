@@ -1,6 +1,11 @@
 import { ValidationOptions, registerDecorator } from 'class-validator'
-import { pipe } from '../util'
-import { Injectable, PipeTransform, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import { pipe } from '../util/fp'
+import {
+  Injectable,
+  PipeTransform,
+  ArgumentMetadata,
+  BadRequestException,
+} from '@nestjs/common'
 
 const lookupMap = {
   '00000': 'A',
@@ -38,21 +43,23 @@ const lookupMap = {
 }
 
 const reverseASCII = (s: string) => s.split('').reverse()
-const toUpperBitMap = (s: string[]) => s.map(c => /[A-Z]/.test(c) ? '1' : '0')
-const lookup = (s: Array<'1' | '0'>) => lookupMap[s.join('')] as string | undefined
+const toUpperBitMap = (s: string[]) => s.map(c => (/[A-Z]/.test(c) ? '1' : '0'))
+const lookup = (s: Array<'1' | '0'>) =>
+  lookupMap[s.join('')] as string | undefined
 
 /**
  * Generates an 18 character salesforce ID from a 15 character id
  * @param id The 15 character salesforce id
  */
 const getExtendedId = (id: string) => {
-  const sum = [0, 5, 10]
-    .map(pipe(
+  const sum = [0, 5, 10].map(
+    pipe(
       start => id.substr(start, 5),
       reverseASCII,
       toUpperBitMap,
-      lookup
-    ))
+      lookup,
+    ),
+  )
 
   if (sum.some(v => typeof v === 'undefined')) {
     throw new Error('initial Id was invalid')
@@ -66,9 +73,14 @@ const getExtendedId = (id: string) => {
  * @param value any value to test
  */
 export const isSFID = (value: any): value is string => {
-  if (typeof value === 'string' && /[a-zA-Z0-9]{18}|[a-zA-Z0-9]{15}/.test(value)) {
+  if (
+    typeof value === 'string' &&
+    /[a-zA-Z0-9]{18}|[a-zA-Z0-9]{15}/.test(value)
+  ) {
     if (/[a-zA-Z0-9]{18}/.test(value)) {
-      return getExtendedId(value.substr(0, 15)).toLowerCase() === value.toLowerCase()
+      return (
+        getExtendedId(value.substr(0, 15)).toLowerCase() === value.toLowerCase()
+      )
     }
     return true
   }
@@ -98,7 +110,8 @@ export class SalesforceIdValidator implements PipeTransform<any, string> {
   transform(value: any, _metadata: ArgumentMetadata): string {
     if (!isSFID(value)) {
       throw new BadRequestException(
-        `${value} is not a valid Salesforce ID.`, 'INVALID_SF_ID'
+        `${value} is not a valid Salesforce ID.`,
+        'INVALID_SF_ID',
       )
     }
     return value
