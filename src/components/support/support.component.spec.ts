@@ -80,7 +80,7 @@ describe('SupportService', () => {
         .spyOn(sfService, 'query')
         .mockImplementation(mockQuery({ Support_Page__c: pages }))
 
-      return expect(supportService.getAll('Anonymous')).resolves.toEqual([
+      return expect(supportService.getAll(['Anonymous'])).resolves.toEqual([
         pages[0],
       ])
     })
@@ -92,9 +92,9 @@ describe('SupportService', () => {
         .spyOn(sfService, 'retrieve')
         .mockImplementation(mockRetrieve({ Support_Page__c: pages }))
 
-      return expect(supportService.get('A00000000001')).resolves.toEqual(
-        pages[1],
-      )
+      return expect(
+        supportService.get('A00000000001', ['Facilitators']),
+      ).resolves.toEqual(pages[1])
     })
   })
 
@@ -118,7 +118,7 @@ describe('SupportService', () => {
       jest.spyOn(sfService, 'search').mockImplementation(mockSearch(pages))
 
       return expect(
-        supportService.search('Some Search', ['Some retrieve'], 'Anonymous'),
+        supportService.search('Some Search', ['Some retrieve'], ['Anonymous']),
       ).resolves.toEqual([pages[0]])
     })
   })

@@ -13,6 +13,12 @@ export interface Support_Page__c {
   Restricted_To__c: string
 }
 
+export const visibleTo = (roles: string[]) => (page: Support_Page__c) => {
+  const restrictions = page.Restricted_To__c.split(';')
+
+  return restrictions.some(r => roles.includes(r))
+}
+
 /**
  * @desc A service to provide functions for working with Support Pages
  *
@@ -24,10 +30,9 @@ export class SupportService {
   constructor(
     private sfService: SalesforceClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance,
   ) {}
 
-  async getAll(role: string, refresh = false) {
+  getAll(roles: string[], refresh = false): Promise<Support_Page__c[]> {
     const query = {
       fields: [
         'Id',
@@ -40,16 +45,20 @@ export class SupportService {
       clauses: `Application__c='Affiliate Portal'`,
     }
 
-    return (await tryCache(
+    return tryCache(
       this.cache,
       query,
       () =>
         this.sfService.query<Support_Page__c>(query).then(d => d.records || []),
       refresh,
-    )).filter(page => page.Restricted_To__c.includes(role))
+    ).then(rs => rs.filter(visibleTo(roles)))
   }
 
-  async get(id: string, refresh = false) {
+  get(
+    id: string,
+    roles: string[],
+    refresh = false,
+  ): Promise<Support_Page__c | undefined> {
     const request = {
       object: 'Support_Page__c',
       ids: [id],
@@ -60,7 +69,11 @@ export class SupportService {
       request,
       () => this.sfService.retrieve(request).then(retrieveResult),
       refresh,
-    )
+    ).then(r => {
+      if (visibleTo(roles)(r)) {
+        return r
+      }
+    })
   }
 
   /**
@@ -70,7 +83,7 @@ export class SupportService {
    *
    * @param refresh Force the refresh of the cache
    */
-  async describe(refresh = false) {
+  describe(refresh = false) {
     const key = 'describeSupportPage'
 
     return tryCache(
@@ -81,19 +94,21 @@ export class SupportService {
     )
   }
 
-  async search(
+  search(
     search: string,
     retrieve: string[],
-    role: string,
+    roles: string[],
     refresh = false,
-  ) {
+  ): Promise<Support_Page__c[]> {
+    // we need the Restricted_To__c for filtering
+    const realRetrieve = [...new Set([...retrieve, 'Restricted_To__c'])]
     // Generate the data parameter for the RPC call
     const data = {
       search: `{${search}}`,
-      retrieve: `Support_Page__c(${retrieve.join(',')})`,
+      retrieve: `Support_Page__c(${realRetrieve.join(',')})`,
     }
 
-    return (await tryCache(
+    return tryCache(
       this.cache,
       data,
       () =>
@@ -101,6 +116,6 @@ export class SupportService {
           .search(data)
           .then(d => d.searchRecords as Support_Page__c[]),
       refresh,
-    )).filter(page => page.Restricted_To__c.includes(role))
+    ).then(rs => rs.filter(visibleTo(roles)))
   }
 }
