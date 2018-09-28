@@ -1,10 +1,10 @@
 import { SupportService, Support_Page__c } from './support.component'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { Test } from '@nestjs/testing'
-import { LoggerServiceProvider } from '../../providers'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
 import { pick } from 'lodash'
+import { mockLogger } from '../../factories/logger.mock'
 
 const mockQuery = (
   data: Record<string, Array<Record<string, any>>>,
@@ -42,13 +42,14 @@ describe('SupportService', () => {
     const module = await Test.createTestingModule({
       controllers: [SupportService],
       providers: [
-        LoggerServiceProvider,
         {
           provide: SalesforceClient,
           useFactory: () => new SalesforceClient('localhost:65535'),
         },
       ],
     })
+      .overrideProvider('LoggerService')
+      .useValue(mockLogger)
       .overrideProvider(CacheService)
       .useClass(CacheServiceMock)
       .compile()

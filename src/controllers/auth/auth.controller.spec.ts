@@ -1,12 +1,12 @@
 import { Test } from '@nestjs/testing'
 import { AuthController } from './auth.controller'
 import { AuthClient, authservices } from '@shingo/auth-api-client'
-import { LoggerServiceProvider } from '../../providers'
 import { ForbiddenException } from '@nestjs/common'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthUser } from '../../guards/auth.guard'
 import { Arguments } from '../../util'
 import { id } from '../../util/fp'
+import { mockLogger } from '../../factories/logger.mock'
 
 const mockLogin = (
   database: Array<{ email: string; password: string }>,
@@ -74,7 +74,6 @@ describe('AuthController', () => {
     const module = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        LoggerServiceProvider,
         {
           provide: AuthClient,
           // very unlikely to be a service running on this port,
@@ -86,7 +85,10 @@ describe('AuthController', () => {
           useFactory: () => new SalesforceClient('localhost:65535'),
         },
       ],
-    }).compile()
+    })
+      .overrideProvider('LoggerService')
+      .useValue(mockLogger)
+      .compile()
 
     authController = module.get<AuthController>(AuthController)
     authService = module.get<AuthClient>(AuthClient)
