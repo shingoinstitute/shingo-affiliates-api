@@ -280,8 +280,8 @@ describe('AuthController', () => {
       { id: 3, jwt: 'jwt-3', permissionFor: [] },
     ]
 
-    it('gets the jwt for a requested user', () => {
-      jest.spyOn(authService, 'login').mockImplementation(mockLoginAs(users))
+    it('gets the jwt for a requested user', async () => {
+      jest.spyOn(authService, 'loginAs').mockImplementation(mockLoginAs(users))
       return expect(
         authController.loginAs({ id: 1 } as any, { userId: 2 }),
       ).resolves.toEqual('jwt-2')
