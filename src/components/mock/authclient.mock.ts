@@ -58,3 +58,10 @@ export const mockUpdateUser = (
 
   return true
 }
+
+export const mockGetRoles = (
+  roles: Record<string, Array<Required<authservices.Role>>>,
+): AuthClient['getRoles'] => async clause =>
+  typeof clause === 'undefined' || clause === ''
+    ? (Object.keys(roles).length && roles[Object.keys(roles)[0]]) || []
+    : roles[clause]
