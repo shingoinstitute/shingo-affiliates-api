@@ -34,6 +34,9 @@ export const hasRole = (role: string) => (u: AuthUser) =>
   !!(u.roles || []).find(r => r.name === role)
 export const isAffiliateManager = hasRole('Affiliate Manager')
 
+export const portalRoles = (u: AuthUser) =>
+  (u.roles || []).filter(r => r.service === 'affiliate-portal')
+
 export const missingParam = (name: string) =>
   new BadRequestException(`Missing parameters: ${name}`, 'MISSING_PARAMETERS')
 

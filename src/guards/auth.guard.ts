@@ -45,3 +45,12 @@ export class AuthGuard implements CanActivate {
     return !!valid
   }
 }
+
+// tslint:disable-next-line:max-classes-per-file
+@Injectable()
+export class AnonymousAuthGuard extends AuthGuard {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    await super.canActivate(context)
+    return true
+  }
+}

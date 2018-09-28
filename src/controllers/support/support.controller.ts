@@ -1,12 +1,15 @@
 import {
-    Controller,
-    Get, Param, Session, Inject, ForbiddenException
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+  NotFoundException,
 } from '@nestjs/common'
 import { SupportService } from '../../components'
-import { LoggerInstance } from 'winston'
-import { Refresh, ArrayParam, StringParam } from '../../decorators'
+import { Refresh, ArrayParam, StringParam, User } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
-import { missingParam } from '../../util'
+import { missingParam, portalRoles } from '../../util'
+import { AuthUser, AnonymousAuthGuard } from '../../guards/auth.guard'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -16,29 +19,38 @@ import { missingParam } from '../../util'
  */
 @Controller('support')
 export class SupportController {
+  constructor(private supportService: SupportService) {}
 
-  constructor(private supportService: SupportService, @Inject('LoggerService') private log: LoggerInstance) { }
-
-  private getRole(session: any) {
-    return session.user && session.user.role && session.user.role.name + 's' || 'Anonymous';
+  private getRoles(user: AuthUser | undefined) {
+    return [
+      ...((user && portalRoles(user).map(r => r.name! + 's')) || []),
+      'Anonymous',
+    ]
   }
 
   @Get()
-  async readAll(@Session() session, @Refresh() refresh: boolean | undefined) {
-    const role = this.getRole(session)
-
-    return this.supportService.getAll(role, refresh)
+  @UseGuards(AnonymousAuthGuard)
+  readAll(
+    @User() user: AuthUser | undefined,
+    @Refresh() refresh: boolean | undefined,
+  ) {
+    return this.supportService.getAll(this.getRoles(user), refresh)
   }
 
   @Get('/category/:name')
-  async readCategory(@Session() session,
-                     @Param('name') category: string,
-                     @Refresh() refresh: boolean | undefined) {
-    const role = this.getRole(session)
-
+  @UseGuards(AnonymousAuthGuard)
+  readCategory(
+    @User() user: AuthUser | undefined,
+    @Param('name') category: string,
+    @Refresh() refresh: boolean | undefined,
+  ) {
     return this.supportService
-      .getAll(role, refresh)
-      .then(pages => pages.filter(page => page.Category__c.toLowerCase() === category.toLowerCase()))
+      .getAll(this.getRoles(user), refresh)
+      .then(pages =>
+        pages.filter(
+          page => page.Category__c.toLowerCase() === category.toLowerCase(),
+        ),
+      )
   }
 
   /**
@@ -48,35 +60,44 @@ export class SupportController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  async describe(@Refresh() refresh: boolean | undefined) {
+  describe(@Refresh() refresh: boolean | undefined) {
     return this.supportService.describe(refresh)
   }
 
   @Get('/search')
-  async search(@Session() session,
-               @StringParam('search', new RequiredValidator(missingParam('search'))) search: string,
-               @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve'))) retrieve: string[],
-               @Refresh() refresh: boolean | undefined) {
-    const realRetrieve = [...new Set([...retrieve, 'Restricted_To__c'])]
-
-    const role = this.getRole(session)
-
-    return this.supportService.search(search, realRetrieve, role, refresh);
+  @UseGuards(AnonymousAuthGuard)
+  search(
+    @User() user: AuthUser | undefined,
+    @StringParam('search', new RequiredValidator(missingParam('search')))
+    search: string,
+    @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
+    retrieve: string[],
+    @Refresh() refresh: boolean | undefined,
+  ) {
+    return this.supportService.search(
+      search,
+      retrieve,
+      this.getRoles(user),
+      refresh,
+    )
   }
 
   @Get('/:id')
-  async read(@Session() session,
-             @Param('id', SalesforceIdValidator) id: string,
-             @Refresh() refresh: boolean | undefined) {
-    const role = this.getRole(session)
-
-    const page = await this.supportService.get(id, refresh);
-
-    if (!page.Restricted_To__c.includes(role)) {
-      throw new ForbiddenException('You do not have permission to read this support page!', 'ACCESS_FORBIDDEN')
+  @UseGuards(AnonymousAuthGuard)
+  async read(
+    @User() user: AuthUser | undefined,
+    @Param('id', SalesforceIdValidator) id: string,
+    @Refresh() refresh: boolean | undefined,
+  ) {
+    const result = await this.supportService.get(
+      id,
+      this.getRoles(user),
+      refresh,
+    )
+    if (typeof result === 'undefined') {
+      // semantically, we really should throw a ForbiddenException, but a 404 doesn't leak information (that the item exists)
+      throw new NotFoundException(`Support Page with Id ${id} not found`)
     }
-
-    return page
+    return result
   }
-
 }

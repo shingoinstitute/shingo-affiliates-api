@@ -49,7 +49,7 @@ export class WorkshopsController {
    * ### GET: /workshops
    * Get all workshops
    *
-   * @param session Session containing the current user.
+   * @param user The current user.
    */
   @Get()
   @UseGuards(AuthGuard)
