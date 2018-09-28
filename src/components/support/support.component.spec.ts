@@ -3,36 +3,13 @@ import { SalesforceClient } from '@shingo/sf-api-client'
 import { Test } from '@nestjs/testing'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
-import { pick } from 'lodash'
 import { mockLogger } from '../../factories/logger.mock'
-
-const mockQuery = (
-  data: Record<string, Array<Record<string, any>>>,
-): SalesforceClient['query'] => async query => {
-  const objects = data[query.table]
-  if (!objects) throw new Error()
-
-  const records: any[] = objects.map(r => pick(r, query.fields))
-  return { records, done: true, totalSize: records.length }
-}
-
-const mockRetrieve = (
-  data: Record<string, Array<Record<string, any>>>,
-): SalesforceClient['retrieve'] => async query => {
-  const objects = data[query.object]
-  if (!objects) throw new Error()
-
-  const records: any[] = objects.filter(r => query.ids.includes(r.Id))
-  return records
-}
-
-const mockDescribe = (
-  data: Record<string, any>,
-): SalesforceClient['describe'] => async query => data[query]
-
-const mockSearch = (
-  data: any[],
-): SalesforceClient['search'] => async _query => ({ searchRecords: data })
+import {
+  mockQuery,
+  mockRetrieve,
+  mockDescribe,
+  mockSearch,
+} from '../mock/sfclient.mock'
 
 describe('SupportService', () => {
   let supportService: SupportService
