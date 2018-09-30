@@ -1,6 +1,12 @@
 import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { id } from '../../util/fp'
 
+export interface AuthState {
+  Permission: Array<Required<authservices.Permission>>
+  Role: Array<Required<authservices.Role>>
+  User: Array<Required<authservices.User>>
+}
+
 export const mockLogin = (
   database: Array<{ email: string; password: string }>,
   jwt: (email: string) => string = id,
@@ -45,7 +51,7 @@ export const mockLoginAs = (
 }
 
 export const mockUpdateUser = (
-  users: Array<Required<authservices.User>>,
+  users: AuthState['User'],
 ): AuthClient['updateUser'] => async updateData => {
   // don't bother searching by extId since none of the mocked methods use extId
   // will add later if tests start failing
@@ -60,8 +66,106 @@ export const mockUpdateUser = (
 }
 
 export const mockGetRoles = (
-  roles: Record<string, Array<Required<authservices.Role>>>,
+  roles: Record<string, AuthState['Role']>,
 ): AuthClient['getRoles'] => async clause =>
   typeof clause === 'undefined' || clause === ''
     ? (Object.keys(roles).length && roles[Object.keys(roles)[0]]) || []
     : roles[clause]
+
+const getNextId = (prev: Array<{ id: number }>) =>
+  // seed with -1 so that the first id given an empty prev array will be 0
+  Math.max(...prev.map(p => p.id), -1) + 1
+
+export const mockCreateRole = (
+  initialState: Pick<AuthState, 'Role'>,
+): AuthClient['createRole'] => async data => {
+  const nextId = getNextId(initialState.Role)
+
+  const newObj: Required<authservices.Role> = {
+    ...data,
+    id: nextId,
+    permissions: [],
+    users: [],
+    _TagEmpty: false,
+  }
+
+  initialState.Role.push(newObj)
+
+  return newObj
+}
+
+export const mockGrantPermissionToRole = (
+  initialState: Pick<AuthState, 'Role' | 'Permission'>,
+): AuthClient['grantPermissionToRole'] => async (
+  resource,
+  level,
+  accessorId,
+) => {
+  const role = initialState.Role.find(r => r.id === accessorId)
+  if (!role) throw new Error(`Role ${accessorId} doesn't exist`)
+
+  const existingPerm = await mockCreatePermission(initialState)({
+    resource,
+    level,
+  })
+  role.permissions.push(existingPerm)
+  if (!existingPerm.roles) {
+    existingPerm.roles = []
+  }
+  existingPerm.roles.push(role)
+
+  return { accessorId, permissionId: existingPerm.id }
+}
+
+export const mockCreatePermission = (
+  initialState: Pick<AuthState, 'Permission'>,
+): AuthClient['createPermission'] => async data => {
+  const { resource, level } = data
+
+  let existingPerm = initialState.Permission.find(
+    p => p.resource === resource && p.level === level,
+  )
+  if (!existingPerm) {
+    const nextId = getNextId(initialState.Permission)
+    existingPerm = {
+      resource,
+      level,
+      users: [],
+      roles: [],
+      id: nextId,
+      _TagEmpty: false,
+    }
+  }
+
+  return data
+}
+
+export const mockDeletePermission = (
+  initialState: AuthState,
+): AuthClient['deletePermission'] => async (
+  obj: string | { id: number },
+  level?: 0 | 1 | 2,
+) => {
+  const perm = initialState.Permission.find(
+    p =>
+      typeof obj === 'string'
+        ? p.resource === obj && p.level === level
+        : p.id === obj.id,
+  )
+
+  if (!perm) return true
+
+  initialState.User.forEach(u => {
+    const idx = (u.permissions || []).findIndex(p => p === perm)
+    if (idx === -1) return
+    ;(u.permissions || []).splice(idx, 1)
+  })
+
+  initialState.Role.forEach(u => {
+    const idx = (u.permissions || []).findIndex(p => p === perm)
+    if (idx === -1) return
+    ;(u.permissions || []).splice(idx, 1)
+  })
+
+  return true
+}

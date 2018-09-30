@@ -73,3 +73,35 @@ export function pipe(...fns: Function[]): Function {
     return y
   }
 }
+
+export const tuple = <A extends any[]>(...args: A) => args
+
+export const head = <T>(xs: T[]) => {
+  const [x] = xs
+  return x
+}
+
+type Unwrap<T> = T extends Array<infer A> ? A : never
+export type Cartesian<A extends [any[], any[], ...any[][]]> = Array<
+  { [key in keyof A]: Unwrap<A[key]> }
+>
+
+export type ToIterableIterator<T extends any[]> = T extends Array<infer A>
+  ? IterableIterator<A>
+  : never
+
+export function* cartesian<A extends [any[], any[], ...any[][]]>(
+  ...arrays: A
+): ToIterableIterator<Cartesian<A>> {
+  function* doCartesian(i, prod) {
+    if (i === arrays.length) {
+      yield prod
+    } else {
+      for (const elem of arrays[i]) {
+        yield* doCartesian(i + 1, prod.concat([elem]))
+      }
+    }
+  }
+
+  yield* doCartesian(0, [])
+}

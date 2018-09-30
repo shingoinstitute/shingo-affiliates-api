@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { CacheService } from '..'
 import { Affiliate } from './affiliate'
 import _ from 'lodash'
-import { tryCache, RequireKeys } from '../../util'
+import { tryCache, RequireKeys, retrieveResult } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
@@ -10,8 +10,14 @@ import {
   CreateBody,
   UpdateBody,
 } from '../../controllers/affiliates/affiliateInterfaces'
+import { flatten, cartesian } from '../../util/fp'
+import { map } from '../../util/fp/generator'
+import { Contact } from '../../Contact.interface'
 
 export { Affiliate }
+
+export const workshopResource = (id: string) => `workshops -- ${id}`
+export const affiliateResource = (id: string) => `affiliate -- ${id}`
 
 /**
  * @desc A service to provide functions for working with Affiliates
@@ -96,10 +102,11 @@ export class AffiliatesService {
    * @param id Salesforce ID for an Account
    */
   get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
+    // FIXME: this can return any account in our salesforce instance, not just registered affiliates
     return tryCache(this.cache, id, () =>
       this.sfService
         .retrieve({ object: 'Account', ids: [id] })
-        .then(r => (Array.isArray(r) ? r[0] : r)),
+        .then(retrieveResult),
     )
   }
 
@@ -231,9 +238,7 @@ export class AffiliatesService {
 
     const result = (await this.sfService.create(data))[0]
 
-    if (result.success) {
-      await this.map(result.id)
-    }
+    await this.map(result.id)
 
     this.cache.invalidate('AffiliatesService.getAll')
 
@@ -251,37 +256,36 @@ export class AffiliatesService {
       service: 'affiliate-portal',
     })
 
-    await Promise.all(
-      ([0, 1, 2] as [0, 1, 2]).map(level =>
-        Promise.all([
-          this.authService
-            .createPermission({ resource: `workshops -- ${id}`, level })
-            .then(workshopPerm =>
-              this.authService.grantPermissionToRole(
-                workshopPerm.resource!,
-                2,
-                cm.id!,
-              ),
-            ),
-          this.authService
-            .createPermission({ resource: `affiliate -- ${id}`, level })
-            .then(affiliatePerm =>
-              this.authService.grantPermissionToRole(
-                affiliatePerm.resource!,
-                1,
-                cm.id!,
-              ),
-            ),
-        ]),
-      ),
-    )
+    const wResource = workshopResource(id)
+    const aResource = affiliateResource(id)
 
+    await Promise.all([
+      // create/grant these permissions to the course manager role
+      // grantPermissionToRole creates if role doesn't already exist
+      this.authService.grantPermissionToRole(wResource, 2, cm.id!),
+      this.authService.grantPermissionToRole(aResource, 1, cm.id!),
+      // create other permissions
+      flatten(
+        [wResource, aResource].map(resource => {
+          // level not created by the above grant call
+          const level = resource === aResource ? 2 : 1
+
+          return [
+            this.authService.createPermission({ resource, level: 0 }),
+            this.authService.createPermission({ resource, level }),
+          ]
+        }),
+      ),
+    ])
+
+    // WHAT IS THIS MAGIC???
+    // FIXME: Fix magic (and brittle) string
     // tslint:disable-next-line:variable-name
     const RecordTypeId = '012A0000000zpraIAA'
 
     await this.sfService.update({
       object: 'Account',
-      records: [{ contents: JSON.stringify({ Id: id, RecordTypeId }) }],
+      records: [{ Id: id, RecordTypeId }],
     })
 
     this.cache.invalidate('AffiliatesService.getAll')
@@ -305,7 +309,7 @@ export class AffiliatesService {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Account',
-      records: [{ contents: JSON.stringify(affiliate) }],
+      records: [affiliate],
     }
 
     const result = (await this.sfService.update(data))[0]
@@ -323,6 +327,8 @@ export class AffiliatesService {
    */
   async delete(id: string) {
     const result = await this.get(id)
+    // NANI!?!?!?
+    // FIXME: Fix magic (and brittle) string
     result.RecordTypeId = '012A0000000zprfIAA'
 
     await this.deletePermissions(result.Id)
@@ -347,29 +353,20 @@ export class AffiliatesService {
    * @param id The Affilaite's Salesforce Id
    */
   private deletePermissions(id: string) {
-    // promise resolves when all permissions are deleted for every level
-    return Promise.all(
-      ([0, 1, 2] as [0, 1, 2])
-        .map(level => {
-          return [
-            this.authService
-              .deletePermission(`workshops -- ${id}`, level)
-              .then(success => ({
-                perm: `workshops -- ${id}`,
-                level,
-                success,
-              })),
-            this.authService
-              .deletePermission(`affiliate -- ${id}`, level)
-              .then(success => ({
-                perm: `affiliate -- ${id}`,
-                level,
-                success,
-              })),
-          ]
-        })
-        .reduce((p, c) => [...p, ...c], []),
+    const pairs = cartesian([0, 1, 2] as [0, 1, 2], [
+      workshopResource(id),
+      affiliateResource(id),
+    ])
+    const ps = map(pairs, ([level, resource]) =>
+      this.authService.deletePermission(resource, level).then(success => ({
+        perm: resource,
+        level,
+        success,
+      })),
     )
+
+    // promise resolves when all permissions are deleted for every level
+    return Promise.all([...ps])
   }
 
   /**
@@ -405,12 +402,13 @@ export class AffiliatesService {
     }
 
     const facilitators =
-      ((await this.sfService.query(query)).records as any[]) || []
+      (await this.sfService.query<Pick<Contact, 'Id'>>(query)).records || []
+
     return Promise.all(
       facilitators.map(fac =>
         this.authService
           .deleteUser({ extId: fac.Id })
-          .then(success => ({ facilitator: fac.Id as string, success })),
+          .then(success => ({ facilitator: fac.Id, success })),
       ),
     )
   }

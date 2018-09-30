@@ -1,5 +1,7 @@
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { pick } from 'lodash'
+// tslint:disable-next-line:no-implicit-dependencies
+import { SuccessResult } from 'jsforce'
 
 export const mockQuery = (
   data: Record<string, Array<Record<string, any>>>,
@@ -26,5 +28,32 @@ export const mockDescribe = (
 ): SalesforceClient['describe'] => async query => data[query]
 
 export const mockSearch = (
-  data: any[],
-): SalesforceClient['search'] => async _query => ({ searchRecords: data })
+  data: Record<string, Record<string, Array<Record<string, any>>>>,
+): SalesforceClient['search'] => async query => {
+  const object = query.retrieve.split('(')[0]
+  const searchRecords = data[query.search][object]
+  return { searchRecords }
+}
+
+export const mockCreate = (
+  data: SuccessResult[],
+): SalesforceClient['create'] => async _query => data
+
+export const mockUpdate = (
+  initialState: Record<string, Array<Record<string, any>>>,
+): SalesforceClient['update'] => async query => {
+  const objects = initialState[query.object]
+  const records = query.records
+
+  const matchedObjects = records
+    .map(r => {
+      const obj = objects.find(o => o.Id === (r as any).Id)
+      if (obj) {
+        Object.assign(obj, r)
+        return obj
+      }
+    })
+    .filter((r): r is Exclude<typeof r, undefined> => !!r)
+
+  return matchedObjects.map(o => ({ success: true as true, id: o.Id }))
+}
