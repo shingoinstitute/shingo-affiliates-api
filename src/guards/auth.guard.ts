@@ -1,9 +1,19 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common'
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  Inject,
+} from '@nestjs/common'
 import { Request } from 'express'
-import { AuthClient, authservices } from '@shingo/auth-api-client'
+import {
+  AuthClient,
+  authservices,
+  InvalidTokenError,
+} from '@shingo/auth-api-client'
 import { getJwt, retrieveResult } from '../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { Contact } from '../Contact.interface'
+import { LoggerInstance } from 'winston'
 
 export type AuthUser = authservices.User & { sfContact: Contact }
 declare module 'express' {
@@ -20,6 +30,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly authService: AuthClient,
     private readonly sfService: SalesforceClient,
+    @Inject('LoggerService') private readonly log: LoggerInstance,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -27,22 +38,45 @@ export class AuthGuard implements CanActivate {
     const token = getJwt(req)
     if (!token) return false
 
-    const valid = await this.authService.isValid(token)
-
-    if (valid) {
-      // add user to request
-      const user = await this.authService.getUser(
-        `user.email='${valid.email}' AND user.extId='${valid.extId}'`,
-      )
-
-      const sfContact = await this.sfService
-        .retrieve({ object: 'Contact', ids: [valid.extId!] })
-        .then(retrieveResult)
-
-      req.user = { ...user, sfContact }
+    let valid
+    try {
+      valid = await this.authService.isValid(token)
+    } catch (err) {
+      this.log.error('AuthGuard: Got Error', err)
     }
 
-    return !!valid
+    if (!valid) return false
+
+    if (valid instanceof InvalidTokenError) {
+      const route = req.url
+      this.log.info(`AuthGuard: Denying access for ${route} :`, valid)
+      return false
+    }
+
+    // add user to request
+    const user = await this.authService.getUser(
+      `user.email='${valid.email}' AND user.extId='${valid.extId}'`,
+    )
+
+    if (!user)
+      throw new Error(
+        `Auth user {email: ${valid.email}, extId: ${valid.extId}} not found`,
+      )
+
+    const sfContact = await this.sfService
+      .retrieve<Contact>({ object: 'Contact', ids: [valid.extId!] })
+      .then(retrieveResult)
+
+    if (sfContact === null)
+      throw new Error(
+        `Associated Contact for user {email: ${valid.email}, extId: ${
+          valid.extId
+        }} not found`,
+      )
+
+    req.user = { ...user, sfContact }
+
+    return true
   }
 }
 

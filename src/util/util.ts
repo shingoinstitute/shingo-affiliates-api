@@ -62,7 +62,8 @@ export const tryCache = async <T>(
   }
 }
 
-export const retrieveResult = (r: unknown) => (Array.isArray(r) ? r[0] : r)
+export const retrieveResult = <T>(r: T[]) =>
+  (r[0] as typeof r[0] | null) || null
 
 /**
  * Gives hostname:port service definition

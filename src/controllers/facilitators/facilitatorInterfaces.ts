@@ -36,6 +36,9 @@ export class CreateBody {
   @IsEmail()
   Email!: string
 
+  @IsString()
+  password!: string
+
   @IsOptional()
   @IsNumber()
   roleId?: number
@@ -84,4 +87,14 @@ export class UpdateBody {
   @IsOptional()
   @IsString()
   Biography__c?: string
+
+  @IsOptional()
+  @ValidateNested()
+  role?: Role
+
+  @IsNumber()
+  id!: number
+
+  @IsSalesforceId()
+  AccountId!: string
 }

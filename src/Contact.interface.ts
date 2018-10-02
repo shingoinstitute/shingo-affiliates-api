@@ -34,7 +34,7 @@ export interface Contact {
   OtherPhone?: null
   AssistantPhone?: null
   ReportsToId?: null
-  Email: 'abe.white@usu.edu'
+  Email: string
   Title?: null
   Department?: null
   AssistantName?: null

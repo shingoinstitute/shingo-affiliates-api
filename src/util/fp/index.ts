@@ -81,9 +81,9 @@ export const head = <T>(xs: T[]) => {
   return x
 }
 
-type Unwrap<T> = T extends Array<infer A> ? A : never
+export type ArrayValue<T> = T extends Array<infer A> ? A : never
 export type Cartesian<A extends [any[], any[], ...any[][]]> = Array<
-  { [key in keyof A]: Unwrap<A[key]> }
+  { [key in keyof A]: ArrayValue<A[key]> }
 >
 
 export type ToIterableIterator<T extends any[]> = T extends Array<infer A>

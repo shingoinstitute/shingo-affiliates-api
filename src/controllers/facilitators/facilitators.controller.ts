@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common'
 import { FacilitatorsService } from '../../components'
 import _ from 'lodash'
-import generator from 'generate-password'
 import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import {
@@ -214,64 +213,48 @@ export class FacilitatorsController {
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
   async create(@Body() body: CreateBody) {
+    // FIXME: Add email verification
     try {
-      const password = generator.generate({
-        length: 12,
-        numbers: true,
-        symbols: true,
-        uppercase: true,
-        strict: true,
-      })
-      const result = await this.facilitatorsService.create({
-        ...body,
-        password,
-      })
+      const result = await this.facilitatorsService.create(body)
 
-      this.mailer.sendMail({
+      await this.mailer.sendMail({
         from: 'shingo.it@usu.edu',
         to:
           process.env.NODE_ENV === 'development'
             ? 'shingo.it@usu.edu,abe.white@usu.edu'
             : 'shingo.coord@usu.edu',
         subject: 'New Shingo Affiliate Portal Account',
-        text: `A new account has been created for ${result.id}:${body.Email}.`,
-        html: `<p>A new account has been created for <pre>${result.id}:${
+        text: `A new account has been created for ${result.extId}:${
+          body.Email
+        }.`,
+        html: `<p>A new account has been created for <pre>${result.extId}:${
           body.Email
         }</pre>.<p>`,
       })
 
-      return this.mailer
-        .sendMail({
-          from: 'shingo.it@usu.edu',
-          to: body.Email,
-          subject: 'New Shingo Affiliate Portal Account',
-          text: stripIndent`
+      await this.mailer.sendMail({
+        from: 'shingo.it@usu.edu',
+        to: body.Email,
+        subject: 'New Shingo Affiliate Portal Account',
+        text: stripIndent`
           Hello ${body.FirstName} ${body.LastName},
 
             Your account for the Shingo Affiliate Portal has been created!
 
-            Your temporary password is:
-
-                ${password}
-
-            Please change it when you first log in.
-
           Thank you,
 
             The Shingo Institute, Home of the Shingo Prize`,
-          html: html`
+        html: html`
           <p>Hello ${body.FirstName} ${body.LastName},</p>
           <p>Your account for the Shingo Affiliate Portal has been created!</p>
-          <p>Your temporary password is:</p>
-          <p>&emsp;${password}</p>
-          <p>Please change it when you first log in.</p>
           <p>Thank you,</p>
           <br>
           <p>The Shingo Institute, <em>Home of the Shingo Prize</em></p>
           <hr>
           <p>This message was an automated response.</p>`,
-        })
-        .then(() => result)
+      })
+
+      return result
     } catch (error) {
       if (
         error.message &&
@@ -405,6 +388,6 @@ export class FacilitatorsController {
     @Param('id', SalesforceIdValidator) id: string,
     @Param('roleId') roleId: string,
   ) {
-    return { added: await this.facilitatorsService.changeRole(id, roleId) }
+    return { added: await this.facilitatorsService.changeRole(id, +roleId) }
   }
 }
