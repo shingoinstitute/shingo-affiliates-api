@@ -12,7 +12,7 @@ import {
 } from '@shingo/auth-api-client'
 import { getJwt, retrieveResult } from '../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
-import { Contact } from '../Contact.interface'
+import { Contact } from '../sf-interfaces/Contact.interface'
 import { LoggerInstance } from 'winston'
 
 export type AuthUser = authservices.User & { sfContact: Contact }

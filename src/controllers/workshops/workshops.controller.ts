@@ -58,7 +58,7 @@ export class WorkshopsController {
       throw new ForbiddenException('SESSION_EXPIRED')
     }
 
-    return this.workshopsService.getAll(false, true, user)
+    return this.workshopsService.getAll(true, user)
   }
 
   /**
@@ -69,7 +69,7 @@ export class WorkshopsController {
    */
   @Get('public')
   readPublic(@Refresh() refresh: boolean | undefined) {
-    return this.workshopsService.getAll(true, refresh)
+    return this.workshopsService.getAll(refresh)
   }
 
   /**

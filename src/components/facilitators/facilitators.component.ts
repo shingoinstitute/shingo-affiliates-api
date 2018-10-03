@@ -5,18 +5,19 @@ import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
-import { tryCache, retrieveResult } from '../../util'
+import { tryCache, retrieveResult, Overwrite, OverwriteMaybe } from '../../util'
 import {
   MapBody,
   CreateBody,
   UpdateBody,
 } from '../../controllers/facilitators/facilitatorInterfaces'
 import { EnsureRoleService } from '../ensurerole.component'
-import { Contact } from '../../Contact.interface'
+import { Contact } from '../../sf-interfaces/Contact.interface'
 import {
   workshopResource,
   affiliateResource,
 } from '../affiliates/affiliates.component'
+import { Account } from '../../sf-interfaces/Account.interface'
 
 interface Facilitator {
   Id: string
@@ -83,6 +84,28 @@ export class FacilitatorsService {
    * @param affiliate SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
    */
   getAll(refresh = false, affiliate = '') {
+    type QueryResult = OverwriteMaybe<
+      Pick<
+        Contact,
+        | 'Id'
+        | 'FirstName'
+        | 'LastName'
+        | 'Email'
+        | 'Title'
+        | 'Photograph__c'
+        | 'Biography__c'
+        | 'Account'
+        | 'Facilitator_For__r'
+      >,
+      {
+        Account: Pick<NonNullable<Contact['Account']>, 'Id' | 'Name'>
+        Facilitator_For__r: Pick<
+          NonNullable<Contact['Facilitator_For__r']>,
+          'Id' | 'Name'
+        >
+      }
+    >
+
     const baseClause = `RecordType.DeveloperName='Affiliate_Instructor'`
     const query = {
       fields: [
@@ -109,20 +132,18 @@ export class FacilitatorsService {
       this.cache,
       this.getAllKey,
       async () => {
-        const facilitators = (await this.sfService.query<Facilitator>(query))
+        const facilitators = (await this.sfService.query<QueryResult>(query))
           .records
         const authFacilitators = await this.addUserAuthInfo(facilitators)
 
-        const authedFacs = authFacilitators.filter(
-          (f): f is AddUserInfo<Facilitator> =>
-            typeof (f as AddUserInfo<Facilitator>).id !== 'undefined' &&
-            !!(f as AddUserInfo<Facilitator>).services && // the empty string is falsy, so we coerce to boolean
-            (f as AddUserInfo<Facilitator>).services!.includes(
+        return authFacilitators.filter(
+          (f): f is AddUserInfo<QueryResult> =>
+            typeof (f as AddUserInfo<QueryResult>).id !== 'undefined' &&
+            !!(f as AddUserInfo<QueryResult>).services && // the empty string is falsy, so we coerce to boolean
+            (f as AddUserInfo<QueryResult>).services!.includes(
               'affiliate-portal',
             ),
         )
-
-        return authedFacs
       },
       refresh,
     )
@@ -220,7 +241,13 @@ export class FacilitatorsService {
   ) {
     // // Generate the data parameter for the RPC call
     const realRetrieve = [
-      ...new Set([...retrieve, 'AccountId', 'RecordType.DeveloperName', 'Id']),
+      ...new Set([
+        ...retrieve,
+        'Account.Id',
+        'Account.Name',
+        'RecordType.DeveloperName',
+        'Id',
+      ]),
     ]
 
     const data = {
@@ -228,32 +255,23 @@ export class FacilitatorsService {
       retrieve: `Contact(${realRetrieve.join()})`,
     }
 
-    interface RetrieveResult {
-      Id: string
-      AccountId: string
-      RecordType: {
-        DeveloperName: string
-      }
-    }
-    interface QueryResult {
-      Id: string
-      Name: string
-    }
-
-    type AddAccount<T> = T & { Account?: QueryResult }
+    type RetrieveResult = Overwrite<
+      Partial<Contact>,
+      OverwriteMaybe<
+        Pick<Contact, 'Id' | 'Account' | 'RecordType'>,
+        { Account: Pick<Account, 'Id' | 'Name'> }
+      >
+    >
 
     return tryCache(
       this.cache,
       data,
       async (): Promise<
-        | Array<AddAccount<AddUserInfo<RetrieveResult>>>
-        | Array<AddAccount<RetrieveResult>>
+        Array<AddUserInfo<RetrieveResult>> | RetrieveResult[]
       > => {
         /* this method does way too much, but I don't know enough about how it is used to refactor it
           1. We request the Contacts using the search data and filter to correct facilitators
           2. We get the authentication info for each facilitator if it exists
-          3. Using the account Ids from the facilitators, we request associated Account objects from salesforce
-          4. We add the account data to every facilitator under the Account key
           5. If isMapped is true, return only the facilitators that have associated authentication info
           6. Otherwise return only the facilitators that don't have associated authentication info
         */
@@ -281,50 +299,19 @@ export class FacilitatorsService {
         // Add the facilitator's auth id to the object
         const authedFacs = await this.addUserAuthInfo(filteredFacs)
 
-        // Step 3
-        const accountIds = authedFacs
-          // why are we filtering on accountId? it should always be truthy
-          .filter(f => !!f.AccountId)
-          .map(f => `'${f.AccountId}'`)
-
-        // what is the point of this request?
-        // TODO: we could add Account.Id and Account.Name to the retrieve fields above and remove step 3 and 4
-        const query = {
-          fields: ['Id', 'Name'],
-          table: 'Account',
-          clauses: `Id IN (${accountIds.join()})`,
-        }
-
         // Step 4
-        const affiliates = _.keyBy(
-          await this.sfService
-            .query<QueryResult>(query)
-            .then(r => r.records || []),
-          'Id',
-        )
-
-        const affiliateMergedFacs = authedFacs.map(f => {
-          const newFac: AddAccount<typeof f> = { ...f }
-
-          if (f.AccountId && typeof affiliates[f.AccountId] !== 'undefined') {
-            newFac.Account = affiliates[f.AccountId]
-          }
-
-          return newFac
-        })
-
         return isMapped
           ? // Step 5
-            affiliateMergedFacs.filter(
-              (f): f is AddAccount<AddUserInfo<RetrieveResult>> =>
+            authedFacs.filter(
+              (f): f is AddUserInfo<RetrieveResult> =>
                 !!(f as AddUserInfo<RetrieveResult>).services &&
                 (f as AddUserInfo<RetrieveResult>).services!.includes(
                   'affiliate-portal',
                 ),
             )
           : // Step 6
-            affiliateMergedFacs.filter(
-              (f): f is AddAccount<RetrieveResult> =>
+            authedFacs.filter(
+              (f): f is RetrieveResult =>
                 typeof (f as AddUserInfo<RetrieveResult>).services ===
                   'undefined' ||
                 !(f as AddUserInfo<RetrieveResult>).services!.includes(
@@ -373,22 +360,22 @@ export class FacilitatorsService {
     }
 
     return tryCache(this.cache, data, async () => {
-      const facilitator:
-        | (Contact & { Account?: any })
-        | null = await this.sfService
+      const facilitator = await this.sfService
         .retrieve<Contact>(data)
         .then(retrieveResult)
 
       if (facilitator === null) return undefined
 
-      facilitator.Account = await this.sfService
-        .retrieve({
-          object: 'Account',
-          ids: [facilitator.AccountId],
-        })
-        .then(retrieveResult)
+      facilitator.Account = facilitator.AccountId
+        ? await this.sfService
+            .retrieve<Account>({
+              object: 'Account',
+              ids: [facilitator.AccountId],
+            })
+            .then(retrieveResult)
+        : null
 
-      const user = await this.tryFindUser(facilitator.Id, facilitator.Email)
+      const user = await this.tryFindUser(facilitator.Id, facilitator.Email!)
       if (!user) return undefined
 
       if (!user.services || !user.services.includes('affiliate-portal'))
@@ -635,12 +622,12 @@ export class FacilitatorsService {
     // Update permissions
     if (user.AccountId !== prevUser.AccountId) {
       await this.authService.revokePermissionFromUser(
-        affiliateResource(prevUser.AccountId),
+        affiliateResource(prevUser.AccountId!),
         1,
         user.id,
       )
       await this.authService.revokePermissionFromUser(
-        workshopResource(prevUser.AccountId),
+        workshopResource(prevUser.AccountId!),
         2,
         user.id,
       )

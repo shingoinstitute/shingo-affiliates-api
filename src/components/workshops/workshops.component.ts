@@ -1,21 +1,29 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { CacheService } from '../'
-import { Workshop } from './workshop'
+import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
 import _, { chunk } from 'lodash'
 import {
   RequireKeys,
   getWorkshopIds,
   Arguments,
   retrieveResult,
+  tryCache,
+  Overwrite,
 } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
-import { DescribeSObjectResult } from 'jsforce'
+import { QueryResult } from 'jsforce'
 import { AuthUser } from '../../guards/auth.guard'
+import { flatten, ArrayValue } from '../../util/fp'
+import { Contact } from '../../sf-interfaces/Contact.interface'
+import { Account } from '../../sf-interfaces/Account.interface'
+import { WorkshopFacilitatorAssociation__c } from '../../sf-interfaces/WorkshopFacilitatorAssociation__c.interface'
+import { Awaited } from '../../util/fp/types'
+import { Attachment } from '../../sf-interfaces/Attachment.interface'
 
-export { Workshop }
+type SFQuery = Arguments<SalesforceClient['query']>[0]
 
 /**
  * @desc A service to provide functions for working with Workshops
@@ -37,42 +45,32 @@ export class WorkshopsService {
    *
    * The function assembles a list of workshop ids form the users permissions to query Salesforce.
    *
-   * The queried fields from Salesforce are as follows:
-   *
-   * ```
-   *  [
-   *      "Id",
-   *      "Name",
-   *      "Start_Date__c",
-   *      "End_Date__c",
-   *      "Course_Manager__c",
-   *      "Billing_Contact__c",
-   *      "Event_City__c",
-   *      "Event_Country__c",
-   *      "Organizing_Affiliate__c",
-   *      "Public__c",
-   *      "Registration_Website__c",
-   *      "Status__c",
-   *      "Host_Site__c",
-   *      "Workshop_Type__c",
-   *      "Language__c"
-   *  ]
-   * ```
-   *
-   * The query is ordered by 'Start_Date__c'
-   *
-   * @param isPublic Get Only public workshops (skips permission check)
    * @param refresh Force the refresh of the cache
-   * @param user The user to filter permissions for (isPublic === false)
+   * @param user Indicates that isPublic === false. The user to filter permissions for
    * user needs permissions[] and roles[].permissions[]
    */
-  async getAll(
-    isPublic = false,
-    refresh = false,
-    user?: AuthUser,
-  ): Promise<Workshop[]> {
+  getAll(refresh = false, user?: AuthUser) {
     const keyBase = 'WorkshopsService.getAll'
-    const key = isPublic ? keyBase + '_public' : keyBase
+    const key = user ? keyBase + '_public' : keyBase
+
+    type QueryData = Pick<
+      Workshop__c,
+      | 'Id'
+      | 'Name'
+      | 'Start_Date__c'
+      | 'End_Date__c'
+      | 'Course_Manager__c'
+      | 'Billing_Contact__c'
+      | 'Event_City__c'
+      | 'Event_Country__c'
+      | 'Organizing_Affiliate__c'
+      | 'Public__c'
+      | 'Registration_Website__c'
+      | 'Status__c'
+      | 'Host_Site__c'
+      | 'Workshop_Type__c'
+      | 'Language__c'
+    >
 
     const query = {
       fields: [
@@ -96,107 +94,127 @@ export class WorkshopsService {
       clauses: `Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c`,
     }
 
-    let workshops: Workshop[] = []
-    if (!this.cache.isCached(key) || refresh) {
-      if (!isPublic) {
-        // tslint:disable-next-line:max-line-length
-        query.fields.push(
-          '(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)',
-        )
-        const ids = (user && getWorkshopIds(user)) || []
-        if (ids.length === 0) return []
-
-        for (const chunkedIds of chunk(ids, 200)) {
-          workshops = workshops.concat(
-            await this.queryForWorkshops(chunkedIds, query),
+    return tryCache(
+      this.cache,
+      key,
+      async () => {
+        if (user) {
+          return this.getPrivateWorkshops<QueryData>(query, user).then(ws =>
+            ws.map(w => ({
+              ...w,
+              facilitators: w.Instructors__r.map(i => i.Instructor__r),
+            })),
           )
         }
-      } else {
-        workshops = (await this.sfService.query<Workshop>(query)).records
-      }
 
-      for (const workshop of workshops) {
-        if (
-          workshop.Instructors__r &&
-          workshop.Instructors__r.records instanceof Array
-        ) {
-          workshop.facilitators = workshop.Instructors__r.records.map(
-            i => i.Instructor__r,
-          )
-        }
-      }
-
-      this.cache.cache(key, workshops)
-
-      return workshops
-    } else {
-      return this.cache.getCache(key) as Workshop[]
-    }
+        return this.sfService.query<QueryData>(query).then(r => r.records)
+      },
+      refresh,
+    )
   }
 
-  private queryForWorkshops(
+  private async getPrivateWorkshops<BaseQueryData extends Partial<Workshop__c>>(
+    baseQuery: SFQuery,
+    user: AuthUser,
+  ) {
+    type SubSelectFields = Pick<
+      Contact,
+      'Id' | 'FirstName' | 'LastName' | 'Email' | 'Photograph__c'
+    >
+    interface SubSelectResult {
+      Instructors__r?: QueryResult<{ Instructor__r: SubSelectFields }>
+    }
+
+    const subSelectFields = [
+      'Instructor__r.Id',
+      'Instructor__r.FirstName',
+      'Instructor__r.LastName',
+      'Instructor__r.Email',
+      'Instructor__r.Photograph__c',
+    ]
+
+    const query = {
+      ...baseQuery,
+      fields: [
+        ...baseQuery.fields,
+        `(SELECT ${subSelectFields.join()} FROM Instructors__r)`,
+      ],
+    }
+
+    const ids = getWorkshopIds(user)
+    if (ids.length === 0) return []
+
+    const workshops = flatten(
+      await Promise.all(
+        // our api has max of 200 records it can query at a time I guess?
+        chunk(ids, 200).map(chunkedIds =>
+          this.queryForWorkshops<BaseQueryData & SubSelectResult>(
+            chunkedIds,
+            query,
+          ),
+        ),
+      ),
+    )
+
+    // unwrap the child-select QueryResult
+    return workshops.map(
+      r =>
+        // tslint:disable-next-line:no-object-literal-type-assertion
+        ({
+          ...(r as object),
+          Instructors__r: (r.Instructors__r && r.Instructors__r.records) || [],
+        } as Overwrite<
+          typeof r,
+          { Instructors__r: Array<{ Instructor__r: SubSelectFields }> }
+        >),
+    )
+  }
+
+  private queryForWorkshops<T extends Partial<Workshop__c>>(
     ids: ReadonlyArray<string>,
-    query: Arguments<SalesforceClient['query']>[0],
-  ): Promise<Workshop[]> {
+    query: SFQuery,
+  ) {
     const newQuery = {
       ...query,
       clauses: `Id IN (${ids.join()}) ORDER BY Start_Date__c`,
     }
-    return this.sfService.query<Workshop>(newQuery).then(r => r.records)
+    return this.sfService.query<T>(newQuery).then(r => r.records)
   }
 
   /**
    * Get a specific workshop by Salesforce ID. Retrieves all fields of the Workshop__c object.
-   * Specifically:
-   *
-   * ```
-   * [
-   *   "Id",
-   *   "IsDeleted" ,
-   *   "Name",
-   *   "CreatedDate",
-   *   "CreatedById",
-   *   "LastModifiedDate",
-   *   "LastModifiedById",
-   *   "SystemModstamp",
-   *   "LastViewedDate",
-   *   "LastReferencedDate",
-   *   "Billing_Contact__c",
-   *   "Course_Manager__c",
-   *   "End_Date__c",
-   *   "Event_City__c",
-   *   "Event_Country__c",
-   *   "Organizing_Affiliate__c",
-   *   "Public__c",
-   *   "Registration_Website__c",
-   *   "Start_Date__c",
-   *   "Status__c",
-   *   "Workshop_Type__c",
-   *   "Host_Site__c",
-   *   "Language__c",
-   * ]
-   * ```
    *
    * @param id - A Salesforce ID corresponding to a Workshop\__c record
    */
-  async get(id: string): Promise<Workshop> {
+  get(id: string): Promise<Workshop__c | undefined> {
     // Create the data parameter for the RPC call
 
-    if (!this.cache.isCached(id)) {
-      const workshop: Workshop = (await this.sfService
-        .retrieve({
+    return tryCache(this.cache, id, async () => {
+      const workshop:
+        | null
+        | Workshop__c & {
+            facilitators?: Array<
+              ArrayValue<
+                Awaited<ReturnType<WorkshopsService['facilitators']>>
+              >['Instructor__r']
+            >
+            files?: Array<Partial<Attachment>>
+          } = await this.sfService
+        .retrieve<Workshop__c>({
           object: 'Workshop__c',
           ids: [id],
         })
-        .then(retrieveResult)) as Workshop
+        .then(retrieveResult)
 
-      workshop.facilitators =
-        (await this.facilitators(id)).map(f => f.Instructor__r) || []
+      if (workshop === null) return undefined
+
+      workshop.facilitators = (await this.facilitators(id)).map(
+        f => f.Instructor__r,
+      )
 
       if (workshop.Course_Manager__c) {
-        // tslint:disable-next-line:max-line-length
         workshop.Course_Manager__r = await this.sfService
-          .retrieve({
+          .retrieve<Contact>({
             object: 'Contact',
             ids: [workshop.Course_Manager__c],
           })
@@ -204,23 +222,18 @@ export class WorkshopsService {
       }
 
       if (workshop.Organizing_Affiliate__c) {
-        // tslint:disable-next-line:max-line-length
-        workshop.Organizing_Affiliate__r = await this.sfService
-          .retrieve({
+        workshop.Organizing_Affiliate__r = (await this.sfService
+          .retrieve<Account>({
             object: 'Account',
             ids: [workshop.Organizing_Affiliate__c],
           })
-          .then(retrieveResult)
+          .then(retrieveResult)) as Account
       }
 
       workshop.files = (await this.getFiles(workshop.Id!)) || []
 
-      this.cache.cache(id, workshop)
-
       return workshop
-    } else {
-      return this.cache.getCache(id) as Workshop
-    }
+    })
   }
 
   private getFiles(id: string) {
@@ -230,15 +243,11 @@ export class WorkshopsService {
       clauses: `ParentId='${id}'`,
     }
 
-    // tslint:disable-next-line:interface-over-type-literal
-    type Attachment = {
-      Name: string
-      ParentId: string
-      ContentType: string
-      BodyLength: number
-    }
-
-    return this.sfService.query<Attachment>(query).then(r => r.records || [])
+    type QueryData = Pick<
+      Attachment,
+      'Name' | 'ParentId' | 'ContentType' | 'BodyLength'
+    >
+    return this.sfService.query<QueryData>(query).then(r => r.records || [])
   }
 
   /**
@@ -252,44 +261,16 @@ export class WorkshopsService {
     // Set the key for the cache
     const key = 'describeWorkshops'
 
-    // If no cached result, use the shingo-sf-api to get the result
-    if (!this.cache.isCached(key) || refresh) {
-      const describeObject = await this.sfService.describe('Workshop__c')
-
-      // Cache describe
-      this.cache.cache(key, describeObject)
-
-      return describeObject
-    } else {
-      // else return the cachedResult
-      return this.cache.getCache(key) as DescribeSObjectResult
-    }
+    return tryCache(
+      this.cache,
+      key,
+      () => this.sfService.describe('Workshop__c'),
+      refresh,
+    )
   }
 
   /**
    * Executes a SOSL query to search for text on workshop records in Salesforce.
-   *
-   * Example response body:
-   *
-   * ```
-   * [
-   *      {
-   *          "Id": "a1Sg0000001jXbgEAE",
-   *          "Name": "Test Workshop 10 (Updated)",
-   *          "Start_Date__c": "2017-07-12"
-   *      },
-   *      {
-   *          "Id": "a1Sg0000001jXWgEAM",
-   *          "Name": "Test Workshop 9 (Updated)",
-   *          "Start_Date__c": "2017-07-11"
-   *      },
-   *      {
-   *          "Id": "a1Sg0000001jXWbEAM",
-   *          "Name": "Test Workshop 8",
-   *          "Start_Date__c": "2017-07-11"
-   *      }
-   *  ]
-   * ```
    *
    * @param search SOSL search expression (i.e. '*Discover Test*')
    * @param retrieve A comma seperated list of the Workshop__c fields to retrieve (i.e. 'Id, Name, Start_Date__c')
@@ -302,19 +283,15 @@ export class WorkshopsService {
       retrieve: `Workshop__c(${retrieve.join(',')})`,
     }
 
-    // If no cached result, use the shingo-sf-api to get result
-    if (!this.cache.isCached(data) || refresh) {
-      const workshops: Workshop[] =
-        ((await this.sfService.search(data)).searchRecords as Workshop[]) || []
-
-      // Cache results
-      this.cache.cache(data, workshops)
-
-      return workshops
-    } else {
-      // else return the cached result
-      return this.cache.getCache(data) as Workshop[]
-    }
+    return tryCache(
+      this.cache,
+      data,
+      () =>
+        this.sfService
+          .search<Partial<Workshop__c>>(data)
+          .then(s => s.searchRecords || []),
+      refresh,
+    )
   }
 
   /**
@@ -334,20 +311,20 @@ export class WorkshopsService {
    */
   async facilitators(id: string) {
     const key = id + '_facilitators'
-    interface Returned {
-      Id: string
-      Instructor__r: {
-        Id: string
-        FirstName: string
-        LastName: string
-        Name: string
-        AccountId: string
-        Email: string
-        Title: string
-      }
+    type QueryData = Pick<WorkshopFacilitatorAssociation__c, 'Id'> & {
+      Instructor__r: Pick<
+        Contact,
+        | 'Id'
+        | 'FirstName'
+        | 'LastName'
+        | 'Name'
+        | 'AccountId'
+        | 'Email'
+        | 'Title'
+      >
     }
 
-    if (!this.cache.isCached(key)) {
+    return tryCache(this.cache, key, async () => {
       const query = {
         fields: [
           'Id',
@@ -363,8 +340,11 @@ export class WorkshopsService {
         clauses: `Workshop__c='${id}'`,
       }
 
-      const facilitators =
-        ((await this.sfService.query(query)).records as Returned[]) || []
+      const facilitators: Array<
+        QueryData & { id?: number }
+      > = await this.sfService
+        .query<QueryData>(query)
+        .then(r => r.records || [])
       const ids = facilitators.map(fac => `'${fac.Id}'`)
       const auths = await this.authService.getUsers(
         `user.extId IN (${ids.join()})`,
@@ -372,15 +352,11 @@ export class WorkshopsService {
 
       for (const fac of facilitators) {
         const auth = auths.find(a => a.extId === fac.Id)
-        if (auth) (fac as any).id = auth.id
+        if (auth) fac.id = auth.id
       }
 
-      this.cache.cache(id + '_facilitators', facilitators)
-
       return facilitators
-    } else {
-      return this.cache.getCache(key) as Returned[]
-    }
+    })
   }
 
   /**
@@ -391,14 +367,13 @@ export class WorkshopsService {
   // tslint:disable-next-line:max-line-length
   async create(
     workshop: RequireKeys<
-      Partial<Workshop>,
+      Partial<Workshop__c>,
       | 'Name'
       | 'Start_Date__c'
       | 'End_Date__c'
       | 'Organizing_Affiliate__c'
       | 'Course_Manager__c'
-      | 'facilitators'
-    >,
+    > & { facilitators: Array<{ Id: string; id: number }> },
   ) {
     // Use the shingo-sf-api to create the new record
     const data = {
@@ -423,7 +398,11 @@ export class WorkshopsService {
    *
    * @param workshop The workshop
    */
-  async update(workshop: RequireKeys<Partial<Workshop>, 'Id'>) {
+  async update(
+    workshop: RequireKeys<Partial<Workshop__c>, 'Id'> & {
+      facilitators: Array<{ Id: string }>
+    },
+  ) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
@@ -438,12 +417,12 @@ export class WorkshopsService {
     const removeFacilitators = _.differenceWith(
       currFacilitators,
       workshop.facilitators || [],
-      (val: any, other) => other && val.Instructor__r.Id === other.Id,
+      (val, other) => other && val.Instructor__r.Id === other.Id,
     )
     workshop.facilitators = _.differenceWith(
       workshop.facilitators,
       currFacilitators,
-      (val, other: any) => other && val.Id === other.Instructor__r.Id,
+      (val, other) => other && val.Id === other.Instructor__r.Id,
     )
 
     await this.grantPermissions(workshop as any)
@@ -555,9 +534,9 @@ export class WorkshopsService {
    */
   private async grantPermissions(
     workshop: RequireKeys<
-      Partial<Workshop>,
-      'Id' | 'facilitators' | 'Organizing_Affiliate__c'
-    >,
+      Partial<Workshop__c>,
+      'Id' | 'Organizing_Affiliate__c'
+    > & { facilitators: Array<{ Id: string; id: number }> },
   ) {
     const roles = await this.authService.getRoles(
       `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${
@@ -578,10 +557,8 @@ export class WorkshopsService {
           object: 'WorkshopFacilitatorAssociation__c',
           records: [
             {
-              contents: JSON.stringify({
-                Workshop__c: workshop.Id,
-                Instructor__c: facilitator.Id,
-              }),
+              Workshop__c: workshop.Id,
+              Instructor__c: facilitator.Id,
             },
           ],
         }
@@ -601,7 +578,7 @@ export class WorkshopsService {
    * @param remove List of facilitators to remove
    */
   private async removePermissions(
-    workshop: RequireKeys<Partial<Workshop>, 'Id'>,
+    workshop: RequireKeys<Partial<Workshop__c>, 'Id'>,
     remove: ReadonlyArray<{ Id: string; Instructor__r: { Id: string } }>,
   ) {
     const resource = `/workshops/${workshop.Id}`

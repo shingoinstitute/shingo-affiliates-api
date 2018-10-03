@@ -11,6 +11,21 @@ export type Overwrite<A extends object, B extends object> = Pick<
   Exclude<keyof A, keyof B>
 > &
   B
+
+export type KeysOfType<T, Type> = {
+  [K in keyof T]-?: Type extends T[K] ? K : never
+}[keyof T]
+export type OptionalKeys<T> = KeysOfType<T, undefined>
+export type NullKeys<T> = KeysOfType<T, null>
+export type MaybeKeys<T> = KeysOfType<T, null | undefined>
+export type MakeMaybe<T> = { [K in keyof T]+?: T[K] | null | undefined }
+
+export type OverwriteMaybe<A extends object, B extends object> = Overwrite<
+  A,
+  Pick<B, Exclude<keyof B, MaybeKeys<A>>> &
+    MakeMaybe<Pick<B, keyof B & MaybeKeys<A>>>
+>
+
 export type RequireKeys<T extends object, K extends keyof T> = Overwrite<
   T,
   { [key in K]-?: T[key] }

@@ -62,3 +62,13 @@ export type Curried9<A, B, C, D, E, F, G, H, I, J> = (
 ) => (
   b: B,
 ) => (c: C) => (d: D) => (e: E) => (f: F) => (g: G) => (h: H) => (i: I) => J
+
+/**
+ * Unwrap a `Promise` to obtain its return value.
+ * @see https://github.com/Microsoft/TypeScript/pull/21613
+ */
+export type Awaited<T> = {
+  '1': T extends { then(onfulfilled: (value: infer U) => any): any }
+    ? Awaited<U>
+    : T
+}[T extends number ? '1' : '1']

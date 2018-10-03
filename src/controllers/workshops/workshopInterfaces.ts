@@ -1,6 +1,12 @@
-import { IsString, IsDateString, IsArray, IsEmail, ValidateNested } from 'class-validator'
+import {
+  IsString,
+  IsDateString,
+  IsArray,
+  IsEmail,
+  ValidateNested,
+} from 'class-validator'
 import { IsSalesforceId } from '../../validators'
-import { Workshop } from '../../components'
+import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
 // tslint:disable:max-classes-per-file variable-name
 
 export class CancelBody {
@@ -8,7 +14,7 @@ export class CancelBody {
   reason!: string
 }
 
-export class UpdateBody implements Partial<Workshop> {
+export class UpdateBody implements Partial<Workshop__c> {
   @IsSalesforceId()
   Id!: string
 

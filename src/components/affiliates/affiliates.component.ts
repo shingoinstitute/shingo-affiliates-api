@@ -1,8 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { CacheService } from '..'
 import { Affiliate } from './affiliate'
 import _ from 'lodash'
-import { tryCache, RequireKeys, retrieveResult } from '../../util'
+import { tryCache, retrieveResult, Overwrite } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
@@ -12,7 +12,8 @@ import {
 } from '../../controllers/affiliates/affiliateInterfaces'
 import { flatten, cartesian } from '../../util/fp'
 import { map } from '../../util/fp/generator'
-import { Contact } from '../../Contact.interface'
+import { Contact } from '../../sf-interfaces/Contact.interface'
+import { Account } from '../../sf-interfaces/Account.interface'
 
 export { Affiliate }
 
@@ -53,9 +54,20 @@ export class AffiliatesService {
    * @param isPublic Filter out private Affiliates
    * @param refresh Force the refresh of the cache
    */
-  async getAll(isPublic = false, refresh = false): Promise<Affiliate[]> {
+  async getAll(isPublic = false, refresh = false) {
     const keyBase = 'AffiliatesService.getAll'
     const key = isPublic ? keyBase + '_public' : keyBase
+
+    type QueryResponse = Pick<
+      Account,
+      | 'Id'
+      | 'Name'
+      | 'Summary__c'
+      | 'Logo__c'
+      | 'Page_Path__c'
+      | 'Website'
+      | 'Languages__c'
+    >
 
     const clauseBase = `RecordType.DeveloperName='Licensed_Affiliate'`
     const query = {
@@ -74,25 +86,30 @@ export class AffiliatesService {
         : clauseBase,
     }
 
-    const affiliates = (await tryCache(
+    return tryCache(
       this.cache,
       key,
-      () => this.sfService.query(query).then(q => q.records || []),
+      async () => {
+        const affiliates = await this.sfService
+          .query<QueryResponse>(query)
+          .then(q => q.records || [])
+
+        if (isPublic) {
+          return affiliates
+        }
+
+        const roles = await this.authService.getRoles(
+          `role.name LIKE 'Course Manager -- %'`,
+        )
+
+        return affiliates.filter(
+          aff =>
+            roles.findIndex(
+              role => role.name === `Course Manager -- ${aff.Id}`,
+            ) !== -1,
+        )
+      },
       refresh,
-    )) as Affiliate[]
-
-    if (isPublic) {
-      return affiliates
-    }
-
-    const roles = await this.authService.getRoles(
-      `role.name LIKE 'Course Manager -- %'`,
-    )
-
-    return affiliates.filter(
-      aff =>
-        roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !==
-        -1,
     )
   }
 
@@ -101,12 +118,13 @@ export class AffiliatesService {
    *
    * @param id Salesforce ID for an Account
    */
-  get(id: string): Promise<RequireKeys<Affiliate, 'Id'>> {
+  get(id: string) {
     // FIXME: this can return any account in our salesforce instance, not just registered affiliates
     return tryCache(this.cache, id, () =>
       this.sfService
-        .retrieve({ object: 'Account', ids: [id] })
-        .then(retrieveResult),
+        .retrieve<Account>({ object: 'Account', ids: [id] })
+        .then(retrieveResult)
+        .then(r => (r === null ? undefined : r)),
     )
   }
 
@@ -131,33 +149,11 @@ export class AffiliatesService {
   /**
    * Executes a SOSL query to search for text on Accounts of record type Licensed Affiliate.
    *
-   * Example response body:
-   * ```
-   * [
-   *      {
-   *          "Id": "003g000001VvwEZAAZ",
-   *          "Name": "Test One",
-   *      },
-   *      {
-   *          "Id": "003g000001VvwEZABA",
-   *          "Name": "Test Two",
-   *      },
-   *      {
-   *          "Id": "003g000001VvwEZABB",
-   *          "Name": "Test Three",
-   *      },
-   *  ]
-   * ```
-   *
    * @param search SOSL search expression (i.e. '*Test*')
    * @param retrieve A list of the Account fields to retrieve (i.e. 'Id, Name')
    * @param refresh Force the refresh of the cache
    */
-  search(
-    search: string,
-    retrieve: string[],
-    refresh = false,
-  ): Promise<Affiliate[]> {
+  search(search: string, retrieve: string[], refresh = false) {
     const newRetrieve = [...new Set([...retrieve, 'RecordType.DeveloperName'])]
     // Generate the data parameter for the RPC call
     const data = {
@@ -165,17 +161,24 @@ export class AffiliatesService {
       retrieve: `Account(${newRetrieve.join()})`,
     }
 
+    type SearchResult = Partial<Account>
+
     // If no cached result, use the shingo-sf-api to get result
     return tryCache(
       this.cache,
       data,
       async () => {
-        const affiliates =
-          ((await this.sfService.search(data)).searchRecords as Affiliate[]) ||
-          []
+        const affiliates = await this.sfService
+          .search<SearchResult>(data)
+          .then(d => d.searchRecords || [])
         return affiliates.filter(
-          aff =>
-            aff.RecordType &&
+          (
+            aff,
+          ): aff is Overwrite<
+            typeof aff,
+            { RecordType: { DeveloperName: 'Licensed_Affiliate' } }
+          > =>
+            !!aff.RecordType &&
             aff.RecordType.DeveloperName === 'Licensed_Affiliate',
         )
       },
@@ -197,7 +200,7 @@ export class AffiliatesService {
     search: string,
     retrieve: string[],
     refresh = false,
-  ): Promise<any[]> {
+  ) {
     const newRetrieve = [...new Set([...retrieve, 'AccountId'])]
 
     const data = {
@@ -205,20 +208,16 @@ export class AffiliatesService {
       retrieve: `Contact(${newRetrieve.join()})`,
     }
 
+    type SearchResult = Overwrite<Partial<Contact>, Pick<Contact, 'AccountId'>>
+
     return tryCache(
       this.cache,
       data,
       async () => {
-        const cms = (await this.sfService.search(data)).searchRecords || []
-        return cms.filter(cm => {
-          if (typeof cm !== 'object') {
-            throw new Error(
-              `Got unexpected result from SF.search: got ${cm}, expected object`,
-            )
-          }
-
-          return (cm as any).AccountId === id
-        })
+        const cms = await this.sfService
+          .search<SearchResult>(data)
+          .then(d => d.searchRecords || [])
+        return cms.filter(cm => cm.AccountId === id)
       },
       refresh,
     )
@@ -233,7 +232,7 @@ export class AffiliatesService {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Account',
-      records: [{ contents: JSON.stringify(affiliate) }],
+      records: [affiliate],
     }
 
     const result = (await this.sfService.create(data))[0]
@@ -327,6 +326,8 @@ export class AffiliatesService {
    */
   async delete(id: string) {
     const result = await this.get(id)
+    if (typeof result === 'undefined')
+      throw new BadRequestException(`Account with id ${id} does not exist`)
     // NANI!?!?!?
     // FIXME: Fix magic (and brittle) string
     result.RecordTypeId = '012A0000000zprfIAA'
