@@ -1,11 +1,8 @@
-import {
-  Support_Page__c,
-  visibleTo,
-} from '../../components/support/support.component'
+import { visibleTo } from '../../components/support/support.component'
 import { SupportController } from './support.controller'
 import { AuthUser } from '../../guards/auth.guard'
 
-const pages: Support_Page__c[] = [
+const pages: any[] = [
   {
     Id: 'A00000000000',
     Title__c: 'How To Log In',
@@ -55,7 +52,6 @@ const user: AuthUser = {
     OtherLatitude: null,
     OtherLongitude: null,
     OtherGeocodeAccuracy: null,
-    OtherAddress: null,
     MailingStreet: null,
     MailingCity: null,
     MailingState: null,
@@ -64,7 +60,6 @@ const user: AuthUser = {
     MailingLatitude: null,
     MailingLongitude: null,
     MailingGeocodeAccuracy: null,
-    MailingAddress: null,
     Phone: null,
     Fax: null,
     MobilePhone: null,
@@ -132,7 +127,7 @@ const user: AuthUser = {
     Qualified_Workshops__c: null,
     Has_Watched_Most_Recent_Webinar__c: false,
     Job_History__c: null,
-  },
+  } as any,
 }
 
 const supportServiceMock = {

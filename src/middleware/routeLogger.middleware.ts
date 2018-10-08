@@ -1,6 +1,7 @@
 import { NestMiddleware, Inject, Injectable } from '@nestjs/common'
 import _ from 'lodash'
 import { LoggerInstance } from 'winston'
+import { Request, Response, NextFunction } from 'express'
 
 /**
  * Route Logger logs information about every route. Use this to debug any issues.
@@ -21,11 +22,11 @@ export class RouteLoggerMiddleware implements NestMiddleware {
    * `
    */
   resolve() {
-    return (req, res, next) => {
+    return ((req: Request, _res: Response, next: NextFunction) => {
       // Log route info
       const info =
         `${req.method} ${req.originalUrl}` +
-        (req.session.user ? ` by ${req.session.user.Email}` : '')
+        (req.user ? ` by ${req.user.sfContact.Email}` : '')
       this.log.verbose(info)
 
       // Log custom headers
@@ -36,14 +37,10 @@ export class RouteLoggerMiddleware implements NestMiddleware {
 
       // Log post body
       if (req.method === 'POST' || req.method === 'PUT') {
-        const body =
-          process.env.NODE_ENV === 'production'
-            ? _.omit(req.body, ['password'])
-            : req.body
         this.log.verbose('\tBody: %j', req.body)
       }
 
       return next()
-    }
+    }) as any
   }
 }

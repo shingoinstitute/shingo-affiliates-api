@@ -1,4 +1,5 @@
-import { SupportService, Support_Page__c } from './support.component'
+import { SupportService } from './support.component'
+import { Support_Page__c } from '../../sf-interfaces/Support_Page__c.interface'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { Test } from '@nestjs/testing'
 import { CacheService } from '../cache/cache.component'
@@ -35,7 +36,7 @@ describe('SupportService', () => {
     sfService = module.get<SalesforceClient>(SalesforceClient)
   })
 
-  const pages: Support_Page__c[] = [
+  const pages: any[] = [
     {
       Id: 'A00000000000',
       Title__c: 'How To Log In',
@@ -92,12 +93,25 @@ describe('SupportService', () => {
   })
 
   describe('search', () => {
-    it('searches for support pages using sfservice, restricted to some role', () => {
-      jest.spyOn(sfService, 'search').mockImplementation(mockSearch(pages))
+    it('searches for support pages using sfservice, restricted to some role', async () => {
+      expect.assertions(2)
+      const search = jest
+        .spyOn(sfService, 'search')
+        .mockResolvedValue({ searchRecords: pages })
 
-      return expect(
-        supportService.search('Some Search', ['Some retrieve'], ['Anonymous']),
-      ).resolves.toEqual([pages[0]])
+      const searchStr = 'Some Search'
+      const retrieve = ['Some Retrieve']
+
+      const result = await supportService.search(searchStr, retrieve, [
+        'Anonymous',
+      ])
+
+      expect(search).toHaveBeenCalledWith({
+        search: `{${searchStr}}`,
+        retrieve: `Support_Page__c(${retrieve.join()},Restricted_To__c)`,
+      })
+
+      expect(result).toEqual([pages[0]])
     })
   })
 })

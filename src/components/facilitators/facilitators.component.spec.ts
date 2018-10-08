@@ -249,13 +249,14 @@ describe('FacilitatorsService', () => {
       ],
     })
 
-    it('retrieves from Contact the fields: AccountId, RecordType.DeveloperName, Id, as well as fields from the retrieve parameter', async () => {
+    it('retrieves from Contact the fields: Account.Id, Account.Name, RecordType.DeveloperName, Id, as well as fields from the retrieve parameter', async () => {
       expect.assertions(1)
       const { search } = createSpys([], [], [])
       await facService.search('some search', ['Name'])
       expect(search).toHaveBeenCalledWith({
         search: '{some search}',
-        retrieve: 'Contact(Name,AccountId,RecordType.DeveloperName,Id)',
+        retrieve:
+          'Contact(Name,Account.Id,Account.Name,RecordType.DeveloperName,Id)',
       })
     })
 

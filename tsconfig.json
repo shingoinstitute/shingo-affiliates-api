@@ -2,7 +2,8 @@
   "compilerOptions": {
     "module": "commonjs",
     "declaration": false,
-    "noImplicitAny": false,
+    // nestjs does not distribute safe/correct types, so we are getting no-implicit-any errors
+    "skipLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strict": true,

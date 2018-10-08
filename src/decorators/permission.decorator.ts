@@ -15,8 +15,10 @@ export const PERM_KEY = new Token<PermissionSetType>(
 export function Permission(
   mode: SetMode,
   ...perms: [PermissionType, ...PermissionType[]]
-)
-export function Permission(...perms: [PermissionType, ...PermissionType[]])
+): ReturnType<typeof ReflectMetadata>
+export function Permission(
+  ...perms: [PermissionType, ...PermissionType[]]
+): ReturnType<typeof ReflectMetadata>
 export function Permission(
   ...data: [SetMode | PermissionType, ...PermissionType[]]
 ) {

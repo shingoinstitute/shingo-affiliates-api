@@ -119,7 +119,7 @@ describe('AuthController', () => {
 
   describe('valid', () => {
     it('just returns the injected user object', () => {
-      const user: AuthUser = {
+      const user: any = {
         sfContact: {
           Id: '003m00000127OppAAE',
           IsDeleted: false,

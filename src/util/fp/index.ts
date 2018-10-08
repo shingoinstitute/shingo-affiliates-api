@@ -176,7 +176,7 @@ export type ToIterableIterator<T extends any[]> = T extends Array<infer A>
 export function* cartesian<A extends [any[], any[], ...any[][]]>(
   ...arrays: A
 ): ToIterableIterator<Cartesian<A>> {
-  function* doCartesian(i, prod) {
+  function* doCartesian(i: number, prod: any[]): IterableIterator<any[]> {
     if (i === arrays.length) {
       yield prod
     } else {
@@ -186,5 +186,5 @@ export function* cartesian<A extends [any[], any[], ...any[][]]>(
     }
   }
 
-  yield* doCartesian(0, [])
+  yield* doCartesian(0, []) as any
 }

@@ -4,6 +4,9 @@
 // then extend for building
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
   "exclude": [
     "node_modules",
     "**/*.mock.ts",

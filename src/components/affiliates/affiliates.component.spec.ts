@@ -23,7 +23,6 @@ import {
   mockGrantPermissionToRole,
   mockCreatePermission,
   AuthState,
-  mockDeletePermission,
 } from '../mock/authclient.mock'
 import { omit } from 'lodash'
 // tslint:disable-next-line:no-implicit-dependencies

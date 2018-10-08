@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { CacheService } from '../'
 import { tryCache, retrieveResult } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'

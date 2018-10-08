@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
-import NodeCache from 'node-cache';
-import hash from 'object-hash';
+import { Inject, Injectable } from '@nestjs/common'
+import NodeCache from 'node-cache'
+import hash from 'object-hash'
 import { LoggerInstance } from 'winston'
 
 /**
@@ -11,9 +11,8 @@ import { LoggerInstance } from 'winston'
  */
 @Injectable()
 export class CacheService {
-
   constructor(@Inject('LoggerService') private log: LoggerInstance) {
-    this.theCache = new NodeCache({ stdTTL: 60 * 60, checkperiod: 60 * 15 }); // sec * minutes = time
+    this.theCache = new NodeCache({ stdTTL: 60 * 60, checkperiod: 60 * 15 }) // sec * minutes = time
   }
 
   /**
@@ -22,7 +21,7 @@ export class CacheService {
    * @private
    * @memberof CacheService
    */
-  private theCache;
+  private theCache: NodeCache
 
   /**
    * @desc Helper function to hash an object to a key
@@ -33,7 +32,7 @@ export class CacheService {
    * @memberof CacheService
    */
   private getKey<K extends object>(obj: K): string {
-    return hash(obj);
+    return hash(obj)
   }
 
   /**
@@ -44,11 +43,9 @@ export class CacheService {
    * @memberof CacheService
    */
   getCache<T extends object, V>(obj: T | string): V | undefined {
-    const key = typeof obj !== 'string'
-      ? this.getKey(obj)
-      : obj;
+    const key = typeof obj !== 'string' ? this.getKey(obj) : obj
 
-    return this.theCache.get(key);
+    return this.theCache.get(key)
   }
 
   /**
@@ -59,20 +56,16 @@ export class CacheService {
    * @memberof CacheService
    */
   isCached<K extends object>(obj: K | string): boolean {
-    const key = typeof obj !== 'string'
-      ? this.getKey(obj)
-      : obj;
+    const key = typeof obj !== 'string' ? this.getKey(obj) : obj
 
-    return typeof this.theCache.get(key) !== 'undefined';
+    return typeof this.theCache.get(key) !== 'undefined'
   }
 
   invalidate<K extends object>(obj: K | string): void {
-    const key = typeof obj !== 'string'
-      ? this.getKey(obj)
-      : obj;
+    const key = typeof obj !== 'string' ? this.getKey(obj) : obj
 
-    const count = this.theCache.del(key);
-    if (count < 1) this.log.error('Did not invalidate cache for key: %j', key);
+    const count = this.theCache.del(key)
+    if (count < 1) this.log.error('Did not invalidate cache for key: %j', key)
   }
 
   /**
@@ -83,14 +76,11 @@ export class CacheService {
    * @memberof CacheService
    */
   cache<K extends object, V>(obj: K | string, value: V): void {
-    const key = typeof obj !== 'string'
-      ? this.getKey(obj)
-      : obj;
+    const key = typeof obj !== 'string' ? this.getKey(obj) : obj
 
-    if (typeof value === 'undefined') return;
+    if (typeof value === 'undefined') return
 
-    const success = this.theCache.set(key, value);
-    if (!success) this.log.error('Response could not be cached!');
+    const success = this.theCache.set(key, value)
+    if (!success) this.log.error('Response could not be cached!')
   }
-
 }

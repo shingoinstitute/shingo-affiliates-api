@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 
-const lookupMap = {
+const lookupMap: Record<string, string> = {
   '00000': 'A',
   '00001': 'B',
   '00010': 'C',

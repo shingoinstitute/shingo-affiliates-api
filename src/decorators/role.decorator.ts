@@ -6,8 +6,13 @@ export type RoleSetType = [SetMode, string[]]
 export const ROLE_KEY = new Token<RoleSetType>('org.shingo.affiliates.roles')
 
 // tslint:disable-next-line:variable-name
-export function Role(mode: SetMode, ...roles: [string, ...string[]])
-export function Role(...roles: [string, ...string[]])
+export function Role(
+  mode: SetMode,
+  ...roles: [string, ...string[]]
+): ReturnType<typeof ReflectMetadata>
+export function Role(
+  ...roles: [string, ...string[]]
+): ReturnType<typeof ReflectMetadata>
 export function Role(...data: [SetMode | string, ...string[]]) {
   const [first, ...rest] = data
   const type = typeof first === 'symbol' ? first : any

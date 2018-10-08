@@ -3,7 +3,7 @@ import { Lazy } from '../util'
 
 const noopL = <T = never>(r: T | Lazy<T>) => (..._args: any[]) => {
   // noop
-  return typeof r === 'function' ? r() : r
+  return typeof r === 'function' ? (r as Lazy<T>)() : r
 }
 
 const noop = () => {
