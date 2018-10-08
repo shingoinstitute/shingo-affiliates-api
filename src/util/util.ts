@@ -1,38 +1,21 @@
 import { CacheService } from '../components'
+import { workshopRecordResource } from '../components/workshops/workshops.component'
 import { BadRequestException } from '@nestjs/common'
 import { Request } from 'express'
 import { AuthUser } from '../guards/auth.guard'
 import { flatten } from './fp'
+import { Lazy, Awaited } from './types'
 // tslint:disable:max-classes-per-file
-
-export type Lazy<T> = () => T
-export type Overwrite<A extends object, B extends object> = Pick<
-  A,
-  Exclude<keyof A, keyof B>
-> &
-  B
-
-export type KeysOfType<T, Type> = {
-  [K in keyof T]-?: Type extends T[K] ? K : never
-}[keyof T]
-export type OptionalKeys<T> = KeysOfType<T, undefined>
-export type NullKeys<T> = KeysOfType<T, null>
-export type MaybeKeys<T> = KeysOfType<T, null | undefined>
-export type MakeMaybe<T> = { [K in keyof T]+?: T[K] | null | undefined }
-
-export type OverwriteMaybe<A extends object, B extends object> = Overwrite<
-  A,
-  Pick<B, Exclude<keyof B, MaybeKeys<A>>> &
-    MakeMaybe<Pick<B, keyof B & MaybeKeys<A>>>
->
-
-export type RequireKeys<T extends object, K extends keyof T> = Overwrite<
-  T,
-  { [key in K]-?: T[key] }
->
-
-export type Arguments<T> = T extends (...args: infer A) => any ? A : never
-
+// fixes the broken Promise.all types (original cannot properly infer return type given non-heterogenous arrays)
+// this does break some cases where Promise.all used to work - for manually enumerated tuple type overloads.
+// Wrap the array with tuple() to solve this issue, keeping the array inferred as a tuple
+declare global {
+  interface PromiseConstructor {
+    all<Ps extends Array<any | PromiseLike<any>>>(
+      promises: Ps,
+    ): Promise<{ [K in keyof Ps]: Awaited<Ps[K]> }>
+  }
+}
 export class Token<T = never> {
   constructor(public name?: string) {}
 }
@@ -96,7 +79,6 @@ export const defaultPort = (host: string, defPort: number) => {
  *
  * @param user Requires user.permissions[] and user.roles[].permissions[]
  */
-// tslint:disable-next-line:max-line-length
 export function getWorkshopIds(user: AuthUser): string[] {
   // permissions for affiliate portal roles
   const affPermissions = flatten(
@@ -105,8 +87,8 @@ export function getWorkshopIds(user: AuthUser): string[] {
       .map(r => r.permissions || []),
   )
   const ids = [...(user.permissions || []), ...affPermissions]
-    .filter(p => p.resource && p.resource.includes('/workshops/'))
-    .map(p => `'${p.resource!.replace('/worshops/', '')}'`)
+    .filter(p => p.resource && p.resource.includes(workshopRecordResource('')))
+    .map(p => p.resource!.replace(workshopRecordResource(''), ''))
 
   return [...new Set(ids)] // Only return unique ids
 }

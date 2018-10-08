@@ -2,19 +2,11 @@ import { Inject, Injectable } from '@nestjs/common'
 import { CacheService } from '../'
 import { tryCache, retrieveResult } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
-import { LoggerInstance } from 'winston'
-
-// tslint:disable-next-line:class-name
-export interface Support_Page__c {
-  Id: string
-  Title__c: string
-  Category__c: string
-  Content__c: string
-  Restricted_To__c: string
-}
+import { Support_Page__c } from '../../sf-interfaces/Support_Page__c.interface'
 
 export const visibleTo = (roles: string[]) => (page: Support_Page__c) => {
-  const restrictions = page.Restricted_To__c.split(';')
+  const restrictions = (page.Restricted_To__c || '').split(';')
+  if (restrictions.length === 0) return true
 
   return restrictions.some(r => roles.includes(r))
 }
@@ -67,9 +59,11 @@ export class SupportService {
     return tryCache(
       this.cache,
       request,
-      () => this.sfService.retrieve(request).then(retrieveResult),
+      () =>
+        this.sfService.retrieve<Support_Page__c>(request).then(retrieveResult),
       refresh,
     ).then(r => {
+      if (r === null) return undefined
       if (visibleTo(roles)(r)) {
         return r
       }

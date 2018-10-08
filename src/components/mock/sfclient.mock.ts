@@ -32,7 +32,7 @@ export const mockSearch = (
 ): SalesforceClient['search'] => async query => {
   const object = query.retrieve.split('(')[0]
   const searchRecords = data[query.search][object]
-  return { searchRecords }
+  return { searchRecords } as any
 }
 
 export const mockCreate = (

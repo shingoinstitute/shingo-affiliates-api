@@ -4,6 +4,7 @@ import {
   IsArray,
   IsEmail,
   ValidateNested,
+  IsNumber,
 } from 'class-validator'
 import { IsSalesforceId } from '../../validators'
 import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
@@ -14,12 +15,36 @@ export class CancelBody {
   reason!: string
 }
 
+// tslint:disable-next-line:class-name
+export class facilitator {
+  @IsSalesforceId()
+  Id!: string
+
+  @IsNumber()
+  id!: number
+}
+
 export class UpdateBody implements Partial<Workshop__c> {
   @IsSalesforceId()
   Id!: string
 
   @IsSalesforceId()
   Organizing_Affiliate__c!: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  facilitators!: facilitator[]
+}
+
+export class Facilitator {
+  @IsSalesforceId()
+  Id!: string
+
+  @IsEmail()
+  Email!: string
+
+  @IsNumber()
+  id!: number
 }
 
 export class CreateBody {
@@ -50,12 +75,4 @@ export class CreateBody {
   @IsArray()
   @ValidateNested({ each: true })
   facilitators!: Facilitator[]
-}
-
-export class Facilitator {
-  @IsSalesforceId()
-  Id!: string
-
-  @IsEmail()
-  Email!: string
 }

@@ -68,12 +68,12 @@ export class FacilitatorsController {
     const isAfMan = isAffiliateManager(user)
 
     if (!isAfMan && !user.sfContact.AccountId) {
-      throw new ForbiddenException('', 'MISSING_FIELDS')
+      throw new ForbiddenException('', 'SESSION_EXPIRED')
     }
 
     return this.facilitatorsService.getAll(
       refresh,
-      isAfMan ? xAffiliate : user.sfContact.AccountId,
+      isAfMan ? xAffiliate : user.sfContact.AccountId!,
     )
   }
 
@@ -121,7 +121,7 @@ export class FacilitatorsController {
       search,
       retrieve,
       mapped,
-      isAfMan ? '' : user.sfContact.AccountId,
+      isAfMan ? '' : user.sfContact.AccountId!,
       refresh,
     )
   }

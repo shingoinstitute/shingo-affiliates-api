@@ -9,21 +9,23 @@ import {
   retrieveResult,
   tryCache,
   Overwrite,
+  ArrayValue,
 } from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
-import { AuthClient } from '@shingo/auth-api-client'
+import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
-import { QueryResult } from 'jsforce'
+import { QueryResult, SuccessResult } from 'jsforce'
 import { AuthUser } from '../../guards/auth.guard'
-import { flatten, ArrayValue } from '../../util/fp'
+import { flatten, multimap, tuple } from '../../util/fp'
 import { Contact } from '../../sf-interfaces/Contact.interface'
 import { Account } from '../../sf-interfaces/Account.interface'
 import { WorkshopFacilitatorAssociation__c } from '../../sf-interfaces/WorkshopFacilitatorAssociation__c.interface'
-import { Awaited } from '../../util/fp/types'
+import { Awaited } from '../../util/types'
 import { Attachment } from '../../sf-interfaces/Attachment.interface'
 
 type SFQuery = Arguments<SalesforceClient['query']>[0]
+export const workshopRecordResource = (id: string) => `/workshops/${id}`
 
 /**
  * @desc A service to provide functions for working with Workshops
@@ -97,7 +99,7 @@ export class WorkshopsService {
     return tryCache(
       this.cache,
       key,
-      async () => {
+      () => {
         if (user) {
           return this.getPrivateWorkshops<QueryData>(query, user).then(ws =>
             ws.map(w => ({
@@ -113,7 +115,7 @@ export class WorkshopsService {
     )
   }
 
-  private async getPrivateWorkshops<BaseQueryData extends Partial<Workshop__c>>(
+  async getPrivateWorkshops<BaseQueryData extends Partial<Workshop__c>>(
     baseQuery: SFQuery,
     user: AuthUser,
   ) {
@@ -170,13 +172,15 @@ export class WorkshopsService {
     )
   }
 
-  private queryForWorkshops<T extends Partial<Workshop__c>>(
+  queryForWorkshops<T extends Partial<Workshop__c>>(
     ids: ReadonlyArray<string>,
     query: SFQuery,
   ) {
     const newQuery = {
       ...query,
-      clauses: `Id IN (${ids.join()}) ORDER BY Start_Date__c`,
+      clauses: `Id IN (${ids
+        .map(i => `'${i}'`)
+        .join()}) ORDER BY Start_Date__c`,
     }
     return this.sfService.query<T>(newQuery).then(r => r.records)
   }
@@ -184,14 +188,11 @@ export class WorkshopsService {
   /**
    * Get a specific workshop by Salesforce ID. Retrieves all fields of the Workshop__c object.
    *
-   * @param id - A Salesforce ID corresponding to a Workshop\__c record
+   * @param id - A Salesforce ID corresponding to a Workshop__c record
    */
   get(id: string): Promise<Workshop__c | undefined> {
-    // Create the data parameter for the RPC call
-
     return tryCache(this.cache, id, async () => {
       const workshop:
-        | null
         | Workshop__c & {
             facilitators?: Array<
               ArrayValue<
@@ -199,7 +200,8 @@ export class WorkshopsService {
               >['Instructor__r']
             >
             files?: Array<Partial<Attachment>>
-          } = await this.sfService
+          }
+        | null = await this.sfService
         .retrieve<Workshop__c>({
           object: 'Workshop__c',
           ids: [id],
@@ -208,35 +210,45 @@ export class WorkshopsService {
 
       if (workshop === null) return undefined
 
-      workshop.facilitators = (await this.facilitators(id)).map(
-        f => f.Instructor__r,
+      // tslint:disable:variable-name
+      const [
+        facilitators,
+        Course_Manager__r,
+        Organizing_Affiliate__r,
+        files,
+      ] = await Promise.all(
+        tuple(
+          this.facilitators(id).then(r => r.map(f => f.Instructor__r)),
+          workshop.Course_Manager__c
+            ? this.sfService
+                .retrieve<Contact>({
+                  object: 'Contact',
+                  ids: [workshop.Course_Manager__c],
+                })
+                .then(retrieveResult)
+            : null,
+          this.sfService
+            .retrieve<Account>({
+              object: 'Account',
+              ids: [workshop.Organizing_Affiliate__c],
+            })
+            .then(retrieveResult),
+          this.getFiles(workshop.Id),
+        ),
       )
+      // tslint:enable:variable-name
 
-      if (workshop.Course_Manager__c) {
-        workshop.Course_Manager__r = await this.sfService
-          .retrieve<Contact>({
-            object: 'Contact',
-            ids: [workshop.Course_Manager__c],
-          })
-          .then(retrieveResult)
-      }
-
-      if (workshop.Organizing_Affiliate__c) {
-        workshop.Organizing_Affiliate__r = (await this.sfService
-          .retrieve<Account>({
-            object: 'Account',
-            ids: [workshop.Organizing_Affiliate__c],
-          })
-          .then(retrieveResult)) as Account
-      }
-
-      workshop.files = (await this.getFiles(workshop.Id!)) || []
+      workshop.facilitators = facilitators
+      workshop.Course_Manager__r = Course_Manager__r
+      // describe result for Workshop__c says this relation must always exist
+      workshop.Organizing_Affiliate__r = Organizing_Affiliate__r as Account
+      workshop.files = files
 
       return workshop
     })
   }
 
-  private getFiles(id: string) {
+  getFiles(id: string) {
     const query = {
       fields: ['Name', 'ParentId', 'ContentType', 'BodyLength'],
       table: 'Attachment',
@@ -257,7 +269,7 @@ export class WorkshopsService {
    *
    * @param refresh Force the refresh of the cache
    */
-  async describe(refresh = false) {
+  describe(refresh = false) {
     // Set the key for the cache
     const key = 'describeWorkshops'
 
@@ -276,11 +288,11 @@ export class WorkshopsService {
    * @param retrieve A comma seperated list of the Workshop__c fields to retrieve (i.e. 'Id, Name, Start_Date__c')
    * @param refresh Used to force the refresh of the cache
    */
-  async search(search: string, retrieve: string[], refresh = false) {
+  search(search: string, retrieve: string[], refresh = false) {
     // Generate the data parameter for the RPC call
     const data = {
       search: `{${search}}`,
-      retrieve: `Workshop__c(${retrieve.join(',')})`,
+      retrieve: `Workshop__c(${retrieve.join()})`,
     }
 
     return tryCache(
@@ -297,19 +309,9 @@ export class WorkshopsService {
   /**
    * Get the associated instructors for the workshop with given id.
    *
-   * Queried fields are as follows:
-   * ```
-   * [
-   *  "Instructor__r.FirstName",
-   *  "Instructor__r.LastName",
-   *  "Instructor__r.Email",
-   *  "Instructor__r.Title"
-   * ]
-   * ```
-   *
    * @param id - A Salesforce ID corresponding to a Workshop__c record
    */
-  async facilitators(id: string) {
+  facilitators(id: string) {
     const key = id + '_facilitators'
     type QueryData = Pick<WorkshopFacilitatorAssociation__c, 'Id'> & {
       Instructor__r: Pick<
@@ -340,22 +342,25 @@ export class WorkshopsService {
         clauses: `Workshop__c='${id}'`,
       }
 
-      const facilitators: Array<
-        QueryData & { id?: number }
+      const facAssociation: Array<
+        QueryData & { id?: number; auth?: authservices.User }
       > = await this.sfService
         .query<QueryData>(query)
         .then(r => r.records || [])
-      const ids = facilitators.map(fac => `'${fac.Id}'`)
+      const ids = facAssociation.map(fac => `'${fac.Instructor__r.Id}'`)
       const auths = await this.authService.getUsers(
         `user.extId IN (${ids.join()})`,
       )
 
-      for (const fac of facilitators) {
-        const auth = auths.find(a => a.extId === fac.Id)
-        if (auth) fac.id = auth.id
+      for (const fac of facAssociation) {
+        const auth = auths.find(a => a.extId === fac.Instructor__r.Id)
+        if (auth) {
+          fac.id = auth.id
+          fac.auth = auth
+        }
       }
 
-      return facilitators
+      return facAssociation
     })
   }
 
@@ -378,9 +383,7 @@ export class WorkshopsService {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
-      records: [
-        { contents: JSON.stringify(_.omit(workshop, ['facilitators'])) },
-      ],
+      records: [_.omit(workshop, ['facilitators'])],
     }
 
     const result = (await this.sfService.create(data))[0]
@@ -399,34 +402,41 @@ export class WorkshopsService {
    * @param workshop The workshop
    */
   async update(
-    workshop: RequireKeys<Partial<Workshop__c>, 'Id'> & {
-      facilitators: Array<{ Id: string }>
+    workshop: RequireKeys<
+      Partial<Workshop__c>,
+      'Id' | 'Organizing_Affiliate__c'
+    > & {
+      facilitators: Array<{ Id: string; id: number }>
     },
   ) {
     // Use the shingo-sf-api to create the new record
     const data = {
       object: 'Workshop__c',
-      records: [
-        { contents: JSON.stringify(_.omit(workshop, ['facilitators'])) },
-      ],
+      records: [_.omit(workshop, ['facilitators'])],
     }
 
     const result = (await this.sfService.update(data))[0]
 
     const currFacilitators = await this.facilitators(workshop.Id)
+    // returns facilitators that are in currFacilitators, but not in workshop.facilitators
     const removeFacilitators = _.differenceWith(
       currFacilitators,
       workshop.facilitators || [],
+      // FIXME: not sure about this comparison, other.Id may just refer to the join object and not an actual facilitator
       (val, other) => other && val.Instructor__r.Id === other.Id,
     )
-    workshop.facilitators = _.differenceWith(
+
+    // for grantPermissions, new facilitators are those that do not currently exist (not in currFacilitators)
+    const newFacilitators = _.differenceWith(
       workshop.facilitators,
       currFacilitators,
       (val, other) => other && val.Id === other.Instructor__r.Id,
     )
 
-    await this.grantPermissions(workshop as any)
-    await this.removePermissions(workshop, removeFacilitators)
+    await Promise.all([
+      this.grantPermissions({ ...workshop, facilitators: newFacilitators }),
+      this.removePermissions(workshop.Id, removeFacilitators),
+    ])
 
     this.cache.invalidate(workshop.Id!)
     this.cache.invalidate(`${workshop.Id}_facilitators`)
@@ -450,12 +460,10 @@ export class WorkshopsService {
     contentType = 'text/csv',
   ) {
     const records = files.map((file, fileId) => ({
-      contents: JSON.stringify({
-        ParentId: id,
-        Name: `${fileId}-${fileName}`,
-        Body: file,
-        ContentType: contentType,
-      }),
+      ParentId: id,
+      Name: `${fileId}-${fileName}`,
+      Body: file,
+      ContentType: contentType,
     }))
 
     const data = {
@@ -481,50 +489,51 @@ export class WorkshopsService {
       ids: [id],
     }
 
-    const result = (await this.sfService.delete(data))[0]
+    const resource = workshopRecordResource(id)
 
-    for (const level of [0, 1, 2] as [0, 1, 2]) {
-      this.authService.deletePermission(`/workshops/${id}`, level)
-    }
+    const permPs = ([0, 1, 2] as [0, 1, 2]).map(level =>
+      this.authService.deletePermission(resource, level),
+    )
+
+    const [result] = await Promise.all(
+      tuple(this.sfService.delete(data), ...permPs),
+    )
 
     this.cache.invalidate(id)
     this.cache.invalidate(`${id}_facilitators`)
     this.cache.invalidate('WorkshopsService.getAll')
     this.cache.invalidate('WorkshopsService.getAll_public')
 
-    return result
+    return result[0]
   }
 
   async cancel(id: string, reason: string) {
     const updateData = {
       object: 'Workshop__c',
-      records: [
-        { contents: JSON.stringify({ Id: id, Status__c: 'Cancelled' }) },
-      ],
+      records: [{ Id: id, Status__c: 'Cancelled' }],
     }
-
-    await this.sfService.update(updateData)
 
     const noteData = {
       object: 'Note',
       records: [
         {
-          contents: JSON.stringify({
-            Title: 'Reasons for Cancelling',
-            Body: reason,
-            ParentId: id,
-          }),
+          Title: 'Reasons for Cancelling',
+          Body: reason,
+          ParentId: id,
         },
       ],
     }
 
-    const note = (await this.sfService.create(noteData))[0]
+    const [, note] = await Promise.all([
+      this.sfService.update(updateData),
+      this.sfService.create(noteData),
+    ])
 
     this.cache.invalidate(id)
     this.cache.invalidate('WorkshopsService.getAll')
     this.cache.invalidate('WorkshopsService.getAll_public')
 
-    return note
+    return note[0]
   }
 
   /**
@@ -532,43 +541,40 @@ export class WorkshopsService {
    *
    * @param workshop Workshop
    */
-  private async grantPermissions(
+  async grantPermissions(
     workshop: RequireKeys<
       Partial<Workshop__c>,
       'Id' | 'Organizing_Affiliate__c'
     > & { facilitators: Array<{ Id: string; id: number }> },
   ) {
+    const resource = workshopRecordResource(workshop.Id)
+
+    const [records, grantPs] = multimap(
+      workshop.facilitators,
+      facilitator => ({
+        Workshop__c: workshop.Id,
+        Instructor__c: facilitator.Id,
+      }),
+      facilitator =>
+        this.authService.grantPermissionToUser(resource, 2, facilitator.id),
+    )
+
+    const createP = this.sfService.create({
+      object: 'WorkshopFacilitatorAssociation__c',
+      records,
+    })
+
     const roles = await this.authService.getRoles(
-      `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${
+      `role.name='Affiliate Manager' OR role.name='Course Manager -- ${
         workshop.Organizing_Affiliate__c
       }'`,
     )
 
-    const resource = `/workshops/${workshop.Id}`
+    const rolePs = roles.map(role =>
+      this.authService.grantPermissionToRole(resource, 2, role.id!),
+    )
 
-    await Promise.all(
-      roles.map(role =>
-        this.authService.grantPermissionToRole(resource, 2, role.id!),
-      ),
-    )
-    await Promise.all(
-      workshop.facilitators.map(facilitator => {
-        const data = {
-          object: 'WorkshopFacilitatorAssociation__c',
-          records: [
-            {
-              Workshop__c: workshop.Id,
-              Instructor__c: facilitator.Id,
-            },
-          ],
-        }
-        return this.sfService
-          .create(data)
-          .then(() =>
-            this.authService.grantPermissionToUser(resource, 2, facilitator.id),
-          )
-      }),
-    )
+    return Promise.all([createP, ...grantPs, ...rolePs])
   }
 
   /**
@@ -577,29 +583,35 @@ export class WorkshopsService {
    * @param workshop - Requires [ 'Id' ]
    * @param remove List of facilitators to remove
    */
-  private async removePermissions(
-    workshop: RequireKeys<Partial<Workshop__c>, 'Id'>,
-    remove: ReadonlyArray<{ Id: string; Instructor__r: { Id: string } }>,
+  async removePermissions(
+    workshopId: string,
+    remove: Array<{ Id: string; Instructor__r: { Id: string } }>,
   ) {
-    const resource = `/workshops/${workshop.Id}`
+    const resource = workshopRecordResource(workshopId)
 
-    const ids = remove.map(facilitator => facilitator.Id)
+    if (remove.length === 0) return tuple([] as SuccessResult[])
 
-    await this.sfService.delete({
+    const [ids, instructors] = multimap(
+      remove,
+      fac => fac.Id,
+      fac => `'${fac.Instructor__r.Id}'`,
+    )
+
+    const deletePs = this.sfService.delete({
       object: 'WorkshopFacilitatorAssociation__c',
       ids,
     })
 
-    const instructors = remove.map(
-      facilitator => `'${facilitator.Instructor__r.Id}'`,
-    )
-    if (instructors.length === 0) return
     const users = await this.authService.getUsers(
       `user.extId IN (${instructors.join()})`,
     )
-    await Promise.all(
-      users.map(user =>
-        this.authService.revokePermissionFromUser(resource, 2, user.id!),
+
+    return Promise.all(
+      tuple(
+        deletePs,
+        ...users.map(user =>
+          this.authService.revokePermissionFromUser(resource, 2, user.id!),
+        ),
       ),
     )
   }

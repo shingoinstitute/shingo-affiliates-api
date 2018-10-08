@@ -11,8 +11,10 @@ export interface Workshop__c {
   Name?: m<string>
   CreatedDate: string
   CreatedById: string
+  CreatedBy: object
   LastModifiedDate: string
   LastModifiedById: string
+  LastModifiedBy: object
   SystemModstamp: string
   LastViewedDate?: m<string>
   LastReferencedDate?: m<string>
