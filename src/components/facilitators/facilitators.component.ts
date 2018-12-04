@@ -45,7 +45,7 @@ export class FacilitatorsService {
      */
     public async getAll(refresh: boolean = false, affiliate?: string): Promise<any[]> {
 
-        if (!this.cache.isCached(this.getAllKey)) {
+        if (refresh || !this.cache.isCached(this.getAllKey)) {
             let query = {
                 action: "SELECT",
                 fields: [
@@ -67,9 +67,9 @@ export class FacilitatorsService {
 
             if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
 
-            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any;
+            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any[] || [];
             const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users || [];
             const users = _.keyBy(usersArr, 'extId');
 
             // Add the facilitator's auth id to object
@@ -86,7 +86,9 @@ export class FacilitatorsService {
                 return facilitator['id'] !== undefined && facilitator.services && facilitator.services.includes('affiliate-portal'); 
             });
 
-            this.cache.cache(this.getAllKey, facilitators);
+            if (facilitators.length) {
+                this.cache.cache(this.getAllKey, facilitators);
+            }
             return facilitators
         } else {
             return this.cache.getCache(this.getAllKey)
@@ -108,7 +110,9 @@ export class FacilitatorsService {
         if (!this.cache.isCached(key) || refresh) {
             const describeObject = await this.sfService.describe('Contact');
 
-            this.cache.cache(key, describeObject);
+            if (describeObject) {
+                this.cache.cache(key, describeObject);
+            }
 
             return describeObject;
         } else {
@@ -164,7 +168,7 @@ export class FacilitatorsService {
 
             if (facilitators.length) {
                 const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users as any[] || [];
                 const users = _.keyBy(usersArr, 'extId');
 
                 const accountIds = [];
@@ -199,7 +203,9 @@ export class FacilitatorsService {
                 });
             }
 
-            this.cache.cache(data, facilitators);
+            if (facilitators.length) {
+                this.cache.cache(data, facilitators);
+            }
 
             return facilitators;
         } else {
@@ -226,6 +232,7 @@ export class FacilitatorsService {
             }
 
             let facilitator = (await this.sfService.retrieve(data))[0];
+            if (!facilitator) return
             facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
 
             let user;
