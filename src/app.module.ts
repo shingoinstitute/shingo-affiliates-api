@@ -1,10 +1,10 @@
-import { Module, MiddlewaresConsumer, RequestMethod, OnModuleInit } from '@nestjs/common';
+import { Module, MiddlewaresConsumer, RequestMethod } from '@nestjs/common';
 import { WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController } from './controllers';
 import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddleware } from './middleware'
 import {
     SalesforceService, CacheService, AuthService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService, LoggerService, MailerService, SupportService
+    UserService, MailerService, SupportService
 } from './components';
 import { MulterFactory } from './factories';
 
@@ -18,7 +18,6 @@ import { MulterFactory } from './factories';
     controllers: [WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController],
     components: [
         AuthMiddleware,
-        LoggerService,
         CacheService,
         UserService,
         SalesforceService,

@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ApplicationModule } from './app.module';
 import { InitService } from './initService';
-import { LoggerService } from './components';
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import * as session from 'express-session';
@@ -11,7 +10,6 @@ import * as connectRedis from 'connect-redis';
 const RedisStore = connectRedis(session);
 
 const port = process.env.PORT || 3000
-const log = new LoggerService();
 
 // Set up CORS whitelist
 let whitelist = ['https://affiliates.shingo.org', 'http://affiliates.shingo.org', 'https://beta-affiliates.shingo.org', 'http://shingo.org', 'https://shingo.org', 'http://www.shingo.org', 'https://www.shingo.org'];
@@ -22,10 +20,10 @@ const server = express();
 const corsOptions = {
     origin: function (origin, callback) {
         if (whitelist.indexOf(origin) > -1 || process.env.NODE_ENV !== 'production') {
-            log.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
+            console.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
             callback(null, true);
         } else {
-            log.warn(`${origin} was not in the whitelist: %j`, whitelist);
+            console.warn(`${origin} was not in the whitelist: %j`, whitelist);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -60,9 +58,9 @@ InitService.init()
     .then(() => {
         const app = NestFactory.create(ApplicationModule, server);
         app.setGlobalPrefix(`${process.env.GLOBAL_PREFIX}`);
-        app.listen(port, () => log.info(`Application is listening on port ${port}`));
+        app.listen(port, () => console.info(`Application is listening on port ${port}`));
     })
     .catch(error => {
-        log.error('Error in lifting application!')
+        console.error('Error in lifting application!')
         console.error(error)
     });

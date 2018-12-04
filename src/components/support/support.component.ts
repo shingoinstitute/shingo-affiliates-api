@@ -1,8 +1,5 @@
 import { Component, Inject } from '@nestjs/common';
-import {
-    SalesforceService, CacheService,
-    SFQueryObject, LoggerService
-} from '../';
+import { SalesforceService, CacheService, SFQueryObject } from '../';
 
 /**
  * @desc A service to provide functions for working with Support Pages
@@ -14,8 +11,7 @@ import {
 export class SupportService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+        @Inject('CacheService') private cache: CacheService = new CacheService()) {}
 
     public async getAll(role: string, refresh: boolean = false): Promise<any[]> {
         let query = {

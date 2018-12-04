@@ -1,5 +1,5 @@
 import { Component, Inject } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '../';
+import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject } from '../';
 import { Affiliate } from './affiliate';
 import * as _ from 'lodash';
 
@@ -17,7 +17,7 @@ export class AffiliatesService {
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
         @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+    ) {}
 
     /**
      * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>

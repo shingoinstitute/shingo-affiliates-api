@@ -1,6 +1,5 @@
-import { Component, Inject } from '@nestjs/common';
-import { createTransport, Transport, Transporter } from 'nodemailer';
-import { LoggerService } from '../logger/logger.component';
+import { Component } from '@nestjs/common';
+import { createTransport, Transporter } from 'nodemailer';
 
 /**
  * Provides an abstraction of nodemailer.
@@ -13,7 +12,7 @@ export class MailerService {
 
     private transporter: Transporter;
 
-    constructor( @Inject('LoggerService') private log: LoggerService = new LoggerService()) {
+    constructor() {
         const transport = {
             host: 'smtp.office365.com',
             port: 587,

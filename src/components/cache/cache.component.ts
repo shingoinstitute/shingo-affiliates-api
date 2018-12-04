@@ -1,5 +1,4 @@
-import { Component, Inject } from '@nestjs/common';
-import { LoggerService } from '../';
+import { Component } from '@nestjs/common';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
 
@@ -12,7 +11,7 @@ import * as hash from 'object-hash';
 @Component()
 export class CacheService {
 
-    constructor( @Inject('LoggerService') private log: LoggerService = new LoggerService()) {
+    constructor() {
         this.theCache = new NodeCache({ stdTTL: 60 * 60, checkperiod: 60 * 15 }); // sec * minutes = time
     }
 
@@ -69,7 +68,7 @@ export class CacheService {
         if (typeof obj !== 'string') key = this.getKey(obj);
 
         const count = this.theCache.del(key);
-        if (count < 1) this.log.error('Did not invalidate cache for key: %j', key);
+        if (count < 1) console.error('Did not invalidate cache for key: %j', key);
     }
 
     /**
@@ -85,7 +84,7 @@ export class CacheService {
         if (!value) return;
 
         const success = this.theCache.set(key, value);
-        if (!success) this.log.error("Response could not be cached!");
+        if (!success) console.error("Response could not be cached!");
     }
 
 }

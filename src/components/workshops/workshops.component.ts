@@ -2,7 +2,6 @@ import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, UserService,
     SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError,
-    LoggerService
 } from '../';
 import { Workshop } from './workshop'
 import { _, chunk } from 'lodash';
@@ -21,8 +20,7 @@ export class WorkshopsService {
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
         @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('UserService') private userService: UserService = new UserService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+        @Inject('UserService') private userService: UserService = new UserService()) {}
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -60,6 +58,11 @@ export class WorkshopsService {
                 "Name",
                 "Start_Date__c",
                 "End_Date__c",
+                "Start_Time__c",
+                "End_Time__c",
+                "Local_Start_Time__c",
+                "Local_End_Time__c",
+                "Timezone__c",
                 "Course_Manager__c",
                 "Billing_Contact__c",
                 "Event_City__c",
@@ -90,14 +93,17 @@ export class WorkshopsService {
                     workshops = workshops.concat(await this.queryForWorkshops(chuncked_ids, query));
                 }
             } else {
-                workshops = (await this.sfService.query(query)).records as Workshop[];
+                workshops = (await this.sfService.query(query)).records as Workshop[] || [];
             }
 
             for (const workshop of workshops) {
-                if (workshop.Instructors__r && workshop.Instructors__r.records instanceof Array) workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
+                if (workshop.Instructors__r && workshop.Instructors__r.records instanceof Array)
+                    workshop.facilitators = workshop.Instructors__r.records.map(i => i.Instructor__r);
             }
 
-            this.cache.cache(key, workshops);
+            if (workshops.length) {
+                this.cache.cache(key, workshops);
+            }
 
             return workshops;
         } else {
@@ -142,11 +148,12 @@ export class WorkshopsService {
      * @returns {Promise<Workshop>} 
      * @memberof WorkshopsService
      */
-    public async get(id: string): Promise<Workshop> {
+    public async get(id: string, refresh = false): Promise<Workshop> {
         // Create the data parameter for the RPC call
 
-        if (!this.cache.isCached(id)) {
+        if (!this.cache.isCached(id) || refresh) {
             let workshop: Workshop = (await this.sfService.retrieve({ object: 'Workshop__c', ids: [id] }))[0] as Workshop;
+            if (!workshop) return
             workshop.facilitators = (await this.facilitators(id)).map(f => f['Instructor__r']) || [];
 
             if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
@@ -193,6 +200,7 @@ export class WorkshopsService {
         // If no cached result, use the shingo-sf-api to get the result
         if (!this.cache.isCached(key) || refresh) {
             const describeObject = await this.sfService.describe('Workshop__c');
+            if (!describeObject) return
 
             // Cache describe
             this.cache.cache(key, describeObject);
@@ -243,7 +251,8 @@ export class WorkshopsService {
             const workshops: Workshop[] = (await this.sfService.search(data)).searchRecords as Workshop[] || [];
 
             // Cache results
-            this.cache.cache(data, workshops);
+            if (workshops.length)
+                this.cache.cache(data, workshops);
 
             return workshops;
         }
@@ -266,8 +275,8 @@ export class WorkshopsService {
      * @returns {Promise<object[]>} 
      * @memberof WorkshopsService
      */
-    public async facilitators(id: string): Promise<object[]> {
-        if (!this.cache.isCached(id + '_facilitators')) {
+    public async facilitators(id: string, refresh = false): Promise<object[]> {
+        if (!this.cache.isCached(id + '_facilitators') || refresh) {
             let query: SFQueryObject = {
                 action: "SELECT",
                 fields: [
@@ -285,6 +294,7 @@ export class WorkshopsService {
             }
 
             const facilitators: any[] = (await this.sfService.query(query)).records || [];
+            if (!facilitators.length) return facilitators
             const ids = facilitators.map(fac => `'${fac.Id}'`)
             const auths = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
             for (let fac of facilitators) {

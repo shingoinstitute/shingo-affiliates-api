@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, HttpStatus, Request, Response, Next, Param, Query, Headers, Body, Session } from '@nestjs/common';
-import { AffiliatesService, Affiliate, LoggerService } from '../../components';
+import { AffiliatesService, Affiliate } from '../../components';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
@@ -14,9 +14,7 @@ import { checkRequired } from '../../validators/objKeyValidator';
 @Controller('affiliates')
 export class AffiliatesController extends BaseController {
 
-    constructor(private affService: AffiliatesService, logger: LoggerService) {
-        super(logger);
-    };
+    constructor(private affService: AffiliatesService) { super() }
 
     /**
      * @desc <h5>GET: /affiliates</h5> Calls {@link AffiliatesService#getAll} to get a list of affiliates
@@ -180,7 +178,7 @@ export class AffiliatesController extends BaseController {
 
         if (body.hasOwnProperty('Summary__c')) {
             delete body.Summary__c;
-            this.log.warn('\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
+            console.warn('\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
         try {

@@ -1,5 +1,5 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { AuthService, SalesforceService, LoggerService } from '../components';
+import { AuthService, SalesforceService } from '../components';
 
 /**
  * The auth middleware uses the Shingo Auth API to test if the user has permissions to access a given resource
@@ -12,11 +12,9 @@ import { AuthService, SalesforceService, LoggerService } from '../components';
 export class AuthMiddleware implements NestMiddleware {
 
     private authService;
-    private log;
 
     constructor() {
         this.authService = new AuthService();
-        this.log = new LoggerService();
     }
 
     /**
@@ -29,8 +27,7 @@ export class AuthMiddleware implements NestMiddleware {
      */
     public resolve(level: number, resource?: string) {
         return (req, res, next) => {
-            let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager';
-
+            let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager'; 
             if (isAfMan) return next();
 
             if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
@@ -50,7 +47,7 @@ export class AuthMiddleware implements NestMiddleware {
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-                    this.log.error('Error in AuthMiddleware.resolve(): %j', error);
+                    console.error('Error in AuthMiddleware.resolve(): %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });
         }

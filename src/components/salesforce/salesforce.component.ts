@@ -1,5 +1,4 @@
 import { Component } from '@nestjs/common';
-import { LoggerService } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';

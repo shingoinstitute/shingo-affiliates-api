@@ -1,7 +1,7 @@
 import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, User,
-    SFQueryObject, LoggerService
+    SFQueryObject
 } from '../';
 import * as _ from 'lodash';
 import * as jwt from 'jwt-simple';
@@ -19,8 +19,7 @@ export class FacilitatorsService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+        @Inject('CacheService') private cache: CacheService = new CacheService()) { }
 
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>
@@ -239,11 +238,11 @@ export class FacilitatorsService {
             try {
                 user = await this.authService.getUser(`user.extId='${facilitator.Id}'`);
             } catch (e) {
-                this.log.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`);
+                console.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`);
                 try {
                     user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
                 } catch (e) {
-                    this.log.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
+                    console.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
                     return Promise.reject(e);
                 }
             }
@@ -528,7 +527,7 @@ export class FacilitatorsService {
         else if (user.services.includes(', affiliate-portal')) user.services = user.services.replace(', affiliate-portal', ', af-p-disabled');
         else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', 'af-p-disabled');
 
-        this.log.warn('Disabling %j', user);
+        console.warn('Disabling %j', user);
         const updated = await this.authService.updateUser(user);
 
         this.cache.invalidate(extId);
