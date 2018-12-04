@@ -29,7 +29,9 @@ export class AuthService {
      * @memberof AuthService
      */
     private getClient() {
-        return new authservices.AuthServices(`${process.env.AUTH_API}:80`, grpc.credentials.createInsecure());
+        const envendpoint = process.env.AUTH_API
+        const endpoint = envendpoint.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
+        return new authservices.AuthServices(endpoint, grpc.credentials.createInsecure());
     }
 
     /**

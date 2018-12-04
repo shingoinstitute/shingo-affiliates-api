@@ -12,7 +12,7 @@ const log = new LoggerService();
  */
 export class InitService {
 
-    public static async  init() {
+    public static async init() {
         log.info('Initializing Affiliate Portal...');
 
         const roles = (await authService.getRoles('role.service=\'affiliate-portal\'')).roles;
@@ -38,6 +38,6 @@ export class InitService {
             global['affiliateManagerId'] = affiliateManager[0].id;
         }
 
-        return Promise.resolve();
+        return ;
     }
 }

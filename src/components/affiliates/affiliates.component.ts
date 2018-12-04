@@ -68,14 +68,14 @@ export class AffiliatesService {
         }
 
         if (isPublic) {
-            return Promise.resolve(affiliates);
+            return affiliates;
         }
 
         const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
 
         affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
 
-        return Promise.resolve(affiliates);
+        return affiliates;
     }
 
     /**
@@ -91,9 +91,9 @@ export class AffiliatesService {
     public async get(id: string): Promise<Affiliate> {
         if (!this.cache.isCached(id)) {
             const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
-            return Promise.resolve(affiliate);
+            return affiliate;
         } else {
-            return Promise.resolve(this.cache.getCache(id));
+            return this.cache.getCache(id);
         }
     }
 
@@ -115,11 +115,11 @@ export class AffiliatesService {
             // Cache describe
             this.cache.cache(key, describeObject);
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         }
         // else return the cachedResult
         else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -162,11 +162,11 @@ export class AffiliatesService {
             // Cache results
             this.cache.cache(data, affiliates);
 
-            return Promise.resolve(affiliates);
+            return affiliates;
         }
         // else return the cached result
         else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -189,10 +189,10 @@ export class AffiliatesService {
             cms = cms.filter(cm => { return cm.AccountId === id; });
 
             this.cache.cache(data, cms);
-            return Promise.resolve(cms);
+            return cms;
         }
         else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -220,7 +220,7 @@ export class AffiliatesService {
 
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -246,7 +246,7 @@ export class AffiliatesService {
 
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -273,7 +273,7 @@ export class AffiliatesService {
         this.cache.invalidate(affiliate.Id);
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -305,7 +305,7 @@ export class AffiliatesService {
         this.cache.invalidate('AffiliatesService.getAll');
         this.cache.invalidate('AffiliatesService.getAll_public');
 
-        return Promise.resolve(update);
+        return update;
     }
 
     /**
@@ -322,7 +322,7 @@ export class AffiliatesService {
             await this.authService.deletePermission(`affiliate -- ${id}`, level as 0 | 1 | 2);
         }
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -337,7 +337,7 @@ export class AffiliatesService {
         const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`);
         await this.authService.deleteRole(cm);
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -360,6 +360,6 @@ export class AffiliatesService {
             await this.authService.deleteUser({ extId: facilitator.Id });
         }
 
-        return Promise.resolve();
+        return ;
     }
 }

@@ -87,9 +87,9 @@ export class FacilitatorsService {
             });
 
             this.cache.cache(this.getAllKey, facilitators);
-            return Promise.resolve(facilitators);
+            return facilitators
         } else {
-            return Promise.resolve(this.cache.getCache(this.getAllKey));
+            return this.cache.getCache(this.getAllKey)
         }
 
 
@@ -110,9 +110,9 @@ export class FacilitatorsService {
 
             this.cache.cache(key, describeObject);
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         } else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -201,9 +201,9 @@ export class FacilitatorsService {
 
             this.cache.cache(data, facilitators);
 
-            return Promise.resolve(facilitators);
+            return facilitators;
         } else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -251,9 +251,9 @@ export class FacilitatorsService {
             _.merge(facilitator, _.omit(user, ['email', 'password']));
 
             this.cache.cache(id, facilitator);
-            return Promise.resolve(facilitator);
+            return facilitator;
         } else {
-            return Promise.resolve(this.cache.getCache(id));
+            return this.cache.getCache(id);
         }
     }
 
@@ -343,7 +343,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ id: id, ...auth });
+        return { id: id, ...auth };
     }
 
     /**
@@ -361,7 +361,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ jwt: user.jwt, id: user.id });
+        return { jwt: user.jwt, id: user.id };
     }
 
     /**
@@ -384,7 +384,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ jwt: user.jwt, id: user.id });
+        return { jwt: user.jwt, id: user.id };
     }
 
     /**
@@ -438,7 +438,7 @@ export class FacilitatorsService {
         this.cache.invalidate(user.Id);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ salesforce: true, auth: auth, record });
+        return { salesforce: true, auth: auth, record };
     }
 
     /**
@@ -459,7 +459,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve((updated && updated.response));
+        return (updated && updated.response);
     }
 
     /**
@@ -486,7 +486,7 @@ export class FacilitatorsService {
         this.cache.invalidate(id);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(record);
+        return record;
     }
 
     /**
@@ -502,7 +502,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(deleted && deleted.response);
+        return deleted && deleted.response;
     }
 
     /**
@@ -527,7 +527,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(updated && updated.response);
+        return updated && updated.response;
     }
 
     /**
@@ -554,7 +554,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(added && added.response);
+        return added && added.response;
     }
 
     public async generateReset(email: string): Promise<string> {
@@ -569,7 +569,7 @@ export class FacilitatorsService {
 
         await this.authService.updateUser(_.omit(user, ['password']));
 
-        return Promise.resolve(token);
+        return token;
     }
 
     public async resetPassword(token: string, password: string): Promise<User> {
@@ -583,7 +583,7 @@ export class FacilitatorsService {
 
         await this.authService.updateUser({ id: user.id, password } as User);
 
-        return Promise.resolve(user);
+        return user;
     }
 
 }

@@ -85,7 +85,7 @@ export class WorkshopsService {
             if (!isPublic) {
                 query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
                 let ids = this.userService.getWorkshopIds(user);
-                if (ids.length === 0) return Promise.resolve([]);
+                if (ids.length === 0) return [];
                 for (let chuncked_ids of chunk(ids, 200)) {
                     workshops = workshops.concat(await this.queryForWorkshops(chuncked_ids, query));
                 }
@@ -99,9 +99,9 @@ export class WorkshopsService {
 
             this.cache.cache(key, workshops);
 
-            return Promise.resolve(workshops);
+            return workshops;
         } else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -156,9 +156,9 @@ export class WorkshopsService {
 
             this.cache.cache(id, workshop);
 
-            return Promise.resolve(workshop);
+            return workshop;
         } else {
-            return Promise.resolve(this.cache.getCache(id));
+            return this.cache.getCache(id);
         }
     }
 
@@ -176,7 +176,7 @@ export class WorkshopsService {
         }
 
         const files = (await this.sfService.query(query)).records;
-        return Promise.resolve(files);
+        return files;
     }
 
     /**
@@ -197,11 +197,11 @@ export class WorkshopsService {
             // Cache describe
             this.cache.cache(key, describeObject);
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         }
         // else return the cachedResult
         else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -245,11 +245,11 @@ export class WorkshopsService {
             // Cache results
             this.cache.cache(data, workshops);
 
-            return Promise.resolve(workshops);
+            return workshops;
         }
         // else return the cached result
         else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -294,9 +294,9 @@ export class WorkshopsService {
 
             this.cache.cache(id + '_facilitators', facilitators);
 
-            return Promise.resolve(facilitators);
+            return facilitators;
         } else {
-            return Promise.resolve(this.cache.getCache(id + '_facilitators'));
+            return this.cache.getCache(id + '_facilitators');
         }
     }
 
@@ -326,7 +326,7 @@ export class WorkshopsService {
 
         this.cache.invalidate('WorkshopsService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -360,7 +360,7 @@ export class WorkshopsService {
         this.cache.invalidate(`${workshop.Id}_facilitators`);
         this.cache.invalidate('WorkshopsService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -389,7 +389,7 @@ export class WorkshopsService {
         const result: SFSuccessObject[] = await this.sfService.create(data);
 
         this.cache.invalidate(id);
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -419,7 +419,7 @@ export class WorkshopsService {
         this.cache.invalidate('WorkshopsService.getAll');
         this.cache.invalidate('WorkshopsService.getAll_public');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     public async cancel(id: string, reason: string): Promise<any> {
@@ -439,7 +439,7 @@ export class WorkshopsService {
         this.cache.invalidate('WorkshopsService.getAll');
         this.cache.invalidate('WorkshopsService.getAll_public');
 
-        return Promise.resolve(note);
+        return note;
     }
 
     /**
@@ -467,7 +467,7 @@ export class WorkshopsService {
             await this.authService.grantPermissionToUser(resource, 2, facilitator['id']);
         }
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -487,13 +487,13 @@ export class WorkshopsService {
         await this.sfService.delete({ object: 'WorkshopFacilitatorAssociation__c', ids });
 
         const instructors = remove.map(facilitator => { return `'${facilitator.Instructor__r.Id}'` });
-        if (!instructors.length) return Promise.resolve();
+        if (!instructors.length) return ;
         const users = await this.authService.getUsers(`user.extId IN (${instructors.join()})`);
         for (const user in users) {
             await this.authService.revokePermissionFromUser(resource, 2, user['id']);
         }
 
-        return Promise.resolve();
+        return ;
     }
 
 }

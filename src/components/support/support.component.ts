@@ -31,17 +31,19 @@ export class SupportService {
             clauses: `Application__c='Affiliate Portal'`
         }
 
-        let pages;
+        let pages: any[];
         if (!this.cache.isCached(query) || refresh) {
-            pages = (await this.sfService.query(query as SFQueryObject)).records as any;
-            this.cache.cache(query, pages);
+            pages = (await this.sfService.query(query as SFQueryObject)).records as any[] || [];
+            if (pages.length > 0) {
+                this.cache.cache(query, pages);
+            }
         } else {
             pages = this.cache.getCache(query);
         }
 
-        pages = pages.filter(page => page.Restricted_To__c.includes(role));
+        pages = (pages || []).filter(page => page.Restricted_To__c.includes(role));
 
-        return Promise.resolve(pages);
+        return pages
     }
 
     public async get(id: string, refresh: boolean = false): Promise<any> {
@@ -58,7 +60,7 @@ export class SupportService {
             page = this.cache.getCache(request);
         }
 
-        return Promise.resolve(page);
+        return page;
     }
 
     /**
@@ -76,9 +78,9 @@ export class SupportService {
 
             this.cache.cache(key, describeObject);
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         } else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -105,6 +107,6 @@ export class SupportService {
 
         pages = pages.filter(page => page.Restricted_To__c.includes(role));
 
-        return Promise.resolve(pages);
+        return pages;
     }
 }
