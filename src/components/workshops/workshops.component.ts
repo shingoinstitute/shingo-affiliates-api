@@ -1,6 +1,6 @@
 import { Component, Inject } from '@nestjs/common';
 import {
-    SalesforceService, AuthService, CacheService, UserService,
+    SalesforceService, AuthService, CacheService,
     SFQueryObject, SFQueryResponse, SFSuccessObject, gRPCError,
 } from '../';
 import { Workshop } from './workshop'
@@ -19,8 +19,7 @@ export class WorkshopsService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('UserService') private userService: UserService = new UserService()) {}
+        @Inject('CacheService') private cache: CacheService = new CacheService()) {}
 
     /**
      *  @desc Get all workshops that the current session's user has permissions for (or all publicly listed workshps). The function assembles a list of workshop ids form the users permissions to query Salesforce. The queried fields from Salesforce are as follows:<br><br>
@@ -87,7 +86,7 @@ export class WorkshopsService {
             let workshops: Workshop[] = [];
             if (!isPublic) {
                 query.fields.push('(SELECT Instructor__r.Id, Instructor__r.FirstName, Instructor__r.LastName, Instructor__r.Email, Instructor__r.Photograph__c FROM Instructors__r)')
-                let ids = this.userService.getWorkshopIds(user);
+                let ids = this.getWorkshopIds(user);
                 if (ids.length === 0) return [];
                 for (let chuncked_ids of chunk(ids, 200)) {
                     workshops = workshops.concat(await this.queryForWorkshops(chuncked_ids, query));
@@ -109,6 +108,25 @@ export class WorkshopsService {
         } else {
             return this.cache.getCache(key);
         }
+    }
+
+    /**
+     * @desc Parse out the workshops that a user has permissions for
+     * 
+     * @param {any} user - Requires <code>user.permissions[]</code> and <code>user.roles[].permissions[]</code>
+     * @returns {string[]} 
+     * @memberof UserService
+     */
+    public getWorkshopIds(user): string[] {
+        let ids = [];
+        user.permissions.forEach(p => {
+            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
+        });
+        user.role.permissions.forEach(p => {
+            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
+        });
+
+        return [...new Set(ids)]; // Only return unique ids
     }
 
     private async queryForWorkshops(ids, query): Promise<Workshop[]> {

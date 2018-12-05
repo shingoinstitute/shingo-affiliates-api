@@ -4,7 +4,7 @@ import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddle
 import {
     SalesforceService, CacheService, AuthService,
     WorkshopsService, FacilitatorsService, AffiliatesService,
-    UserService, MailerService, SupportService
+    MailerService, SupportService
 } from './components';
 import { MulterFactory } from './factories';
 
@@ -19,7 +19,6 @@ import { MulterFactory } from './factories';
     components: [
         AuthMiddleware,
         CacheService,
-        UserService,
         SalesforceService,
         AuthService,
         WorkshopsService,
