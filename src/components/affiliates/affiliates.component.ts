@@ -60,9 +60,10 @@ export class AffiliatesService {
 
         let affiliates = [];
         if (!this.cache.isCached(key) || refresh) {
-            affiliates = (await this.sfService.query(query)).records as Affiliate[];
+            affiliates = (await this.sfService.query(query)).records as Affiliate[] || [];
 
-            this.cache.cache(key, affiliates);
+            if (affiliates.length)
+                this.cache.cache(key, affiliates);
         } else {
             affiliates = this.cache.getCache(key);
         }
