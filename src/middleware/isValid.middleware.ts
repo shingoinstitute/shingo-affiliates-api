@@ -1,5 +1,5 @@
 import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { SalesforceService, AuthService, SFQueryObject, LoggerService } from '../components';
+import { SalesforceService, AuthService, SFQueryObject } from '../components';
 import * as _ from 'lodash';
 
 /**
@@ -14,12 +14,10 @@ export class IsValidMiddleware implements NestMiddleware {
 
     private sfService;
     private authService;
-    private log;
 
     constructor() {
         this.sfService = new SalesforceService();
         this.authService = new AuthService();
-        this.log = new LoggerService();
     }
 
     /**
@@ -61,7 +59,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 .catch(error => {
                     if (error.message === 'SESSION_ALIVE') return next();
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
-                    this.log.error('Error in is-valid.middleware.ts: %j', error);
+                    console.error('Error in is-valid.middleware.ts: %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });
         }

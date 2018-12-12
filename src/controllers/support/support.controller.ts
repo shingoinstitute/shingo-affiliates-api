@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { LoggerService, SupportService } from '../../components';
+import { SupportService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
@@ -20,9 +20,9 @@ import * as generator from 'generate-password';
 @Controller('support')
 export class SupportController extends BaseController {
 
-    constructor(private supportService: SupportService, private logger: LoggerService) {
-        super(logger);
-    };
+    constructor(private supportService: SupportService) {
+        super();
+    }
 
     @Get()
     public async readAll( @Response() res, @Session() session, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {

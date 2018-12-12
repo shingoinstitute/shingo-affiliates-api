@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { SalesforceService, CacheService, AuthService, FacilitatorsService, LoggerService, MailerService } from '../../components';
+import { SalesforceService, CacheService, AuthService, FacilitatorsService, MailerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import * as _ from 'lodash';
@@ -20,9 +20,9 @@ import * as generator from 'generate-password';
 @Controller('facilitators')
 export class FacilitatorsController extends BaseController {
 
-    constructor(private facilitatorsService: FacilitatorsService, private mailer: MailerService, logger: LoggerService) {
-        super(logger);
-    };
+    constructor(private facilitatorsService: FacilitatorsService, private mailer: MailerService) {
+        super();
+    }
 
     /**
      * @desc <h5>GET: /facilitators</h5> Call {@link FacilitatorsService#getAll} to get a list of facilitators for given <code>'x-affiliate' || session.affilaite</code>
@@ -239,7 +239,7 @@ export class FacilitatorsController extends BaseController {
 
         if (body.hasOwnProperty('Biography__c')) {
             delete body.Biography__c;
-            this.log.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
+            console.warn('\nClient attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.\n');
         }
 
         try {

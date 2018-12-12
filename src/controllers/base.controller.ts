@@ -1,5 +1,5 @@
 import { Response, HttpStatus, Inject } from '@nestjs/common';
-import { SalesforceService, LoggerService } from '../components';
+import { SalesforceService} from '../components';
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -8,8 +8,6 @@ import { SalesforceService, LoggerService } from '../components';
  * @class BaseController
  */
 export abstract class BaseController {
-
-    constructor(protected log: LoggerService) { };
 
     /**
     * @desc A helper function to return an error response to the client.
@@ -29,11 +27,11 @@ export abstract class BaseController {
             try {
                 error.error = JSON.parse(error.error);
             } catch (e) {
-                this.log.warn(`Failed to parse an error in response object. Expected a JSON string but got ${error.error} instead`);
+                console.warn(`Failed to parse an error in response object. Expected a JSON string but got ${error.error} instead`);
             }
         }
 
-        this.log.error(message + ' %j', error);
+        console.error(message + ' %j', error);
         return res.status(errorCode).json({ error: error });
     }
 }

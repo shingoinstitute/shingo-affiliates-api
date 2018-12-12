@@ -4,7 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { WorkshopsService, Workshop, LoggerService } from '../../components';
+import { WorkshopsService, Workshop } from '../../components';
 import { MulterFactory } from '../../factories';
 import { BaseController } from '../base.controller';
 
@@ -20,8 +20,8 @@ import { checkRequired } from '../../validators/objKeyValidator';
 @Controller('workshops')
 export class WorkshopsController extends BaseController {
 
-    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory, logger: LoggerService) {
-        super(logger);
+    constructor(private workshopsService: WorkshopsService, private multer: MulterFactory) {
+        super();
     };
 
     /**
@@ -116,7 +116,7 @@ export class WorkshopsController extends BaseController {
 
         try {
             const workshop: Workshop = await this.workshopsService.get(id);
-            this.log.debug(`GET: /workshops/${id} => %j`, workshop);
+            console.debug(`GET: /workshops/${id} => %j`, workshop);
             return res.status(HttpStatus.OK).json(workshop);
         } catch (error) {
             return this.handleError(res, '(114:48) Error in WorkshopsController.read(): ', error);
@@ -157,7 +157,7 @@ export class WorkshopsController extends BaseController {
     @Post()
     public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
         // Check required parameters
-        this.log.debug('Trying to create workshop:\n%j', body);
+        console.debug('Trying to create workshop:\n%j', body);
         let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'Course_Manager__c', 'facilitators']);
         if (!valid.valid)
             return this.handleError(res, 'Error in WorkshopsController.create(): ', { error: 'MISSING_FIELD', fields: valid.missing }, HttpStatus.BAD_REQUEST);

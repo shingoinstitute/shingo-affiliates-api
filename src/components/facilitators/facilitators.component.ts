@@ -1,7 +1,7 @@
 import { Component, Inject } from '@nestjs/common';
 import {
     SalesforceService, AuthService, CacheService, User,
-    SFQueryObject, LoggerService
+    SFQueryObject
 } from '../';
 import * as _ from 'lodash';
 import * as jwt from 'jwt-simple';
@@ -19,8 +19,7 @@ export class FacilitatorsService {
 
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+        @Inject('CacheService') private cache: CacheService = new CacheService()) { }
 
     /**
      * @desc Get all facilitators for the affiliate specified. All if <code>affiliate === ''</code>. The queried fields from Salesforce are as follows:<br><br>
@@ -45,7 +44,7 @@ export class FacilitatorsService {
      */
     public async getAll(refresh: boolean = false, affiliate?: string): Promise<any[]> {
 
-        if (!this.cache.isCached(this.getAllKey)) {
+        if (refresh || !this.cache.isCached(this.getAllKey)) {
             let query = {
                 action: "SELECT",
                 fields: [
@@ -67,9 +66,9 @@ export class FacilitatorsService {
 
             if (affiliate != '') query.clauses += ` AND Facilitator_For__c='${affiliate}'`;
 
-            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any;
+            let facilitators = (await this.sfService.query(query as SFQueryObject)).records as any[] || [];
             const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+            const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users || [];
             const users = _.keyBy(usersArr, 'extId');
 
             // Add the facilitator's auth id to object
@@ -86,10 +85,12 @@ export class FacilitatorsService {
                 return facilitator['id'] !== undefined && facilitator.services && facilitator.services.includes('affiliate-portal'); 
             });
 
-            this.cache.cache(this.getAllKey, facilitators);
-            return Promise.resolve(facilitators);
+            if (facilitators.length) {
+                this.cache.cache(this.getAllKey, facilitators);
+            }
+            return facilitators
         } else {
-            return Promise.resolve(this.cache.getCache(this.getAllKey));
+            return this.cache.getCache(this.getAllKey)
         }
 
 
@@ -108,11 +109,13 @@ export class FacilitatorsService {
         if (!this.cache.isCached(key) || refresh) {
             const describeObject = await this.sfService.describe('Contact');
 
-            this.cache.cache(key, describeObject);
+            if (describeObject) {
+                this.cache.cache(key, describeObject);
+            }
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         } else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -164,7 +167,7 @@ export class FacilitatorsService {
 
             if (facilitators.length) {
                 const ids = facilitators.map(facilitator => { return `'${facilitator['Id']}'` });
-                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users;
+                const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users as any[] || [];
                 const users = _.keyBy(usersArr, 'extId');
 
                 const accountIds = [];
@@ -199,11 +202,13 @@ export class FacilitatorsService {
                 });
             }
 
-            this.cache.cache(data, facilitators);
+            if (facilitators.length) {
+                this.cache.cache(data, facilitators);
+            }
 
-            return Promise.resolve(facilitators);
+            return facilitators;
         } else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -226,17 +231,18 @@ export class FacilitatorsService {
             }
 
             let facilitator = (await this.sfService.retrieve(data))[0];
+            if (!facilitator) return
             facilitator['Account'] = (await this.sfService.retrieve({ object: 'Account', ids: [facilitator.AccountId] }))[0];
 
             let user;
             try {
                 user = await this.authService.getUser(`user.extId='${facilitator.Id}'`);
             } catch (e) {
-                this.log.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`);
+                console.warn(`Failed to find user in auth DB via user's Salesforce ID. Attempting to find by email address...`);
                 try {
                     user = await this.authService.getUser(`user.email='${facilitator.Email}'`);
                 } catch (e) {
-                    this.log.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
+                    console.error('Failed to find user in auth DB using their Salesforce ID and their email address.');
                     return Promise.reject(e);
                 }
             }
@@ -251,9 +257,9 @@ export class FacilitatorsService {
             _.merge(facilitator, _.omit(user, ['email', 'password']));
 
             this.cache.cache(id, facilitator);
-            return Promise.resolve(facilitator);
+            return facilitator;
         } else {
-            return Promise.resolve(this.cache.getCache(id));
+            return this.cache.getCache(id);
         }
     }
 
@@ -343,7 +349,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ id: id, ...auth });
+        return { id: id, ...auth };
     }
 
     /**
@@ -361,7 +367,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ jwt: user.jwt, id: user.id });
+        return { jwt: user.jwt, id: user.id };
     }
 
     /**
@@ -384,7 +390,7 @@ export class FacilitatorsService {
 
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ jwt: user.jwt, id: user.id });
+        return { jwt: user.jwt, id: user.id };
     }
 
     /**
@@ -438,7 +444,7 @@ export class FacilitatorsService {
         this.cache.invalidate(user.Id);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve({ salesforce: true, auth: auth, record });
+        return { salesforce: true, auth: auth, record };
     }
 
     /**
@@ -459,7 +465,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve((updated && updated.response));
+        return (updated && updated.response);
     }
 
     /**
@@ -486,7 +492,7 @@ export class FacilitatorsService {
         this.cache.invalidate(id);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(record);
+        return record;
     }
 
     /**
@@ -502,7 +508,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(deleted && deleted.response);
+        return deleted && deleted.response;
     }
 
     /**
@@ -521,13 +527,13 @@ export class FacilitatorsService {
         else if (user.services.includes(', affiliate-portal')) user.services = user.services.replace(', affiliate-portal', ', af-p-disabled');
         else if (user.services.includes('affiliate-portal, ')) user.services = user.services.replace('affiliate-portal', 'af-p-disabled');
 
-        this.log.warn('Disabling %j', user);
+        console.warn('Disabling %j', user);
         const updated = await this.authService.updateUser(user);
 
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(updated && updated.response);
+        return updated && updated.response;
     }
 
     /**
@@ -554,7 +560,7 @@ export class FacilitatorsService {
         this.cache.invalidate(extId);
         this.cache.invalidate(this.getAllKey);
 
-        return Promise.resolve(added && added.response);
+        return added && added.response;
     }
 
     public async generateReset(email: string): Promise<string> {
@@ -569,7 +575,7 @@ export class FacilitatorsService {
 
         await this.authService.updateUser(_.omit(user, ['password']));
 
-        return Promise.resolve(token);
+        return token;
     }
 
     public async resetPassword(token: string, password: string): Promise<User> {
@@ -583,7 +589,7 @@ export class FacilitatorsService {
 
         await this.authService.updateUser({ id: user.id, password } as User);
 
-        return Promise.resolve(user);
+        return user;
     }
 
 }

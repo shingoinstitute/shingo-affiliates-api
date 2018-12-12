@@ -4,10 +4,7 @@ import {
     HttpStatus, Request, Response, Next,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import {
-    SalesforceService, AuthService,
-    SFQueryObject, LoggerService
-} from '../../components';
+import { SalesforceService, AuthService, SFQueryObject } from '../../components';
 import { BaseController } from '../base.controller';
 
 import * as _ from 'lodash';
@@ -22,8 +19,8 @@ import * as _ from 'lodash';
 @Controller('auth')
 export class AuthController extends BaseController {
 
-    constructor(private sfService: SalesforceService, private authService: AuthService, logger: LoggerService) {
-        super(logger);
+    constructor(private sfService: SalesforceService, private authService: AuthService) {
+        super();
     };
 
     /**
@@ -133,7 +130,7 @@ export class AuthController extends BaseController {
             req.session.user.adminToken = req.headers['x-jwt'];
             req.session.affiliate = req.session.user['AccountId'];
 
-            this.log.debug(`Admin ${body.adminId} logged in as ${body.userId}`);
+            console.debug(`Admin ${body.adminId} logged in as ${body.userId}`);
 
             return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password']));
         } catch(error) {

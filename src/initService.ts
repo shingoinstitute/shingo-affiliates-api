@@ -1,8 +1,7 @@
-import { AuthService, LoggerService } from './components';
+import { AuthService } from './components';
 import * as _ from 'lodash';
 
 const authService = new AuthService();
-const log = new LoggerService();
 
 /**
  * This class handles lifting the server. It checks for required roles (creates them if not found) and stores the requried global ids
@@ -12,8 +11,8 @@ const log = new LoggerService();
  */
 export class InitService {
 
-    public static async  init() {
-        log.info('Initializing Affiliate Portal...');
+    public static async init() {
+        console.info('Initializing Affiliate Portal...');
 
         const roles = (await authService.getRoles('role.service=\'affiliate-portal\'')).roles;
 
@@ -22,22 +21,22 @@ export class InitService {
 
         if (!facilitator.length) {
             const role = await authService.createRole({ name: 'Facilitator', service: 'affiliate-portal' });
-            log.info('Created Facilitator role! %j', role);
+            console.info('Created Facilitator role! %j', role);
             global['facilitatorId'] = role.id;
         } else {
-            log.info('Found Facilitator role: %j', _.omit(facilitator[0], ['users', 'permissions']));
+            console.info('Found Facilitator role: %j', _.omit(facilitator[0], ['users', 'permissions']));
             global['facilitatorId'] = facilitator[0].id;
         }
 
         if (!affiliateManager.length) {
             const role = await authService.createRole({ name: 'Affiliate Manager', service: 'affiliate-portal' });
-            log.info('Created Affiliate Manager role! %j', role);
+            console.info('Created Affiliate Manager role! %j', role);
             global['affiliateManagerId'] = role.id;
         } else {
-            log.info('Found Affiliate Manager role: %j', _.omit(affiliateManager[0], ['users', 'permissions']));
+            console.info('Found Affiliate Manager role: %j', _.omit(affiliateManager[0], ['users', 'permissions']));
             global['affiliateManagerId'] = affiliateManager[0].id;
         }
 
-        return Promise.resolve();
+        return ;
     }
 }

@@ -1,5 +1,5 @@
 import { Component, Inject } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject, LoggerService } from '../';
+import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject } from '../';
 import { Affiliate } from './affiliate';
 import * as _ from 'lodash';
 
@@ -17,7 +17,7 @@ export class AffiliatesService {
     constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
         @Inject('AuthService') private authService: AuthService = new AuthService(),
         @Inject('CacheService') private cache: CacheService = new CacheService(),
-        @Inject('LoggerService') private log: LoggerService = new LoggerService()) { }
+    ) {}
 
     /**
      * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
@@ -60,22 +60,23 @@ export class AffiliatesService {
 
         let affiliates = [];
         if (!this.cache.isCached(key) || refresh) {
-            affiliates = (await this.sfService.query(query)).records as Affiliate[];
+            affiliates = (await this.sfService.query(query)).records as Affiliate[] || [];
 
-            this.cache.cache(key, affiliates);
+            if (affiliates.length)
+                this.cache.cache(key, affiliates);
         } else {
             affiliates = this.cache.getCache(key);
         }
 
         if (isPublic) {
-            return Promise.resolve(affiliates);
+            return affiliates;
         }
 
         const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
 
         affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
 
-        return Promise.resolve(affiliates);
+        return affiliates;
     }
 
     /**
@@ -91,9 +92,9 @@ export class AffiliatesService {
     public async get(id: string): Promise<Affiliate> {
         if (!this.cache.isCached(id)) {
             const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
-            return Promise.resolve(affiliate);
+            return affiliate;
         } else {
-            return Promise.resolve(this.cache.getCache(id));
+            return this.cache.getCache(id);
         }
     }
 
@@ -115,11 +116,11 @@ export class AffiliatesService {
             // Cache describe
             this.cache.cache(key, describeObject);
 
-            return Promise.resolve(describeObject);
+            return describeObject;
         }
         // else return the cachedResult
         else {
-            return Promise.resolve(this.cache.getCache(key));
+            return this.cache.getCache(key);
         }
     }
 
@@ -162,11 +163,11 @@ export class AffiliatesService {
             // Cache results
             this.cache.cache(data, affiliates);
 
-            return Promise.resolve(affiliates);
+            return affiliates;
         }
         // else return the cached result
         else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -189,10 +190,10 @@ export class AffiliatesService {
             cms = cms.filter(cm => { return cm.AccountId === id; });
 
             this.cache.cache(data, cms);
-            return Promise.resolve(cms);
+            return cms;
         }
         else {
-            return Promise.resolve(this.cache.getCache(data));
+            return this.cache.getCache(data);
         }
     }
 
@@ -220,7 +221,7 @@ export class AffiliatesService {
 
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -246,7 +247,7 @@ export class AffiliatesService {
 
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -273,7 +274,7 @@ export class AffiliatesService {
         this.cache.invalidate(affiliate.Id);
         this.cache.invalidate('AffiliatesService.getAll');
 
-        return Promise.resolve(result);
+        return result;
     }
 
     /**
@@ -305,7 +306,7 @@ export class AffiliatesService {
         this.cache.invalidate('AffiliatesService.getAll');
         this.cache.invalidate('AffiliatesService.getAll_public');
 
-        return Promise.resolve(update);
+        return update;
     }
 
     /**
@@ -322,7 +323,7 @@ export class AffiliatesService {
             await this.authService.deletePermission(`affiliate -- ${id}`, level as 0 | 1 | 2);
         }
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -337,7 +338,7 @@ export class AffiliatesService {
         const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`);
         await this.authService.deleteRole(cm);
 
-        return Promise.resolve();
+        return ;
     }
 
     /**
@@ -360,6 +361,6 @@ export class AffiliatesService {
             await this.authService.deleteUser({ extId: facilitator.Id });
         }
 
-        return Promise.resolve();
+        return ;
     }
 }

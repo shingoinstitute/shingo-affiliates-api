@@ -1,5 +1,4 @@
 import { Component } from '@nestjs/common';
-import { LoggerService } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';
@@ -45,7 +44,9 @@ export class SalesforceService {
      * @memberof SalesforceService
      */
     private getClient() {
-        return new sfservices.SalesforceMicroservices(`${process.env.SF_API}:80`, grpc.credentials.createInsecure());
+        const envendpoint = process.env.SF_API
+        const endpoint = envendpoint.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
+        return new sfservices.SalesforceMicroservices(endpoint, grpc.credentials.createInsecure());
     }
 
     /**
@@ -57,7 +58,7 @@ export class SalesforceService {
      */
     public async query(query: SFQueryObject): Promise<SFQueryResponse> {
         const response = await this.client.queryAsync(query);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -69,7 +70,7 @@ export class SalesforceService {
      */
     public async retrieve(data: SFIdData): Promise<object> {
         const response = await this.client.retrieveAsync(data);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -81,7 +82,7 @@ export class SalesforceService {
      */
     public async create(data: SFRecordData): Promise<SFSuccessObject[]> {
         const response = await this.client.createAsync(data);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -93,7 +94,7 @@ export class SalesforceService {
      */
     public async update(data: SFRecordData): Promise<SFSuccessObject[]> {
         const response = await this.client.updateAsync(data);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -105,7 +106,7 @@ export class SalesforceService {
      */
     public async delete(data: SFIdData): Promise<SFSuccessObject[]> {
         const response = await this.client.deleteAsync(data);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -117,7 +118,7 @@ export class SalesforceService {
      */
     public async describe(object: string): Promise<object> {
         const response = await this.client.describeAsync({ object });
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
@@ -129,7 +130,7 @@ export class SalesforceService {
      */
     public async search(data: SFSearchData): Promise<SFSearchResults> {
         const response = await this.client.searchAsync(data);
-        return Promise.resolve(JSON.parse(response.contents));
+        return JSON.parse(response.contents);
     }
 
     /**
