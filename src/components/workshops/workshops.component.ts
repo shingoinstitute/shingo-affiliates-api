@@ -72,7 +72,8 @@ export class WorkshopsService {
                 "Status__c",
                 "Host_Site__c",
                 "Workshop_Type__c",
-                "Language__c"
+                "Language__c",
+                "Case_Study__c"
             ],
             table: "Workshop__c",
             clauses: "Public__c=true AND Status__c='Verified' ORDER BY Start_Date__c"
