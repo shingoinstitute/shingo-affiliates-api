@@ -1,18 +1,48 @@
 {
-  "name": "shingo-affiliates-api",
-  "version": "2.0.0",
+  "name": "@shingo/affiliates-api",
+  "version": "2.0.1",
   "description": "Provide REST services to interact with Shingo Affiliates and Workshops.",
-  "main": "./build/index.js",
+  "main": "index.js",
   "engines": {
     "node": ">=8.11"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shingoinstitute/shingo-affiliates-api"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node ./build/index.js",
+    "debug": "nodemon --watch ./build --inspect=0.0.0.0:9229 --nolazy ./build/index.js",
+    "docker-debug": "docker-compose -f docker-compose.debug.yml up",
+    "build": "tsc -p ./tsconfig.build.json",
+    "build:tests": "tsc -p ./tsconfig.spec.json",
+    "test": "run-s build build:tests test:*",
+    "test:all:ci": "run-s build build:tests test:lint test:unit:ci test:security",
+    "test:lint": "tslint --project .",
+    "test:unit": "node ./scripts/test.js",
+    "test:unit:ci": "node ./scripts/test.js -i --ci --testResultsProcessor='jest-junit'",
+    "test:unit:watch": "node ./scripts/test.js --watch",
+    "test:security": "npm audit",
+    "cov": "run-s cov:html && opn coverage/index.html",
+    "cov:html": "node ./scripts/test.js --coverage --coverageReporters='html'",
+    "cov:send": "node ./scripts/test.js --coverage --coverageReporters='lcov'; codecov",
+    "cov:check": "node ./scripts/test.js --coverage",
+    "clean": "rm -r build/ && rm -r coverage && rm -r .nyc_output && rm -r spec",
+    "prepack": "npm run build && cp -Rav build/* . | scripts/parseEmitted.sh build.emit",
+    "postpack": "scripts/postpack.sh"
+  },
+  "author": "Abraham White <abelincoln.white@gmail.com>",
+  "license": "MIT",
   "dependencies": {
     "@nestjs/common": "^5.1.0",
     "@nestjs/core": "^5.1.0",
     "@nestjs/cqrs": "^5.1.1",
     "@nestjs/microservices": "^5.1.0",
     "@nestjs/websockets": "^5.1.0",
-    "@shingo/auth-api-client": "^1.0.0-alpha.7",
+    "@shingo/auth-api-client": "file:/Users/abe/Documents/shingo/shingo-auth-api/packages/client/shingo-auth-api-client-1.0.0-alpha.7.tgz",
     "@shingo/sf-api-client": "^1.0.0-alpha.2",
     "body-parser": "^1.18.3",
     "class-transformer": "^0.1.9",
@@ -20,7 +50,8 @@
     "common-tags": "^1.8.0",
     "cors": "^2.8.4",
     "express": "^4.16.3",
-    "lodash": "^4.17.10",
+    "jsforce": "^1.9.1",
+    "lodash": "^4.17.11",
     "multer": "^1.3.0",
     "node-cache": "^4.1.1",
     "nodemailer": "^4.0.1",
@@ -28,7 +59,7 @@
     "qs": "^6.5.2",
     "reflect-metadata": "^0.1.12",
     "rxjs": "^6.2.2",
-    "typescript": "^3.1.1",
+    "typescript": "^3.2.2",
     "winston": "^2.4.4"
   },
   "devDependencies": {
@@ -49,7 +80,7 @@
     "@types/object-hash": "^1.2.0",
     "@types/qs": "^6.5.1",
     "@types/winston": "^2.4.4",
-    "jest": "^23.5.0",
+    "jest": "^24.1.0",
     "jest-junit": "^5.1.0",
     "nodemon": "^1.18.4",
     "npm-run-all": "^4.1.3",
@@ -58,27 +89,6 @@
     "tslint": "^5.11.0",
     "tslint-config-prettier": "^1.15.0"
   },
-  "scripts": {
-    "start": "node ./build/index.js",
-    "debug": "nodemon --watch ./build --inspect=0.0.0.0:9229 --nolazy ./build/index.js",
-    "docker-debug": "docker-compose -f docker-compose.debug.yml up",
-    "build": "tsc -p ./tsconfig.build.json",
-    "build:tests": "tsc -p ./tsconfig.spec.json",
-    "test": "run-s build build:tests test:*",
-    "test:all:ci": "run-s build build:tests test:lint test:unit:ci test:security",
-    "test:lint": "tslint --project .",
-    "test:unit": "node ./scripts/test.js",
-    "test:unit:ci": "node ./scripts/test.js -i --ci --testResultsProcessor='jest-junit'",
-    "test:unit:watch": "node ./scripts/test.js --watch",
-    "test:security": "npm audit",
-    "cov": "run-s cov:html && opn coverage/index.html",
-    "cov:html": "node ./scripts/test.js --coverage --coverageReporters='html'",
-    "cov:send": "node ./scripts/test.js --coverage --coverageReporters='lcov'; codecov",
-    "cov:check": "node ./scripts/test.js --coverage",
-    "clean": "rm -r build/ && rm -r coverage && rm -r .nyc_output && rm -r spec"
-  },
-  "author": "Abraham White <abelincoln.white@gmail.com>",
-  "license": "MIT",
   "prettier": {
     "semi": false,
     "singleQuote": true,

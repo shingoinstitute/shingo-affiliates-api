@@ -12,7 +12,7 @@ export interface Contact {
   MasterRecord?: m<Contact>
   AccountId?: m<string>
   Account?: m<Account>
-  LastName: string
+  LastName?: m<string>
   FirstName?: m<string>
   Salutation?: m<string>
   Name: string

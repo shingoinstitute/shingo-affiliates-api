@@ -1,3 +1,31 @@
+// tslint:disable-next-line:variable-name
+export const RefineTag = Symbol('__RefineTag')
+// tslint:disable-next-line:variable-name
+export const RefineBaseTypeTag = Symbol('__RefineBaseType')
+/**
+ * Refined is essentially newtype
+ * We create a new type that has the same runtime representation as its inner type,
+ * however the inner type is not assignable to the new type.
+ * This differs from newtype-ts in that a newtype is also assignable to its carrier type
+ *
+ * Example:
+ * ```ts
+ * type PositiveNumber = Refined<number, 'Positive'>
+ * const x: PositiveNumber = 5  // will not work, since type of 5 is number
+ * const y: PositiveNumber = unsafeCoerce<PositiveNumber>(5) // works, since we coerced 5 to type PositiveNumber
+ * ```
+ */
+export type Refined<U, T> = U & {
+  readonly [RefineTag]: T
+  readonly [RefineBaseTypeTag]: U
+}
+// taken from gcanti/monocle-ts
+export class Iso<S, A> {
+  readonly _tag: 'Iso' = 'Iso'
+  constructor(readonly get: (s: S) => A, readonly reverseGet: (a: A) => S) {}
+}
+export const wrap = <T, New extends Refined<T, any>>(v: T): New => v as any
+
 export type Function1<A, B> = (a: A) => B
 export type Function2<A, B, C> = (a: A, b: B) => C
 export type Function3<A, B, C, D> = (a: A, b: B, c: C) => D
@@ -90,11 +118,7 @@ export type Arguments<T> = T extends (...args: infer A) => any ? A : never
 export type RetType<T> = T extends (...args: any[]) => infer R ? R : never
 
 export type Lazy<T> = () => T
-export type Overwrite<A extends object, B extends object> = Pick<
-  A,
-  Exclude<keyof A, keyof B>
-> &
-  B
+export type Overwrite<A, B> = Pick<A, Exclude<keyof A, keyof B>> & B
 
 export type KeysOfType<T, Type> = {
   [K in keyof T]-?: Type extends T[K] ? K : never
@@ -103,6 +127,10 @@ export type OptionalKeys<T> = KeysOfType<T, undefined>
 export type NullKeys<T> = KeysOfType<T, null>
 export type MaybeKeys<T> = KeysOfType<T, null | undefined>
 export type MakeMaybe<T> = { [K in keyof T]+?: T[K] | null | undefined }
+export type UndefinedToOptional<T> = Overwrite<
+  T,
+  { [k in OptionalKeys<T>]+?: T[k] }
+>
 
 export type OverwriteMaybe<A extends object, B extends object> = Overwrite<
   A,
@@ -110,9 +138,15 @@ export type OverwriteMaybe<A extends object, B extends object> = Overwrite<
     MakeMaybe<Pick<B, keyof B & MaybeKeys<A>>>
 >
 
-export type RequireKeys<T extends object, K extends keyof T> = Overwrite<
+export type RequireKeys<T, K extends keyof T> = Overwrite<
   T,
   { [key in K]-?: T[key] }
 >
 
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>
+
 export type ArrayValue<T> = T extends Array<infer A> ? A : never
+export type PromiseValue<T> = T extends Promise<infer A> ? A : never
+export type RefineBaseType<T, K> = T extends Refined<any, K>
+  ? T[typeof RefineBaseTypeTag]
+  : never

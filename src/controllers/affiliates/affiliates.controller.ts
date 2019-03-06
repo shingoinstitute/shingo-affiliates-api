@@ -10,6 +10,7 @@ import {
   ForbiddenException,
   BadRequestException,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common'
 import { AffiliatesService } from '../../components'
 
@@ -24,10 +25,19 @@ import {
   Permission,
 } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
-import { missingParam, isAffiliateManager } from '../../util'
+import {
+  missingParam,
+  isAffiliateManager,
+  CurrUser,
+  RouteMetadata,
+  RefreshParam,
+  UrlParam as UrlParamType,
+  Body as BodyType,
+} from '../../util'
 import { CreateBody, MapBody, UpdateBody } from './affiliateInterfaces'
 import { AuthGuard, RoleGuard, PermissionGuard } from '../../guards'
 import { AuthUser } from '../../guards/auth.guard'
+import { Param as ParamType } from '../../decorators/ParamOptions.interface'
 
 /**
  * Controller of the REST API logic for Affiliates
@@ -49,10 +59,22 @@ export class AffiliatesController {
   @Get()
   @UseGuards(AuthGuard)
   async readAll(
-    @User() user: AuthUser,
+    @User() user: CurrUser<AuthUser>,
     @BooleanParam({ query: 'isPublic', header: 'is-public' })
-    isPublic: boolean | undefined,
-    @Refresh() refresh: boolean | undefined,
+    isPublic: ParamType<
+      boolean | undefined,
+      { query: 'isPublic'; header: 'is-public' }
+    >,
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    // a phantom parameter - not actually used, just for type information
+    // unfortunately decorators cannot currently mutate types - otherwise this would be
+    // unnecessary. We must keep the information here in sync with the information in the
+    // decorators
+    _metadata: RouteMetadata<{
+      route: '/affiliates'
+      auth: true
+      method: 'GET'
+    }>,
   ) {
     if (!isPublic && (!user || !isAffiliateManager(user))) {
       throw new ForbiddenException('', 'NOT_AFFILIATE_MANAGER')
@@ -68,7 +90,14 @@ export class AffiliatesController {
    * @param refresh Force cache refresh
    */
   @Get('/describe')
-  describe(@Refresh() refresh: boolean | undefined) {
+  describe(
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/describe'
+      auth: false
+      method: 'GET'
+    }>,
+  ) {
     return this.affService.describe(refresh)
   }
 
@@ -84,10 +113,15 @@ export class AffiliatesController {
   @UseGuards(AuthGuard)
   async search(
     @StringParam('search', new RequiredValidator(missingParam('search')))
-    search: string,
+    search: ParamType<string, 'search'>,
     @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
-    retrieve: string[],
-    @Refresh() refresh: boolean | undefined,
+    retrieve: ParamType<string[], 'retreive'>,
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/search'
+      auth: true
+      method: 'GET'
+    }>,
   ) {
     return this.affService.search(search, retrieve, refresh)
   }
@@ -105,12 +139,18 @@ export class AffiliatesController {
   @Permission([1, 'affiliate -- '])
   @UseGuards(AuthGuard, PermissionGuard)
   searchCMS(
-    @Param('id', SalesforceIdValidator) id: string,
+    @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
     @StringParam('search', new RequiredValidator(missingParam('search')))
-    search: string,
+    search: ParamType<string, 'search'>,
     @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
-    retrieve: string[],
-    @Refresh() refresh: boolean | undefined,
+    retrieve: ParamType<string[], 'retrieve'>,
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/:id/coursemanagers'
+      auth: true
+      permission: [[1, 'affiliate -- ']]
+      method: 'GET'
+    }>,
   ) {
     return this.affService.searchCM(id, search, retrieve, refresh)
   }
@@ -124,8 +164,19 @@ export class AffiliatesController {
   @Get(':id')
   @Permission([1, 'affiliate -- '])
   @UseGuards(AuthGuard, PermissionGuard)
-  async read(@Param('id', SalesforceIdValidator) id: string) {
-    return this.affService.get(id)
+  async read(
+    @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/:id'
+      auth: true
+      permission: [[1, 'affiliate -- ']]
+      method: 'GET'
+    }>,
+  ) {
+    const data = await this.affService.get(id)
+    if (typeof data === 'undefined')
+      throw new NotFoundException(`Affiliate with id ${id} not found`)
+    return data
   }
 
   /**
@@ -137,7 +188,15 @@ export class AffiliatesController {
   @Post()
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
-  create(@Body() body: CreateBody) {
+  create(
+    @Body() body: BodyType<CreateBody>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates'
+      // TODO: indicate the IsAffiliateManager requirement
+      auth: true
+      method: 'POST'
+    }>,
+  ) {
     return this.affService.create(body)
   }
 
@@ -150,9 +209,15 @@ export class AffiliatesController {
   @Post(':id/map')
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
-  async map(
-    @Param('id', SalesforceIdValidator) id: string,
-    @Body() affiliate: MapBody,
+  map(
+    @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    @Body() affiliate: BodyType<MapBody>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/:id/map'
+      // TODO: indicate the IsAffiliateManager requirement
+      auth: true
+      method: 'POST'
+    }>,
   ) {
     if (id !== affiliate.Id) {
       throw new BadRequestException(
@@ -160,8 +225,7 @@ export class AffiliatesController {
         'INVALID_SF_ID',
       )
     }
-    await this.affService.map(affiliate.Id)
-    return { mapped: true }
+    return this.affService.map(affiliate.Id).then(() => ({ mapped: true }))
   }
 
   /**
@@ -175,8 +239,14 @@ export class AffiliatesController {
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
   update(
-    @Body() body: UpdateBody,
-    @Param('id', SalesforceIdValidator) id: string,
+    @Body() body: BodyType<UpdateBody>,
+    @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/:id'
+      // TODO: indicate the IsAffiliateManager requirement
+      auth: true
+      method: 'PUT'
+    }>,
   ) {
     if (id !== body.Id) {
       throw new BadRequestException(
@@ -205,7 +275,15 @@ export class AffiliatesController {
   @Delete(':id')
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
-  delete(@Param('id', SalesforceIdValidator) id: string) {
+  delete(
+    @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/affiliates/:id'
+      // TODO: indicate the IsAffiliateManager requirement
+      auth: true
+      method: 'DELETE'
+    }>,
+  ) {
     return this.affService.delete(id)
   }
 }

@@ -48,9 +48,11 @@ export class PermissionGuard implements CanActivate {
         user: 'anonymous',
         result: false,
       }
-    const isAfMan =
+
+    const isAfMan = !!(
       req.user &&
-      !!(req.user.roles || []).find(r => r.name === 'Affiliate Manager')
+      (req.user.roles || []).find(r => r.name === 'Affiliate Manager')
+    )
     const user = (req.user && req.user.email) || 'anonymous'
 
     if (isAfMan) return { level, resource: resource || '', user, result: true }

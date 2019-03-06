@@ -10,12 +10,13 @@ import {
 } from '@nestjs/common'
 
 import _ from 'lodash'
-import { AuthClient, authservices } from '@shingo/auth-api-client'
+import { AuthClient } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 import { LoginBody, LoginAsBody, ChangePasswordBody } from './authInterfaces'
 import { AuthUser } from '../../guards/auth.guard'
 import { RoleGuard, AuthGuard } from '../../guards'
 import { IsAffiliateManager, User } from '../../decorators'
+import { Body as BodyType, CurrUser, RouteMetadata } from '../../util'
 
 /**
  * Provides the controller of the Auth REST logic
@@ -34,38 +35,32 @@ export class AuthController {
    * @param body login credentials
    */
   @Post('login')
-  async login(@Body() body: LoginBody) {
-    const user = await this.authService
-      .login(body)
-      .then(jwt =>
-        this.authService
-          .getUser(`user.email='${body.email}'`)
-          .then<{ jwt: string } & authservices.User>(u => ({
-            ...u,
-            jwt,
-          })),
-      )
-      .catch((e: Error) => {
-        this.log.debug(e as any)
-        if (
-          e.message === 'INVALID_PASSWORD' ||
-          e.message === 'EMAIL_NOT_FOUND'
-        ) {
-          throw new ForbiddenException(e.message || '')
-        }
+  async login(
+    @Body() body: BodyType<LoginBody>,
+    _metadata: RouteMetadata<{
+      route: '/auth/login'
+      auth: false
+      method: 'POST'
+    }>,
+  ) {
+    const jwt = await this.authService.login(body).catch((e: Error) => {
+      this.log.debug(e as any)
+      if (e.message === 'INVALID_PASSWORD' || e.message === 'EMAIL_NOT_FOUND') {
+        throw new ForbiddenException(e.message)
+      }
 
-        throw e
-      })
+      throw e
+    })
 
-    if (typeof user === 'undefined') {
+    if (typeof jwt === 'undefined') {
       throw new ForbiddenException('', 'INVALID_LOGIN')
     }
 
-    if (!(user.services || '').includes('affiliate-portal')) {
-      throw new ForbiddenException('', 'NOT_REGISTERED')
-    }
+    // if (!(user.services || '').includes('affiliate-portal')) {
+    //   throw new ForbiddenException('', 'NOT_REGISTERED')
+    // }
 
-    return user
+    return { jwt }
   }
 
   /**
@@ -74,23 +69,35 @@ export class AuthController {
    */
   @Get('valid')
   @UseGuards(AuthGuard)
-  async valid(@User() user: AuthUser) {
-    return user
+  async valid(
+    @User() user: CurrUser<AuthUser>,
+    _metadata: RouteMetadata<{
+      route: '/auth/valid'
+      auth: true
+      method: 'GET'
+    }>,
+  ) {
+    return user as AuthUser
   }
 
   @Post('/changepassword')
   @UseGuards(AuthGuard)
   async changePassword(
-    @User() user: AuthUser,
-    @Body() body: ChangePasswordBody,
+    @User() user: CurrUser<AuthUser>,
+    @Body() body: BodyType<ChangePasswordBody>,
+    _metadata: RouteMetadata<{
+      route: '/auth/changepassword'
+      auth: true
+      method: 'POST'
+    }>,
   ) {
     const updated = await this.authService.updateUser({
-      id: user.id!,
+      id: user.id,
       password: body.password,
     })
     if (updated) {
       const jwt = await this.authService.login({
-        email: user.email!,
+        email: user.email,
         password: body.password,
       })
       return { jwt }
@@ -104,14 +111,22 @@ export class AuthController {
   @Post('/loginas')
   @IsAffiliateManager()
   @UseGuards(AuthGuard, RoleGuard)
-  async loginAs(@User() user: AuthUser, @Body() body: LoginAsBody) {
-    const newToken = await this.authService.loginAs({
+  async loginAs(
+    @User() user: CurrUser<AuthUser>,
+    @Body() body: BodyType<LoginAsBody>,
+    _metadata: RouteMetadata<{
+      route: '/auth/loginas'
+      auth: ['Affiliate Manager']
+      method: 'POST'
+    }>,
+  ) {
+    const jwt = await this.authService.loginAs({
       adminId: user.id!,
       userId: body.userId,
     })
 
     this.log.debug(`Admin ${user.id} logged in as ${body.userId}`)
 
-    return newToken
+    return { jwt }
   }
 }

@@ -38,6 +38,21 @@ export const portalRoles = (u: AuthUser) =>
 export const missingParam = (name: string) =>
   new BadRequestException(`Missing parameters: ${name}`, 'MISSING_PARAMETERS')
 
+/** Constructs a type-safe query for our salesforce microservice */
+export const createQuery = <SFObject = never>(table: string) => <
+  Fields extends Array<keyof SFObject>
+>(
+  fields: Fields,
+  clauses?: string,
+) => {
+  const out: { fields: Fields; table: string; clauses?: string } = {
+    fields,
+    table,
+  }
+  if (clauses) out.clauses = clauses
+  return out
+}
+
 /**
  * Gets some data from a cache if a key exists or stores new data in the cache
  * @param cache The cache service
@@ -53,6 +68,7 @@ export const tryCache = async <T>(
 ) => {
   if (!cache.isCached(key) || invalidate) {
     const result = await data()
+    if (Array.isArray(result) && result.length === 0) return result
     cache.cache(key, result)
     return result
   } else {

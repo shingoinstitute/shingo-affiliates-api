@@ -12,6 +12,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common'
 import { FacilitatorsService } from '../../components'
 import _ from 'lodash'
@@ -135,8 +136,11 @@ export class FacilitatorsController {
   @Get('/:id')
   @Permission([1, 'affiliate -- '])
   @UseGuards(AuthGuard, PermissionGuard)
-  read(@Param('id', SalesforceIdValidator) id: string) {
-    return this.facilitatorsService.get(id)
+  async read(@Param('id', SalesforceIdValidator) id: string) {
+    const data = this.facilitatorsService.get(id)
+    if (typeof data === 'undefined')
+      throw new NotFoundException(`Facilitator with id ${id} not found`)
+    return data
   }
 
   @Get('/resetpassword/:email')

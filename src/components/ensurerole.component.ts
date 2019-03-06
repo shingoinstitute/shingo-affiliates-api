@@ -10,8 +10,8 @@ import { LoggerInstance } from 'winston'
  */
 @Injectable()
 export class EnsureRoleService {
-  private _facilitatorId: number | undefined
-  private _affiliateId: number | undefined
+  private _facilitatorId?: number
+  private _affiliateId?: number
 
   get facilitatorId() {
     if (typeof this._facilitatorId === 'undefined')
@@ -38,7 +38,7 @@ export class EnsureRoleService {
 
   async init() {
     if (
-      typeof this._facilitatorId !== 'undefined' ||
+      typeof this._facilitatorId !== 'undefined' &&
       typeof this._affiliateId !== 'undefined'
     )
       return

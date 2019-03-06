@@ -10,12 +10,16 @@ import {
   authservices,
   InvalidTokenError,
 } from '@shingo/auth-api-client'
-import { getJwt, retrieveResult } from '../util'
+import { getJwt, retrieveResult, RequireKeys, Omit } from '../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { Contact } from '../sf-interfaces/Contact.interface'
 import { LoggerInstance } from 'winston'
 
-export type AuthUser = authservices.User & { sfContact: Contact }
+export type User = Omit<
+  RequireKeys<authservices.User, 'id' | 'email' | 'password'>,
+  '_TagEmpty'
+>
+export type AuthUser = User & { sfContact: Contact }
 declare module 'express' {
   interface Request {
     user?: AuthUser
@@ -54,9 +58,9 @@ export class AuthGuard implements CanActivate {
     }
 
     // add user to request
-    const user = await this.authService.getUser(
+    const user = (await this.authService.getUser(
       `user.email='${valid.email}' AND user.extId='${valid.extId}'`,
-    )
+    )) as User
 
     if (!user)
       throw new Error(

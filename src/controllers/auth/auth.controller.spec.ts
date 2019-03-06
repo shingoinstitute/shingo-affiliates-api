@@ -72,7 +72,9 @@ describe('AuthController', () => {
           mockGetUser({ "user.email='abe.white@usu.edu'": abeUser }),
         )
 
-      return expect(await authController.login(credential)).toEqual({
+      return expect(
+        await authController.login(credential as any, {} as any),
+      ).toEqual({
         ...abeUser,
         jwt: abeUser.email,
       })
@@ -91,11 +93,17 @@ describe('AuthController', () => {
 
       return Promise.all([
         expect(
-          authController.login({ ...credential, password: 'asdfasd' }),
+          authController.login(
+            { ...credential, password: 'asdfasd' } as any,
+            {} as any,
+          ),
         ).rejects.toThrowError(ForbiddenException),
 
         expect(
-          authController.login({ ...credential, email: 'a@a.com' }),
+          authController.login(
+            { ...credential, email: 'a@a.com' } as any,
+            {} as any,
+          ),
         ).rejects.toThrowError(ForbiddenException),
       ])
     })
@@ -111,9 +119,9 @@ describe('AuthController', () => {
         }),
       )
 
-      return expect(authController.login(credential)).rejects.toThrowError(
-        ForbiddenException,
-      )
+      return expect(
+        authController.login(credential as any, {} as any),
+      ).rejects.toThrowError(ForbiddenException)
     })
   })
 
@@ -218,7 +226,9 @@ describe('AuthController', () => {
         },
       }
 
-      return expect(authController.valid(user)).resolves.toEqual(user)
+      return expect(
+        authController.valid(user as any, {} as any),
+      ).resolves.toEqual(user)
     })
   })
 
@@ -232,7 +242,11 @@ describe('AuthController', () => {
     it('gets the jwt for a requested user', async () => {
       jest.spyOn(authService, 'loginAs').mockImplementation(mockLoginAs(users))
       return expect(
-        authController.loginAs({ id: 1 } as any, { userId: 2 }),
+        authController.loginAs(
+          { id: 1 } as any,
+          { userId: 2 } as any,
+          {} as any,
+        ),
       ).resolves.toEqual('jwt-2')
     })
   })
@@ -270,7 +284,9 @@ describe('AuthController', () => {
       const oldUser = { ...users[0] }
       const body = { password: 'some-password' }
 
-      return expect(authController.changePassword(users[0] as any, body))
+      return expect(
+        authController.changePassword(users[0] as any, body as any, {} as any),
+      )
         .resolves.toEqual({ jwt: users[0].email })
         .then(() => expect(users[0]).toEqual({ ...oldUser, ...body }))
     })

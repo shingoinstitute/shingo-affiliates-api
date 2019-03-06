@@ -2,7 +2,13 @@ import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { CacheService } from '..'
 import { Affiliate } from './affiliate'
 import _ from 'lodash'
-import { tryCache, retrieveResult, Overwrite } from '../../util'
+import {
+  tryCache,
+  retrieveResult,
+  Overwrite,
+  createQuery,
+  ArrayValue,
+} from '../../util'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
@@ -55,23 +61,16 @@ export class AffiliatesService {
    * @param refresh Force the refresh of the cache
    */
   async getAll(isPublic = false, refresh = false) {
-    const keyBase = 'AffiliatesService.getAll'
-    const key = isPublic ? keyBase + '_public' : keyBase
-
-    type QueryResponse = Pick<
-      Account,
-      | 'Id'
-      | 'Name'
-      | 'Summary__c'
-      | 'Logo__c'
-      | 'Page_Path__c'
-      | 'Website'
-      | 'Languages__c'
-    >
+    // const keyBase = 'AffiliatesService.getAll'
+    // const key = isPublic ? keyBase + '_public' : keyBase
 
     const clauseBase = `RecordType.DeveloperName='Licensed_Affiliate'`
-    const query = {
-      fields: [
+    const clause = isPublic
+      ? clauseBase + ` AND (NOT Name Like 'McKinsey%')`
+      : clauseBase
+
+    const query = createQuery<Account>('Account')(
+      [
         'Id',
         'Name',
         'Summary__c',
@@ -80,36 +79,26 @@ export class AffiliatesService {
         'Website',
         'Languages__c',
       ],
-      table: 'Account',
-      clauses: isPublic
-        ? clauseBase + ` AND (NOT Name Like 'McKinsey%')`
-        : clauseBase,
+      clause,
+    )
+
+    type Fields = ArrayValue<(typeof query)['fields']>
+    type QueryResponse = Pick<Account, Fields>
+
+    const affiliates = await this.sfService
+      .query<QueryResponse>(query)
+      .then(q => q.records || [])
+
+    if (isPublic) {
+      return affiliates
     }
 
-    return tryCache(
-      this.cache,
-      key,
-      async () => {
-        const affiliates = await this.sfService
-          .query<QueryResponse>(query)
-          .then(q => q.records || [])
+    const roles = await this.authService.getRoles(
+      `role.name LIKE 'Course Manager -- %'`,
+    )
 
-        if (isPublic) {
-          return affiliates
-        }
-
-        const roles = await this.authService.getRoles(
-          `role.name LIKE 'Course Manager -- %'`,
-        )
-
-        return affiliates.filter(
-          aff =>
-            roles.findIndex(
-              role => role.name === `Course Manager -- ${aff.Id}`,
-            ) !== -1,
-        )
-      },
-      refresh,
+    return affiliates.filter(
+      aff => !!roles.find(role => role.name === `Course Manager -- ${aff.Id}`),
     )
   }
 
@@ -124,7 +113,7 @@ export class AffiliatesService {
       this.sfService
         .retrieve<Account>({ object: 'Account', ids: [id] })
         .then(retrieveResult)
-        .then(r => (r === null ? undefined : r)),
+        .then(r => (r == null ? undefined : r)),
     )
   }
 

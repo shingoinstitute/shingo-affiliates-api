@@ -2,26 +2,25 @@ import {
   IsString,
   IsDateString,
   IsArray,
-  IsEmail,
   ValidateNested,
-  IsNumber,
+  IsOptional,
 } from 'class-validator'
 import { IsSalesforceId } from '../../validators'
 import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
 // tslint:disable:max-classes-per-file variable-name
+
+// These classes are only used to validate for logic in the api
+// making these classes validate that an object is correct for salesforce
+// will be too difficult to keep in sync
 
 export class CancelBody {
   @IsString()
   reason!: string
 }
 
-// tslint:disable-next-line:class-name
-export class facilitator {
+export class Facilitator {
   @IsSalesforceId()
   Id!: string
-
-  @IsNumber()
-  id!: number
 }
 
 export class UpdateBody implements Partial<Workshop__c> {
@@ -32,19 +31,9 @@ export class UpdateBody implements Partial<Workshop__c> {
   Organizing_Affiliate__c!: string
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
-  facilitators!: facilitator[]
-}
-
-export class Facilitator {
-  @IsSalesforceId()
-  Id!: string
-
-  @IsEmail()
-  Email!: string
-
-  @IsNumber()
-  id!: number
+  facilitators?: Facilitator[]
 }
 
 export class CreateBody {

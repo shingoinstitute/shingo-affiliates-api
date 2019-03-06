@@ -4,7 +4,7 @@ import {
   Post,
   Put,
   Delete,
-  Param,
+  Param as UrlParam,
   Body,
   Inject,
   ForbiddenException,
@@ -15,6 +15,7 @@ import {
   FilesInterceptor,
   UploadedFiles,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common'
 import { WorkshopsService } from '../../components'
 
@@ -25,12 +26,23 @@ import {
   StringParam,
   Permission,
   User,
+  RefreshParam,
 } from '../../decorators'
 import { RequiredValidator, SalesforceIdValidator } from '../../validators'
-import { missingParam, isAffiliateManager } from '../../util'
+import {
+  missingParam,
+  isAffiliateManager,
+  CurrUser,
+  UrlParam as UrlParamType,
+  Body as BodyType,
+  RouteMetadata,
+  Files,
+} from '../../util'
 import { CancelBody, UpdateBody, CreateBody } from './workshopInterfaces'
 import { AuthUser } from '../../guards/auth.guard'
 import { PermissionGuard, AuthGuard } from '../../guards'
+import { Param as ParamType } from '../../decorators/ParamOptions.interface'
+import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -53,7 +65,14 @@ export class WorkshopsController {
    */
   @Get()
   @UseGuards(AuthGuard)
-  readAll(@User() user: AuthUser) {
+  readAll(
+    @User() user: CurrUser<AuthUser>,
+    _metadata: RouteMetadata<{
+      route: '/workshops'
+      auth: true
+      method: 'GET'
+    }>,
+  ) {
     if (!user) {
       throw new ForbiddenException('SESSION_EXPIRED')
     }
@@ -68,7 +87,14 @@ export class WorkshopsController {
    * @param refresh Force cache refresh
    */
   @Get('public')
-  readPublic(@Refresh() refresh: boolean | undefined) {
+  readPublic(
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/public'
+      auth: false
+      method: 'GET'
+    }>,
+  ) {
     return this.workshopsService.getAll(refresh)
   }
 
@@ -80,7 +106,14 @@ export class WorkshopsController {
    */
   @Get('/describe')
   @UseGuards(AuthGuard)
-  describe(@Refresh() refresh: boolean | undefined) {
+  describe(
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/describe'
+      auth: true
+      method: 'GET'
+    }>,
+  ) {
     return this.workshopsService.describe(refresh)
   }
 
@@ -96,10 +129,15 @@ export class WorkshopsController {
   @UseGuards(AuthGuard)
   search(
     @StringParam('search', new RequiredValidator(missingParam('search')))
-    search: string,
+    search: ParamType<string, 'search'>,
     @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
-    retrieve: string[],
-    @Refresh() refresh: boolean | undefined,
+    retrieve: ParamType<string[], 'retrieve'>,
+    @Refresh() refresh: RefreshParam<boolean | undefined>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/search'
+      auth: true
+      method: 'GET'
+    }>,
   ) {
     return this.workshopsService.search(search, retrieve, refresh)
   }
@@ -113,11 +151,20 @@ export class WorkshopsController {
   @Get('/:id')
   @Permission([1])
   @UseGuards(AuthGuard, PermissionGuard)
-  read(@Param('id', SalesforceIdValidator) id: string) {
-    return this.workshopsService.get(id).then(w => {
-      this.log.debug(`GET: /workshops/${id} => %j`, w)
-      return w
-    })
+  async read(
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id'
+      auth: true
+      permission: [1]
+      method: 'GET'
+    }>,
+  ) {
+    const w = await this.workshopsService.get(id)
+    this.log.debug(`GET: /workshops/${id} => %j`, w)
+    if (typeof w === 'undefined')
+      throw new NotFoundException(`Workshop with id ${id} not found`)
+    return w
   }
 
   /**
@@ -129,7 +176,15 @@ export class WorkshopsController {
   @Get('/:id/facilitators')
   @Permission([1])
   @UseGuards(AuthGuard, PermissionGuard)
-  facilitators(@Param('id', SalesforceIdValidator) id: string) {
+  facilitators(
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id/facilitators'
+      auth: true
+      permission: [1]
+      method: 'GET'
+    }>,
+  ) {
     return this.workshopsService.facilitators(id)
   }
 
@@ -146,7 +201,16 @@ export class WorkshopsController {
   @Post()
   @Permission([2, 'workshops -- '])
   @UseGuards(AuthGuard, PermissionGuard)
-  async create(@Body() body: CreateBody, @User() user: AuthUser) {
+  async create(
+    @Body() body: BodyType<CreateBody & Partial<Workshop__c>>,
+    @User() user: CurrUser<AuthUser>,
+    _metadata: RouteMetadata<{
+      route: '/workshops'
+      auth: true
+      permission: [[2, 'workshops -- ']]
+      method: 'POST'
+    }>,
+  ) {
     this.log.debug('Trying to create workshop:\n%j', body)
 
     // Check can create for Organizing_Affiliate\__c
@@ -177,9 +241,15 @@ export class WorkshopsController {
   @Permission([2])
   @UseGuards(AuthGuard, PermissionGuard)
   update(
-    @Param('id', SalesforceIdValidator) id: string,
-    @Body() body: UpdateBody,
-    @User() user: AuthUser,
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    @Body() body: BodyType<UpdateBody & Partial<Workshop__c>>,
+    @User() user: CurrUser<AuthUser>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id'
+      auth: true
+      permission: 2
+      method: 'PUT'
+    }>,
   ) {
     // Check the id
     if (id !== body.Id) {
@@ -217,8 +287,14 @@ export class WorkshopsController {
   @UseGuards(AuthGuard, PermissionGuard)
   @UseInterceptors(FileInterceptor('attendeeList'))
   async uploadAttendeeFile(
-    @UploadedFile() file: Express.Multer.File,
-    @Param('id', SalesforceIdValidator) id: string,
+    @UploadedFile() file: Files<Express.Multer.File, 'attendeeList'>,
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id/attendee_file'
+      auth: true
+      permission: [2]
+      method: 'POST'
+    }>,
   ) {
     const ext = file.originalname.split('.').pop()
 
@@ -243,8 +319,14 @@ export class WorkshopsController {
   @UseGuards(AuthGuard, PermissionGuard)
   @UseInterceptors(FilesInterceptor('evaluationFiles', 30))
   uploadEvaluations(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Param('id', SalesforceIdValidator) id: string,
+    @UploadedFiles() files: Files<Express.Multer.File[], 'evaluationFiles', 30>,
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id/evaluation_files'
+      auth: true
+      permission: [2]
+      method: 'POST'
+    }>,
   ) {
     const buffFiles = files.map(file => file.buffer.toString('base64'))
     const ext = files[0].originalname.split('.').pop()
@@ -268,7 +350,15 @@ export class WorkshopsController {
   @Delete('/:id')
   @Permission([2])
   @UseGuards(AuthGuard, PermissionGuard)
-  async delete(@Param('id', SalesforceIdValidator) id: string) {
+  async delete(
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id'
+      auth: true
+      permission: [2]
+      method: 'DELETE'
+    }>,
+  ) {
     return this.workshopsService.delete(id)
   }
 
@@ -276,8 +366,14 @@ export class WorkshopsController {
   @Permission([2])
   @UseGuards(AuthGuard, PermissionGuard)
   async cancel(
-    @Param('id', SalesforceIdValidator) id: string,
-    @Body() body: CancelBody,
+    @UrlParam('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+    @Body() body: BodyType<CancelBody>,
+    _metadata: RouteMetadata<{
+      route: '/workshops/:id/cancel'
+      auth: true
+      permission: [2]
+      method: 'PUT'
+    }>,
   ) {
     return this.workshopsService.cancel(id, body.reason)
   }

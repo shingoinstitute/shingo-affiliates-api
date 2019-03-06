@@ -265,7 +265,8 @@ export class FacilitatorsService {
 
     return tryCache(
       this.cache,
-      data,
+      // since we are doing additional processing here, the cache key must depend on all inputs
+      JSON.stringify(data) + isMapped + affiliate,
       async (): Promise<
         Array<AddUserInfo<RetrieveResult>> | RetrieveResult[]
       > => {
@@ -277,9 +278,15 @@ export class FacilitatorsService {
         */
 
         // Step 1
-        const facilitators = await this.sfService
-          .search<RetrieveResult>(data)
-          .then(r => r.searchRecords || [])
+        const facilitators = await tryCache(
+          this.cache,
+          data,
+          () =>
+            this.sfService
+              .search<RetrieveResult>(data)
+              .then(r => r.searchRecords || []),
+          refresh,
+        )
 
         const filteredFacs = facilitators.filter(result => {
           if (!isMapped) return !!result
@@ -300,7 +307,7 @@ export class FacilitatorsService {
         const authedFacs = await this.addUserAuthInfo(filteredFacs)
 
         // Step 4
-        return isMapped
+        const result = isMapped
           ? // Step 5
             authedFacs.filter(
               (f): f is AddUserInfo<RetrieveResult> =>
@@ -318,6 +325,7 @@ export class FacilitatorsService {
                   'affiliate-portal',
                 ),
             )
+        return result
       },
       refresh,
     )
