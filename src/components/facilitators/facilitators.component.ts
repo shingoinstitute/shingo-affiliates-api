@@ -1,7 +1,6 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { CacheService } from '../'
 import _ from 'lodash'
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
@@ -18,6 +17,7 @@ import {
   affiliateResource,
 } from '../affiliates/affiliates.component'
 import { Account } from '../../sf-interfaces/Account.interface'
+import { SalesforceService } from '../salesforce.component'
 
 interface Facilitator {
   Id: string
@@ -55,7 +55,7 @@ export class FacilitatorsService {
   private getAllKey = 'FacilitatorsService.getAll'
 
   constructor(
-    private sfService: SalesforceClient,
+    private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
     @Inject('LoggerService') private log: LoggerInstance,
@@ -132,8 +132,7 @@ export class FacilitatorsService {
       this.cache,
       this.getAllKey,
       async () => {
-        const facilitators = (await this.sfService.query<QueryResult>(query))
-          .records
+        const facilitators = await this.sfService.query<QueryResult>(query)
         const authFacilitators = await this.addUserAuthInfo(facilitators)
 
         return authFacilitators.filter(

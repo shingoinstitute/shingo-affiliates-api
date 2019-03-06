@@ -22,8 +22,8 @@ import {
   EnsureRoleServiceProvider,
   MailerServiceProvider,
   AuthClientProvider,
-  SalesforceClientProvider,
 } from './providers'
+import { salesforceServiceProvider } from './components/salesforce.component'
 
 /**
  * The NestJS application module ties together the controllers and components. It also configures any nest middleware.
@@ -53,7 +53,7 @@ import {
     MailerServiceProvider,
     SupportService,
     AuthClientProvider,
-    SalesforceClientProvider,
+    salesforceServiceProvider,
   ],
 })
 export class ApplicationModule implements OnModuleInit {

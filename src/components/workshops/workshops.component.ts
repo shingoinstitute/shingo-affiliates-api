@@ -12,7 +12,6 @@ import {
   ArrayValue,
   createQuery,
 } from '../../util'
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
@@ -24,10 +23,11 @@ import { Account } from '../../sf-interfaces/Account.interface'
 import { WorkshopFacilitatorAssociation__c } from '../../sf-interfaces/WorkshopFacilitatorAssociation__c.interface'
 import { PromiseValue, Omit } from '../../util/types'
 import { Attachment } from '../../sf-interfaces/Attachment.interface'
+import { SalesforceService, QueryRequest } from '../salesforce.component'
 
 type UnPromise<T extends Promise<any>> = T extends Promise<infer R> ? R : never
 
-type SFQuery = Arguments<SalesforceClient['query']>[0]
+type SFQuery = QueryRequest
 type Facilitator = ArrayValue<
   PromiseValue<ReturnType<WorkshopsService['facilitators']>>
 >
@@ -100,10 +100,8 @@ type WorkshopPublicQueryFields = ArrayValue<
 >
 type WorkshopPublicQueryData = Pick<Workshop__c, WorkshopPublicQueryFields>
 
-const doWorkshopPublicQuery = (client: SalesforceClient) =>
-  client
-    .query<WorkshopPublicQueryData>(workshopPublicQuery)
-    .then(r => r.records)
+const doWorkshopPublicQuery = (client: SalesforceService) =>
+  client.query<WorkshopPublicQueryData>(workshopPublicQuery)
 
 const queryForWorkshops = <T extends Partial<Workshop__c> = never>(
   ids: ReadonlyArray<string>,
@@ -113,11 +111,10 @@ const queryForWorkshops = <T extends Partial<Workshop__c> = never>(
     ...query,
     clauses: `Id IN (${ids.map(i => `'${i}'`).join()}) ORDER BY Start_Date__c`,
   }
-  return (sfService: SalesforceClient) =>
-    sfService.query<T>(newQuery).then(r => r.records)
+  return (sfService: SalesforceService) => sfService.query<T>(newQuery)
 }
 
-const queryFlipped = (sfService: SalesforceClient) => <
+const queryFlipped = (sfService: SalesforceService) => <
   T extends Partial<Workshop__c> = never
 >(
   ids: ReadonlyArray<string>,
@@ -151,7 +148,7 @@ const getPrivateWorkshops = (user: AuthUser) => {
     return () => Promise.resolve([]) as Promise<GetPrivateWorkshopsData[]>
 
   return async (
-    sfService: SalesforceClient,
+    sfService: SalesforceService,
   ): Promise<GetPrivateWorkshopsData[]> => {
     const workshopQuery = queryFlipped(sfService)
 
@@ -184,7 +181,7 @@ const getPrivateWorkshops = (user: AuthUser) => {
 @Injectable()
 export class WorkshopsService {
   constructor(
-    private sfService: SalesforceClient,
+    private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
     @Inject('LoggerService') private log: LoggerInstance,
@@ -282,7 +279,7 @@ export class WorkshopsService {
     )
 
     type QueryData = Pick<Attachment, ArrayValue<(typeof query)['fields']>>
-    return this.sfService.query<QueryData>(query).then(r => r.records || [])
+    return this.sfService.query<QueryData>(query)
   }
 
   /**
@@ -347,7 +344,7 @@ export class WorkshopsService {
 
     const facAssociation: Array<
       QueryData & { authId?: number; auth?: authservices.User }
-    > = await this.sfService.query<QueryData>(query).then(r => r.records || [])
+    > = await this.sfService.query<QueryData>(query)
     const ids = facAssociation.map(fac => `'${fac.Instructor__r.Id}'`)
     const auths = await this.getAuthForFac(...ids)
 

@@ -43,7 +43,6 @@
     "@nestjs/microservices": "^5.1.0",
     "@nestjs/websockets": "^5.1.0",
     "@shingo/auth-api-client": "file:/Users/abe/Documents/shingo/shingo-auth-api/packages/client/shingo-auth-api-client-1.0.0-alpha.7.tgz",
-    "@shingo/sf-api-client": "^1.0.0-alpha.2",
     "body-parser": "^1.18.3",
     "class-transformer": "^0.1.9",
     "class-validator": "^0.9.1",

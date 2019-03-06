@@ -9,7 +9,6 @@ import {
   createQuery,
   ArrayValue,
 } from '../../util'
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { LoggerInstance } from 'winston'
 import {
@@ -20,6 +19,7 @@ import { flatten, cartesian } from '../../util/fp'
 import { map } from '../../util/fp/generator'
 import { Contact } from '../../sf-interfaces/Contact.interface'
 import { Account } from '../../sf-interfaces/Account.interface'
+import { SalesforceService } from '../salesforce.component'
 
 export { Affiliate }
 
@@ -35,7 +35,7 @@ export const affiliateResource = (id: string) => `affiliate -- ${id}`
 @Injectable()
 export class AffiliatesService {
   constructor(
-    private sfService: SalesforceClient,
+    private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
     @Inject('LoggerService') private log: LoggerInstance,
@@ -85,9 +85,7 @@ export class AffiliatesService {
     type Fields = ArrayValue<(typeof query)['fields']>
     type QueryResponse = Pick<Account, Fields>
 
-    const affiliates = await this.sfService
-      .query<QueryResponse>(query)
-      .then(q => q.records || [])
+    const affiliates = await this.sfService.query<QueryResponse>(query)
 
     if (isPublic) {
       return affiliates
@@ -391,8 +389,7 @@ export class AffiliatesService {
       clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`,
     }
 
-    const facilitators =
-      (await this.sfService.query<Pick<Contact, 'Id'>>(query)).records || []
+    const facilitators = await this.sfService.query<Pick<Contact, 'Id'>>(query)
 
     return Promise.all(
       facilitators.map(fac =>

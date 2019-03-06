@@ -4,6 +4,3 @@ export {
 } from './ensureroleservice.provider'
 export { provider as LoggerServiceProvider } from './loggerservice.provider'
 export { provider as MailerServiceProvider } from './mailerservice.provider'
-export {
-  provider as SalesforceClientProvider,
-} from './salesforceclient.provider'

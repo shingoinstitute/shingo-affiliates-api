@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { CacheService } from '../'
 import { tryCache, retrieveResult } from '../../util'
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { Support_Page__c } from '../../sf-interfaces/Support_Page__c.interface'
+import { SalesforceService } from '../salesforce.component'
 
 export const visibleTo = (roles: string[]) => (page: Support_Page__c) => {
   const restrictions = (page.Restricted_To__c || '').split(';')
@@ -20,7 +20,7 @@ export const visibleTo = (roles: string[]) => (page: Support_Page__c) => {
 @Injectable()
 export class SupportService {
   constructor(
-    private sfService: SalesforceClient,
+    private sfService: SalesforceService,
     private cache: CacheService,
   ) {}
 
@@ -40,8 +40,7 @@ export class SupportService {
     return tryCache(
       this.cache,
       query,
-      () =>
-        this.sfService.query<Support_Page__c>(query).then(d => d.records || []),
+      () => this.sfService.query<Support_Page__c>(query),
       refresh,
     ).then(rs => rs.filter(visibleTo(roles)))
   }
