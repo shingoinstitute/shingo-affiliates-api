@@ -4,7 +4,6 @@ import { AuthClient, authservices as A } from '@shingo/auth-api-client'
 import { FacilitatorsService } from './facilitators.component'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
-import { mockLogger } from '../../factories/logger.mock'
 import { EnsureRoleService } from '../ensurerole.component'
 import { EnsureRoleServiceMock } from '../mock/ensurerole.component.mock'
 import { omit } from 'lodash'
@@ -43,8 +42,6 @@ describe('FacilitatorsService', () => {
       .useClass(EnsureRoleServiceMock)
       .overrideProvider(CacheService)
       .useClass(CacheServiceMock)
-      .overrideProvider('LoggerService')
-      .useValue(mockLogger)
       .compile()
 
     authService = module.get<AuthClient>(AuthClient)

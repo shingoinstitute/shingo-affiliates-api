@@ -1,16 +1,9 @@
 import { SupportService } from './support.component'
-import { Support_Page__c } from '../../sf-interfaces/Support_Page__c.interface'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { Test } from '@nestjs/testing'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
-import { mockLogger } from '../../factories/logger.mock'
-import {
-  mockQuery,
-  mockRetrieve,
-  mockDescribe,
-  mockSearch,
-} from '../mock/sfclient.mock'
+import { mockQuery, mockRetrieve, mockDescribe } from '../mock/sfclient.mock'
 
 describe('SupportService', () => {
   let supportService: SupportService
@@ -26,8 +19,6 @@ describe('SupportService', () => {
         },
       ],
     })
-      .overrideProvider('LoggerService')
-      .useValue(mockLogger)
       .overrideProvider(CacheService)
       .useClass(CacheServiceMock)
       .compile()

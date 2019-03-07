@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  Inject,
-} from '@nestjs/common'
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common'
 import { Request } from 'express'
 import {
   AuthClient,
@@ -12,7 +7,6 @@ import {
 } from '@shingo/auth-api-client'
 import { getJwt, retrieveResult, RequireKeys, Omit } from '../util'
 import { Contact } from '../sf-interfaces/Contact.interface'
-import { LoggerInstance } from 'winston'
 import { SalesforceService } from '../components/salesforce.component'
 
 export type User = Omit<
@@ -34,7 +28,6 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly authService: AuthClient,
     private readonly sfService: SalesforceService,
-    @Inject('LoggerService') private readonly log: LoggerInstance,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -46,14 +39,14 @@ export class AuthGuard implements CanActivate {
     try {
       valid = await this.authService.isValid(token)
     } catch (err) {
-      this.log.error('AuthGuard: Got Error', err)
+      console.error('AuthGuard: Got Error', err)
     }
 
     if (!valid) return false
 
     if (valid instanceof InvalidTokenError) {
       const route = req.url
-      this.log.info(`AuthGuard: Denying access for ${route} :`, valid)
+      console.info(`AuthGuard: Denying access for ${route} :`, valid)
       return false
     }
 

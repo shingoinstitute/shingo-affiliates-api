@@ -1,12 +1,10 @@
 import {
   Injectable,
   CanActivate,
-  Inject,
   ExecutionContext,
   ForbiddenException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
-import { LoggerInstance } from 'winston'
 import { ROLE_KEY } from '../decorators/role.decorator'
 import { all } from '../decorators/permission.decorator'
 import { Request } from 'express'
@@ -14,10 +12,7 @@ import { hasRole as userHasRole } from '../util'
 
 @Injectable()
 export class RoleGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector,
-    @Inject('LoggerService') private readonly log: LoggerInstance,
-  ) {}
+  constructor(private readonly reflector: Reflector) {}
 
   private async hasRole(req: Request, role: string) {
     if (!req.user) {

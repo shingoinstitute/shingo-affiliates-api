@@ -1,4 +1,4 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { CacheService } from '..'
 import { Affiliate } from './affiliate'
 import _ from 'lodash'
@@ -10,7 +10,6 @@ import {
   ArrayValue,
 } from '../../util'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
-import { LoggerInstance } from 'winston'
 import {
   CreateBody,
   UpdateBody,
@@ -38,7 +37,6 @@ export class AffiliatesService {
     private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance,
   ) {}
 
   /**
@@ -368,7 +366,7 @@ export class AffiliatesService {
       `role.name='Course Manager -- ${id}'`,
     )
     if (!cm) {
-      this.log.warn(
+      console.warn(
         `affiliate.deleteRoles(): Role 'Course Manager -- ${id}' does not exist`,
       )
       return true

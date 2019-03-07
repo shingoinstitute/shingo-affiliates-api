@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common'
 import { AffiliatesService } from '../../components'
 
-import { LoggerInstance } from 'winston'
 import {
   Refresh,
   ArrayParam,
@@ -44,10 +43,7 @@ import { Param as ParamType } from '../../decorators/ParamOptions.interface'
  */
 @Controller('affiliates')
 export class AffiliatesController {
-  constructor(
-    private affService: AffiliatesService,
-    @Inject('LoggerService') private log: LoggerInstance,
-  ) {}
+  constructor(private affService: AffiliatesService) {}
 
   /**
    * ## GET: /affiliates
@@ -258,7 +254,7 @@ export class AffiliatesController {
     if (body.hasOwnProperty('Summary__c')) {
       delete body.Summary__c
       // tslint:disable-next-line:max-line-length
-      this.log.warn(
+      console.warn(
         '\nClient attempted to update Biography field on Affiliate. Biography/Summary field must be updated through salesforce until this functionality is built into the affiliate portal.\n',
       )
     }

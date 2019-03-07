@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Inject,
   ForbiddenException,
   InternalServerErrorException,
   UseGuards,
@@ -11,7 +10,6 @@ import {
 
 import _ from 'lodash'
 import { AuthClient } from '@shingo/auth-api-client'
-import { LoggerInstance } from 'winston'
 import { LoginBody, LoginAsBody, ChangePasswordBody } from './authInterfaces'
 import { AuthUser } from '../../guards/auth.guard'
 import { RoleGuard, AuthGuard } from '../../guards'
@@ -23,10 +21,7 @@ import { Body as BodyType, CurrUser, RouteMetadata } from '../../util'
  */
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthClient,
-    @Inject('LoggerService') private log: LoggerInstance,
-  ) {}
+  constructor(private authService: AuthClient) {}
 
   /**
    * ### POST: /auth/login
@@ -44,7 +39,7 @@ export class AuthController {
     }>,
   ) {
     const jwt = await this.authService.login(body).catch((e: Error) => {
-      this.log.debug(e as any)
+      console.debug(e)
       if (e.message === 'INVALID_PASSWORD' || e.message === 'EMAIL_NOT_FOUND') {
         throw new ForbiddenException(e.message)
       }
@@ -125,7 +120,7 @@ export class AuthController {
       userId: body.userId,
     })
 
-    this.log.debug(`Admin ${user.id} logged in as ${body.userId}`)
+    console.debug(`Admin ${user.id} logged in as ${body.userId}`)
 
     return { jwt }
   }

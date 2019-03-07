@@ -2,6 +2,7 @@
   "extends": ["@shingo/tslint-rules", "tslint-config-prettier"],
   "rules": {
     "curly": false,
-    "no-shadowed-variable": false
+    "no-shadowed-variable": false,
+    "no-console": false
   }
 }

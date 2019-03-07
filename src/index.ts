@@ -3,17 +3,15 @@ import { ApplicationModule } from './app.module'
 import express from 'express'
 import bodyParser from 'body-parser'
 import cors from 'cors'
-import { loggerFactory } from './factories/logger.factory'
 import { ValidationPipe } from '@nestjs/common'
 
 const port = process.env.PORT || 3000
-const log = loggerFactory()
 
-if (!process.env.AUTH_API || !process.env.SF_API || !process.env.EMAIL_PASS) {
+if (!process.env.AUTH_API || !process.env.EMAIL_PASS) {
   // tslint:disable-next-line:max-line-length
-  log.error(
-    `Environment variables missing. AUTH: ${process.env.AUTH_API}; SF: ${
-      process.env.SF_API
+  console.error(
+    `Environment variables missing. AUTH: ${
+      process.env.AUTH_API
     }; EMAIL_PASS: ${process.env.EMAIL_PASS}`,
   )
   process.exit(1)
@@ -48,10 +46,10 @@ server.use(
       if (process.env.NODE_ENV !== 'production') return callback(null, true)
 
       if (whitelist.indexOf(origin) > -1) {
-        log.debug("Setting 'Access-Control-Allow-Origin' to %s", origin)
+        console.debug("Setting 'Access-Control-Allow-Origin' to %s", origin)
         callback(null, true)
       } else {
-        log.warn(`${origin} was not in the whitelist: %j`, whitelist)
+        console.warn(`${origin} was not in the whitelist: %j`, whitelist)
         callback(new Error('Not allowed by CORS'))
       }
     },
@@ -75,11 +73,11 @@ const bootstrap = async () => {
   )
   app
     .listen(port)
-    .then(() => log.info(`Application is listening on port ${port}`))
+    .then(() => console.info(`Application is listening on port ${port}`))
 }
 
 bootstrap().catch(error => {
-  log.error('Error in lifting application!')
-  log.error(error)
+  console.error('Error in lifting application!')
+  console.error(error)
   process.exit(1)
 })

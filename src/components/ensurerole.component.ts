@@ -1,9 +1,7 @@
 import _ from 'lodash'
 import { AuthClient } from '@shingo/auth-api-client'
-import { loggerFactory } from '../factories/logger.factory'
 import { defaultPort } from '../util'
-import { Injectable, Inject } from '@nestjs/common'
-import { LoggerInstance } from 'winston'
+import { Injectable } from '@nestjs/common'
 
 /**
  * This class ensures affiliate portal roles exist, and provide access to the role ids
@@ -33,7 +31,6 @@ export class EnsureRoleService {
     private authService: AuthClient = new AuthClient(
       defaultPort(process.env.AUTH_API!, 80),
     ),
-    @Inject('LoggerService') private log: LoggerInstance = loggerFactory(),
   ) {}
 
   async init() {
@@ -43,7 +40,7 @@ export class EnsureRoleService {
     )
       return
 
-    this.log.info('Ensuring Affiliate Portal Roles exist')
+    console.info('Ensuring Affiliate Portal Roles exist')
     const roles = await this.authService.getRoles(
       "role.service='affiliate-portal'",
     )
@@ -58,10 +55,10 @@ export class EnsureRoleService {
         name: 'Facilitator',
         service: 'affiliate-portal',
       })
-      this.log.info('Created Facilitator role! %j', role)
+      console.info('Created Facilitator role! %j', role)
       this._facilitatorId = role.id
     } else {
-      this.log.info(
+      console.info(
         'Found Facilitator role: %j',
         _.omit(facilitator, ['users', 'permissions']),
       )
@@ -73,10 +70,10 @@ export class EnsureRoleService {
         name: 'Affiliate Manager',
         service: 'affiliate-portal',
       })
-      this.log.info('Created Affiliate Manager role! %j', role)
+      console.info('Created Affiliate Manager role! %j', role)
       this._affiliateId = role.id
     } else {
-      this.log.info(
+      console.info(
         'Found Affiliate Manager role: %j',
         _.omit(affiliateManager, ['users', 'permissions']),
       )

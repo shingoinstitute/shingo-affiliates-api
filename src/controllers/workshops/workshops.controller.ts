@@ -6,7 +6,6 @@ import {
   Delete,
   Param as UrlParam,
   Body,
-  Inject,
   ForbiddenException,
   BadRequestException,
   UseInterceptors,
@@ -19,7 +18,6 @@ import {
 } from '@nestjs/common'
 import { WorkshopsService } from '../../components'
 
-import { LoggerInstance } from 'winston'
 import {
   Refresh,
   ArrayParam,
@@ -52,10 +50,7 @@ import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
  */
 @Controller('workshops')
 export class WorkshopsController {
-  constructor(
-    private workshopsService: WorkshopsService,
-    @Inject('LoggerService') private log: LoggerInstance,
-  ) {}
+  constructor(private workshopsService: WorkshopsService) {}
 
   /**
    * ### GET: /workshops
@@ -161,7 +156,7 @@ export class WorkshopsController {
     }>,
   ) {
     const w = await this.workshopsService.get(id)
-    this.log.debug(`GET: /workshops/${id} => %j`, w)
+    console.debug(`GET: /workshops/${id} => %j`, w)
     if (typeof w === 'undefined')
       throw new NotFoundException(`Workshop with id ${id} not found`)
     return w
@@ -211,7 +206,7 @@ export class WorkshopsController {
       method: 'POST'
     }>,
   ) {
-    this.log.debug('Trying to create workshop:\n%j', body)
+    console.debug('Trying to create workshop:\n%j', body)
 
     // Check can create for Organizing_Affiliate\__c
     if (

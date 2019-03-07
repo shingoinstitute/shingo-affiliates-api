@@ -1,6 +1,5 @@
 import { NestMiddleware, Inject, Injectable } from '@nestjs/common'
 import _ from 'lodash'
-import { LoggerInstance } from 'winston'
 import { Request, Response, NextFunction } from 'express'
 
 /**
@@ -12,8 +11,6 @@ import { Request, Response, NextFunction } from 'express'
  */
 @Injectable()
 export class RouteLoggerMiddleware implements NestMiddleware {
-  constructor(@Inject('LoggerService') private log: LoggerInstance) {}
-
   /**
    * Logs:
    * `METHOD /original/url [by user.email]
@@ -27,17 +24,17 @@ export class RouteLoggerMiddleware implements NestMiddleware {
       const info =
         `${req.method} ${req.originalUrl}` +
         (req.user ? ` by ${req.user.sfContact.Email}` : '')
-      this.log.verbose(info)
+      console.info(info)
 
       // Log custom headers
       for (const key in req.headers) {
         if (key.includes('x-'))
-          this.log.verbose(`\tHeader: '${key}: ${req.headers[key]}'`)
+          console.info(`\tHeader: '${key}: ${req.headers[key]}'`)
       }
 
       // Log post body
       if (req.method === 'POST' || req.method === 'PUT') {
-        this.log.verbose('\tBody: %j', req.body)
+        console.info('\tBody: %j', req.body)
       }
 
       return next()

@@ -16,7 +16,6 @@ import {
 } from '@nestjs/common'
 import { FacilitatorsService } from '../../components'
 import _ from 'lodash'
-import { LoggerInstance } from 'winston'
 import { Transporter as MailTransport } from 'nodemailer'
 import {
   Refresh,
@@ -48,7 +47,6 @@ export class FacilitatorsController {
   constructor(
     private facilitatorsService: FacilitatorsService,
     @Inject('MailerService') private mailer: MailTransport,
-    @Inject('LoggerService') private log: LoggerInstance,
   ) {}
 
   /**
@@ -317,7 +315,7 @@ export class FacilitatorsController {
     if (body.hasOwnProperty('Biography__c')) {
       delete body.Biography__c
       // tslint:disable-next-line:max-line-length
-      this.log.warn(
+      console.warn(
         'Client attempted to update Biography field on Facilitator. Biography field must be updated through salesforce until this functionality is built into the affiliate portal.',
       )
     }

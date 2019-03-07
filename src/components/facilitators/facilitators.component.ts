@@ -1,8 +1,7 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { CacheService } from '../'
 import _ from 'lodash'
 import { AuthClient, authservices as A } from '@shingo/auth-api-client'
-import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
 import { tryCache, retrieveResult, Overwrite, OverwriteMaybe } from '../../util'
 import {
@@ -58,7 +57,6 @@ export class FacilitatorsService {
     private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance,
     private ensure: EnsureRoleService,
   ) {}
 
@@ -345,7 +343,7 @@ export class FacilitatorsService {
       .then(u => u || this.getUserBy({ email }))
       .then(u => {
         if (typeof u === 'undefined') {
-          this.log.warn(
+          console.warn(
             `Failed to find user {email: ${email}, extId: ${extId}} in auth DB using their Salesforce ID and their email address.`,
           )
           // throw new Error('Failed to find user by Salesforce ID and email')
@@ -739,7 +737,7 @@ export class FacilitatorsService {
     )
     user.services = newServices.join()
 
-    this.log.warn('Disabling %j', user)
+    console.warn('Disabling', user)
     const updated = await this.authService.updateUser({ ...user, extId })
 
     this.cache.invalidate(extId)

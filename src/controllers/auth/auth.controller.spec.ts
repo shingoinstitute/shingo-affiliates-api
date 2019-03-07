@@ -5,7 +5,6 @@ import { ForbiddenException } from '@nestjs/common'
 import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthUser } from '../../guards/auth.guard'
 import { Arguments } from '../../util'
-import { mockLogger } from '../../factories/logger.mock'
 import {
   mockLogin,
   mockGetUser,
@@ -32,10 +31,7 @@ describe('AuthController', () => {
           useFactory: () => new SalesforceClient('localhost:65535'),
         },
       ],
-    })
-      .overrideProvider('LoggerService')
-      .useValue(mockLogger)
-      .compile()
+    }).compile()
 
     authController = module.get<AuthController>(AuthController)
     authService = module.get<AuthClient>(AuthClient)

@@ -1,4 +1,3 @@
-import { SalesforceClient } from '@shingo/sf-api-client'
 import { AuthClient, authservices } from '@shingo/auth-api-client'
 import { Test } from '@nestjs/testing'
 import {
@@ -8,7 +7,6 @@ import {
 } from './affiliates.component'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
-import { mockLogger } from '../../factories/logger.mock'
 import {
   mockQuery,
   mockRetrieve,
@@ -53,8 +51,6 @@ describe('AffiliatesService', () => {
     })
       .overrideProvider(CacheService)
       .useClass(CacheServiceMock)
-      .overrideProvider('LoggerService')
-      .useValue(mockLogger)
       .compile()
 
     authService = module.get<AuthClient>(AuthClient)

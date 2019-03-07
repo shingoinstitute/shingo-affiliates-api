@@ -1,14 +1,12 @@
 import {
   CanActivate,
   ExecutionContext,
-  Inject,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { PERM_KEY, all } from '../decorators/permission.decorator'
 import { AuthClient } from '@shingo/auth-api-client'
-import { LoggerInstance } from 'winston'
 import { Request } from 'express'
 
 /**
@@ -20,7 +18,6 @@ export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authService: AuthClient,
-    @Inject('LoggerService') private readonly log: LoggerInstance,
   ) {}
 
   private parseResource(resource: string) {

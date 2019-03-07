@@ -4,7 +4,6 @@ import { WorkshopsService, workshopRecordResource } from './workshops.component'
 import { Test } from '@nestjs/testing'
 import { CacheService } from '../cache/cache.component'
 import { CacheServiceMock } from '../cache/cache.component.mock'
-import { mockLogger } from '../../factories/logger.mock'
 import { AuthUser } from '../../guards/auth.guard'
 import { Workshop__c } from '../../sf-interfaces/Workshop__c.interface'
 import { omit } from 'lodash'
@@ -32,8 +31,6 @@ describe('FacilitatorsService', () => {
     })
       .overrideProvider(CacheService)
       .useClass(CacheServiceMock)
-      .overrideProvider('LoggerService')
-      .useValue(mockLogger)
       .compile()
 
     authService = module.get<AuthClient>(AuthClient)

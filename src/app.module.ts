@@ -18,7 +18,6 @@ import { SalesforceIdValidator } from './validators/SalesforceId.validator'
 import { PermissionGuard, AuthGuard, RoleGuard } from './guards'
 import { EnsureRoleService } from './components/ensurerole.component'
 import {
-  LoggerServiceProvider,
   EnsureRoleServiceProvider,
   MailerServiceProvider,
   AuthClientProvider,
@@ -44,7 +43,6 @@ import { salesforceServiceProvider } from './components/salesforce.component'
     AuthGuard,
     PermissionGuard,
     RoleGuard,
-    LoggerServiceProvider,
     CacheService,
     WorkshopsService,
     FacilitatorsService,

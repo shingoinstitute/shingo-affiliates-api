@@ -13,7 +13,6 @@ import {
   createQuery,
 } from '../../util'
 import { AuthClient, authservices } from '@shingo/auth-api-client'
-import { LoggerInstance } from 'winston'
 // tslint:disable-next-line:no-implicit-dependencies
 import { QueryResult, SuccessResult } from 'jsforce'
 import { AuthUser } from '../../guards/auth.guard'
@@ -184,7 +183,6 @@ export class WorkshopsService {
     private sfService: SalesforceService,
     private authService: AuthClient,
     private cache: CacheService,
-    @Inject('LoggerService') private log: LoggerInstance,
   ) {}
 
   /**
