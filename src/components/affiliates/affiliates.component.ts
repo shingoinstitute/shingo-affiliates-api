@@ -58,7 +58,7 @@ export class AffiliatesService {
             query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
         }
 
-        let affiliates = [];
+        let affiliates: Affiliate[] = [];
         if (!this.cache.isCached(key) || refresh) {
             affiliates = (await this.sfService.query(query)).records as Affiliate[] || [];
 
@@ -271,7 +271,7 @@ export class AffiliatesService {
 
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
-        this.cache.invalidate(affiliate.Id);
+        this.cache.invalidate(affiliate.Id!);
         this.cache.invalidate('AffiliatesService.getAll');
 
         return result;
@@ -293,11 +293,11 @@ export class AffiliatesService {
         const result: Affiliate = await this.get(id);
         result.RecordTypeId = '012A0000000zprfIAA';
 
-        await this.deletePermissions(result.Id);
+        await this.deletePermissions(result.Id!);
 
-        await this.deleteRoles(result.Id);
+        await this.deleteRoles(result.Id!);
 
-        await this.deleteFacilitators(result.Id);
+        await this.deleteFacilitators(result.Id!);
 
         const update: SFSuccessObject = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
 

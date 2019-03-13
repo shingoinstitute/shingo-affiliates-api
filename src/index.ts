@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ApplicationModule } from './app.module';
 import { InitService } from './initService';
-import * as express from 'express';
-import * as bodyParser from 'body-parser';
-import * as session from 'express-session';
-import * as cors from 'cors';
-import * as connectRedis from 'connect-redis';
+import express from 'express';
+import bodyParser from 'body-parser';
+import session from 'express-session';
+import cors, { CorsOptions } from 'cors';
+import connectRedis from 'connect-redis';
+import { ValidationPipe } from '@nestjs/common';
 
 const RedisStore = connectRedis(session);
 
@@ -17,8 +18,8 @@ let whitelist = ['https://affiliates.shingo.org', 'http://affiliates.shingo.org'
 // Set up ExpressJS Server
 const server = express();
 
-const corsOptions = {
-    origin: function (origin, callback) {
+const corsOptions: CorsOptions = {
+    origin: (origin, callback) => {
         if (whitelist.indexOf(origin) > -1 || process.env.NODE_ENV !== 'production') {
             console.debug('Setting \'Access-Control-Allow-Origin\' to %s', origin);
             callback(null, true);
@@ -55,9 +56,15 @@ server.use(session(options));
 
 // Initialize the NestJS application and start the server
 InitService.init()
-    .then(() => {
-        const app = NestFactory.create(ApplicationModule, server);
-        app.setGlobalPrefix(`${process.env.GLOBAL_PREFIX}`);
+    .then(async () => {
+        const app = await NestFactory.create(ApplicationModule, server);
+        app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '');
+        app.useGlobalPipes(
+            new ValidationPipe({
+                transform: true,
+                disableErrorMessages: process.env.NODE_ENV === 'production'
+            })
+        )
         app.listen(port, () => console.info(`Application is listening on port ${port}`));
     })
     .catch(error => {

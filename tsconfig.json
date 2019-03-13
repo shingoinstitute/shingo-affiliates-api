@@ -1,23 +1,17 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "declaration": false,
+    "declaration": true,
+    // nestjs does not distribute safe/correct types, so we are getting no-implicit-any errors
+    "skipLibCheck": true,
+    // disabled until new backend is deployed
     "noImplicitAny": false,
-    "noLib": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es6",
+    "strict": true,
+    "target": "es2016",
     "outDir": "build",
-    "typeRoots": [
-      "node_modules/@types"
-    ]
+    "esModuleInterop": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "**/*spec*"
-  ]
+  "include": ["src/**/*.ts"],
 }

@@ -1,4 +1,4 @@
-import { Module, MiddlewaresConsumer, RequestMethod } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { WorkshopsController, AuthController, FacilitatorsController, AffiliatesController, SupportController } from './controllers';
 import { AuthMiddleware, IsValidMiddleware, IsAFManMiddleware, RouteLoggerMiddleware } from './middleware'
 import {
@@ -31,9 +31,7 @@ import { MulterFactory } from './factories';
 })
 export class ApplicationModule {
 
-    private eventsEmitter;
-
-    configure(consumer: MiddlewaresConsumer) {
+    configure(consumer: MiddlewareConsumer) {
 
         if (process.env.DEBUG_ROUTES === 'true') {
             consumer.apply(RouteLoggerMiddleware)

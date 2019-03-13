@@ -170,7 +170,7 @@ export class FacilitatorsService {
                 const usersArr = (await this.authService.getUsers(`user.extId IN (${ids.join()})`)).users as any[] || [];
                 const users = _.keyBy(usersArr, 'extId');
 
-                const accountIds = [];
+                const accountIds: string[] = [];
                 // Add the facilitator's auth id to the object
                 for (let facilitator of facilitators) {
                     if (facilitator.AccountId) accountIds.push(`'${facilitator.AccountId}'`);

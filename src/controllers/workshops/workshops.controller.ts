@@ -1,14 +1,20 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
+    HttpStatus, Request, Response,
+    Param, Headers, Body, Session, NotFoundException
 } from '@nestjs/common';
 import { WorkshopsService, Workshop } from '../../components';
 import { MulterFactory } from '../../factories';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
+import { StringParam } from '../../decorators/stringparam.decorator';
+import { Param as ParamType } from '../../decorators/ParamOptions.interface'
+import { RequiredValidator } from '../../validators/required.validator';
+import { RouteMetadata, missingParam, UrlParam as UrlParamType } from '../../util';
+import { ArrayParam } from '../../decorators/arrayparam.decorator';
+import { SalesforceIdValidator } from '../../validators/SalesforceId.validator';
 
 /**
  * @desc Controller of the REST API logic for Workshops
@@ -102,25 +108,47 @@ export class WorkshopsController extends BaseController {
 
     }
 
+    @Get('/host-sites')
+    searchHostSite(
+        @StringParam('search', new RequiredValidator(missingParam('search')))
+        search: ParamType<string, 'search'>,
+        @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
+        retrieve: ParamType<string[], 'retrieve'>,
+        _metadata: RouteMetadata<{
+            route: '/workshops/host-sites'
+            auth: false
+            method: 'GET'
+        }>
+    ) {
+        console.info('/workshops/host-sites', search, retrieve)
+        return [
+          { Id: 'some Id', Email: 'Some Email', Name: 'Some Name' }
+        , { Id: 'another Id', Email: 'Another Email', Name: 'Another Name' }
+        ]
+    }
+
+
     /**
      * @desc <h5>GET: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
      * 
-     * @param {SalesforceId} id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
-     * @returns {Promise<Response>} Response body is a JSON object of type {<em>returned fields</em>}
+     * @param id - Workshop\__c id. match <code>/a[\w\d]{14,17}/</code>
      * @memberof WorkshopsController
      */
     @Get('/:id')
-    public async read( @Response() res, @Param('id') id): Promise<Response> {
-        // Check the id
-        if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
-
-        try {
-            const workshop: Workshop = await this.workshopsService.get(id);
-            console.debug(`GET: /workshops/${id} => %j`, workshop);
-            return res.status(HttpStatus.OK).json(workshop);
-        } catch (error) {
-            return this.handleError(res, '(114:48) Error in WorkshopsController.read(): ', error);
-        }
+    public async read(
+        @Param('id', SalesforceIdValidator) id: UrlParamType<string, 'id'>,
+        _metadata: RouteMetadata<{
+            route: '/workshops/:id'
+            auth: true
+            permission: [1]
+            method: 'GET'
+        }>
+    ) {
+        const w = await this.workshopsService.get(id);
+        console.debug(`GET: /workshops/${id} => %j`, w);
+        if (typeof w === 'undefined')
+            throw new NotFoundException(`Workshop with id ${id} not found`)
+        return w
     }
 
     /**

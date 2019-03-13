@@ -17,6 +17,17 @@ export class AuthMiddleware implements NestMiddleware {
         this.authService = new AuthService();
     }
 
+    private parseResource(resource: string) {
+        if (resource.match(/^\/workshops\/.*\/facilitators/))
+            return resource.split('/facilitators')[0]
+        else if (resource.match(/^\/workshops\/.*\/attendee_file/))
+            return resource.split('/attendee_file')[0]
+        else if (resource.match(/^\/workshops\/.*\/evaluation_files/))
+            return resource.split('/evaluation_files')[0]
+
+        return resource
+    }
+
     /**
      * The function called when the middleware is activated. Calls {@link AuthService#canAccess}. NOTE: If user is an Affiliate Manager all check logic is skipped as the user implicitly has all permissions.
      * 
@@ -30,20 +41,16 @@ export class AuthMiddleware implements NestMiddleware {
             let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager'; 
             if (isAfMan) return next();
 
-            if (resource && resource.match(/^.*\s--\s$/)) resource += req.session.affiliate;
-            else if (!resource) resource = `${req.path}`;
+            const realResource = this.parseResource(
+                resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
+                : !resource ? resource = `${req.path}`
+                : resource
+            )
 
-            if (resource.match(/^\/workshops\/.*\/facilitators/)) resource = resource.split('/facilitators')[0];
-	    else if (resource.match(/^\/workshops\/.*\/attendee_file/)) resource = resource.split('/attendee_file')[0];
-	    else if (resource.match(/^\/workshops\/.*\/evaluation_files/)) resource = resource.split('/evaluation_files')[0];
-
-            return this.authService.canAccess(resource, level, req.headers['x-jwt'])
+            return this.authService.canAccess(realResource, level, req.headers['x-jwt'])
                 .then(result => {
-                    if (resource.includes('affiliate -- ')) resource = 'affiliate -- ';
-                    else if (resource.includes('workshops -- ')) resource = 'workshops -- ';
-			else resource = `${req.path}`;
                     if (result && result.response) return next();
-                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${resource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
+                    throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${realResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
                 .catch(error => {
                     if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);

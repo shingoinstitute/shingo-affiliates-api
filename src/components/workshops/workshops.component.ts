@@ -118,16 +118,15 @@ export class WorkshopsService {
      * @returns {string[]} 
      * @memberof UserService
      */
-    public getWorkshopIds(user): string[] {
-        let ids = [];
-        user.permissions.forEach(p => {
-            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
-        });
-        user.role.permissions.forEach(p => {
-            if (p.resource.includes('/workshops/')) ids.push(`'${p.resource.replace('/workshops/', '')}'`)
-        });
-
-        return [...new Set(ids)]; // Only return unique ids
+    public getWorkshopIds(user) {
+        type Permission = { resource: string }
+        return [...new Set(
+            ([...user.permissions, ...user.role.permissions] as Permission[]).reduce((ids, p) => {
+                if (p.resource.includes('/workshops/'))
+                    ids.push(`'${p.resource.replace('/workshops/', '')}'`)
+                return ids
+            }, [] as string[])
+        )]
     }
 
     private async queryForWorkshops(ids, query): Promise<Workshop[]> {
@@ -167,7 +166,7 @@ export class WorkshopsService {
      * @returns {Promise<Workshop>} 
      * @memberof WorkshopsService
      */
-    public async get(id: string, refresh = false): Promise<Workshop> {
+    public async get(id: string, refresh = false): Promise<Workshop | undefined> {
         // Create the data parameter for the RPC call
 
         if (!this.cache.isCached(id) || refresh) {
@@ -178,7 +177,7 @@ export class WorkshopsService {
             if (workshop.Course_Manager__c) workshop.Course_Manager__r = (await this.sfService.retrieve({ object: 'Contact', ids: [workshop.Course_Manager__c] }))[0];
             if (workshop.Organizing_Affiliate__c) workshop.Organizing_Affiliate__r = (await this.sfService.retrieve({ object: 'Account', ids: [workshop.Organizing_Affiliate__c] }))[0];
 
-            workshop.files = await this.getFiles(workshop.Id) || [];
+            workshop.files = await this.getFiles(workshop.Id!) || [];
 
             this.cache.cache(id, workshop);
 
@@ -378,14 +377,14 @@ export class WorkshopsService {
         }
         const result: SFSuccessObject = (await this.sfService.update(data))[0];
 
-        const currFacilitators = await this.facilitators(workshop.Id);
+        const currFacilitators = await this.facilitators(workshop.Id!);
         const removeFacilitators = _.differenceWith(currFacilitators, workshop.facilitators, (val, other) => { return other && val.Instructor__r.Id === other.Id });
         workshop.facilitators = _.differenceWith(workshop.facilitators, currFacilitators, (val, other) => { return other && val.Id === other.Instructor__r.Id });
 
         await this.grantPermissions(workshop);
         await this.removePermissions(workshop, removeFacilitators);
 
-        this.cache.invalidate(workshop.Id);
+        this.cache.invalidate(workshop.Id!);
         this.cache.invalidate(`${workshop.Id}_facilitators`);
         this.cache.invalidate('WorkshopsService.getAll');
 
@@ -404,7 +403,7 @@ export class WorkshopsService {
      */
     public async upload(id: string, fileName: string, files: string[], contentType: string = 'text/csv'): Promise<SFSuccessObject[]> {
 
-        const records = [];
+        const records: Array<{ contents: string }> = [];
         let fileId = 0;
         for (const file of files) {
             records.push({ contents: JSON.stringify({ ParentId: id, Name: `${fileId++}-${fileName}`, Body: file, ContentType: contentType }) });
@@ -487,7 +486,7 @@ export class WorkshopsService {
             await this.authService.grantPermissionToRole(resource, 2, role.id);
         }
 
-        for (const facilitator of workshop.facilitators) {
+        for (const facilitator of workshop.facilitators!) {
             const data = {
                 object: 'WorkshopFacilitatorAssociation__c',
                 records: [{ contents: JSON.stringify({ Workshop__c: workshop.Id, Instructor__c: facilitator['Id'] }) }]
