@@ -33,7 +33,7 @@ export class AffiliatesController extends BaseController {
         if (!isPublic && (!session.user || session.user.role.name !== 'Affiliate Manager')) return this.handleError(res, 'Error in AffiliatesController.readAll(): ', { error: 'NOT_AFFILIATE_MANAGER' }, HttpStatus.FORBIDDEN);
 
         try {
-            const affiliates: Affiliate[] = await this.affService.getAll(isPublic, forceRefresh);
+            const affiliates = await this.affService.getAll(isPublic, forceRefresh);
             return res.status(HttpStatus.OK).json(affiliates);
         } catch (error) {
             return this.handleError(res, 'Error in AffiliatesController.readAll(): ', error);
@@ -72,7 +72,7 @@ export class AffiliatesController extends BaseController {
         if (!search || !retrieve) return this.handleError(res, 'Error in AffiliatesController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
 
         try {
-            const affiliates: Affiliate[] = await this.affService.search(search, retrieve, refresh === 'true');
+            const affiliates = await this.affService.search(search, retrieve, refresh === 'true');
             return res.status(HttpStatus.OK).json(affiliates);
         } catch (error) {
             return this.handleError(res, 'Error in AffiliatesController.search(): ', error);

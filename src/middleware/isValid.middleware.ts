@@ -1,6 +1,8 @@
-import { HttpStatus, Middleware, NestMiddleware, Request, Response, Next, Headers, RequestMapping } from '@nestjs/common';
-import { SalesforceService, AuthService, SFQueryObject } from '../components';
-import * as _ from 'lodash';
+import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
+import { OldSalesforceClient, AuthService } from '../components';
+import _ from 'lodash';
+import SalesforceService, { salesforceServiceFactory } from '../components/salesforce/new-salesforce.component'
+import { Contact } from '../sf-interfaces';
 
 /**
  * This middleware checks if the user with given JWT is valid (JWT is correct and hasn't expired) and rebuilds the user object on session if it is missing
@@ -12,11 +14,11 @@ import * as _ from 'lodash';
 @Middleware()
 export class IsValidMiddleware implements NestMiddleware {
 
-    private sfService;
+    private sfService: SalesforceService;
     private authService;
 
     constructor() {
-        this.sfService = new SalesforceService();
+        this.sfService = salesforceServiceFactory();
         this.authService = new AuthService();
     }
 
@@ -47,7 +49,7 @@ export class IsValidMiddleware implements NestMiddleware {
                     req.session.user = _.omit(user, ['password', 'roles']);
                     req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
 
-                    return this.sfService.retrieve({ object: 'Contact', ids: [user.extId] });
+                    return this.sfService.retrieve<Contact>({ object: 'Contact', ids: [user.extId] });
                 })
                 .then(response => {
                     let contact = response[0];
@@ -58,7 +60,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 })
                 .catch(error => {
                     if (error.message === 'SESSION_ALIVE') return next();
-                    if (error.metadata) error = SalesforceService.parseRPCErrorMeta(error);
+                    if (error.metadata) error = OldSalesforceClient.parseRPCErrorMeta(error);
                     console.error('Error in is-valid.middleware.ts: %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });

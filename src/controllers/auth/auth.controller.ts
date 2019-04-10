@@ -1,13 +1,11 @@
 import {
     Controller,
-    Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
-    Param, Query, Headers, Body, Session
-} from '@nestjs/common';
-import { SalesforceService, AuthService, SFQueryObject } from '../../components';
+    Get, Post, HttpStatus, Request, Response, Body } from '@nestjs/common';
+import { AuthService } from '../../components';
 import { BaseController } from '../base.controller';
-
-import * as _ from 'lodash';
+import _ from 'lodash';
+import SalesforceService from '../../components/salesforce/new-salesforce.component';
+import { Contact } from '../../sf-interfaces';
 
 /**
  * @desc Provides the controller of the Auth REST logic
@@ -60,8 +58,8 @@ export class AuthController extends BaseController {
         }
     }
 
-    private async getSessionUser(user): Promise<any> {
-        const contact = (await this.sfService.retrieve({ object: 'Contact', ids: [user.extId] }))[0];
+    private async getSessionUser(user) {
+        const [contact] = await this.sfService.retrieve<Contact>({ object: 'Contact', ids: [user.extId] })
         let sessionUser = _.omit(user, ['password', 'roles']);
         sessionUser = _.merge(contact, _.omit(sessionUser, ['email']));
         sessionUser.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
@@ -93,7 +91,7 @@ export class AuthController extends BaseController {
         try {
             req.session.user.jwt = `${Math.random()}`;
             req.session.user.email = req.session.user.Email;
-            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']));
+            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']) as any);
             req.session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {
@@ -108,7 +106,7 @@ export class AuthController extends BaseController {
         try {
             req.session.user.password = body.password;
 
-            const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']));
+            const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']) as any);
 
             req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`);
             req.session.user = await this.getSessionUser(req.session.user);

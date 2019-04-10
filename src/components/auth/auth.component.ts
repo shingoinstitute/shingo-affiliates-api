@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { gRPCError, User } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
@@ -12,7 +12,7 @@ const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_service
  * @export
  * @class AuthService
  */
-@Component()
+@Injectable()
 export class AuthService {
 
     private client;
@@ -30,7 +30,7 @@ export class AuthService {
      */
     private getClient() {
         const envendpoint = process.env.AUTH_API
-        const endpoint = envendpoint.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
+        const endpoint = envendpoint!.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
         return new authservices.AuthServices(endpoint, grpc.credentials.createInsecure());
     }
 

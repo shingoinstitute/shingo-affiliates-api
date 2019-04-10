@@ -1,108 +1,103 @@
-import { Component, Inject } from '@nestjs/common';
-import { SalesforceService, CacheService, SFQueryObject } from '../';
+import { Injectable } from '@nestjs/common'
+import { CacheService } from '../'
+import SalesforceService from '../salesforce/new-salesforce.component'
+import { SFQ } from '../../util/salesforce'
+import { tryCache } from '../../util'
+import { Support_Page__c } from '../../sf-interfaces'
 
 /**
  * @desc A service to provide functions for working with Support Pages
- * 
+ *
  * @export
  * @class SupportService
  */
-@Component()
+@Injectable()
 export class SupportService {
+  private queryFn: <T>(x: string) => Promise<T[]>
+  constructor(
+    private sfService: SalesforceService,
+    private cache: CacheService
+  ) {
+    this.queryFn = this.sfService.query.bind(this.sfService)
+  }
 
-    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService()) {}
+  getAll(role: string, refresh: boolean = false) {
+    const key = 'SupportService.getAll'
+    const query = new SFQ('Support_Page__c')
+      .select('Id', 'Title__c', 'Category__c', 'Content__c', 'Restricted_To__c')
+      .where(`Application__c='Affiliate Portal'`)
 
-    public async getAll(role: string, refresh: boolean = false): Promise<any[]> {
-        let query = {
-            action: "SELECT",
-            fields: [
-                "Id",
-                "Title__c",
-                "Category__c",
-                "Content__c",
-                "Restricted_To__c"
-            ],
-            table: "Support_Page__c",
-            clauses: `Application__c='Affiliate Portal'`
-        }
+    return tryCache(
+      this.cache,
+      key,
+      async () => {
+        const pages = (await query.query(this.queryFn)) || []
+        return pages.filter(
+          page => !page.Restricted_To__c || page.Restricted_To__c.includes(role)
+        )
+      },
+      refresh
+    )
+  }
 
-        let pages: any[];
-        if (!this.cache.isCached(query) || refresh) {
-            pages = (await this.sfService.query(query as SFQueryObject)).records as any[] || [];
-            if (pages.length > 0) {
-                this.cache.cache(query, pages);
-            }
-        } else {
-            pages = this.cache.getCache(query);
-        }
-
-        pages = (pages || []).filter(page => page.Restricted_To__c.includes(role));
-
-        return pages
+  get(id: string, refresh: boolean = false) {
+    const request = {
+      object: 'Support_Page__c',
+      ids: [id],
     }
 
-    public async get(id: string, refresh: boolean = false): Promise<any> {
-        let request = {
-            object: 'Support_Page__c',
-            ids: [id]
-        }
+    return tryCache(
+      this.cache,
+      request,
+      async () => {
+        const [page] = await this.sfService.retrieve<Support_Page__c>(request)
+        return page
+      },
+      refresh
+    )
+  }
 
-        let page;
-        if (!this.cache.isCached(request) || refresh) {
-            page = (await this.sfService.retrieve(request))[0] as any;
-            this.cache.cache(request, page);
-        } else {
-            page = this.cache.getCache(request);
-        }
+  /**
+   * @desc Uses the Salesforce REST API to describe the Support_Page__c object. See the Salesforce documentation for more about 'describe'
+   *
+   * @param {boolean} [refresh=false] - Force the refresh of the cache
+   * @memberof SupportService
+   */
+  describe(refresh: boolean = false) {
+    const key = 'describeSupportPage'
 
-        return page;
+    return tryCache(
+      this.cache,
+      key,
+      () => this.sfService.describe('Support_Page__c'),
+      refresh
+    )
+  }
+
+  search(
+    search: string,
+    retrieve: string,
+    role: string,
+    refresh: boolean = false
+  ) {
+    // Generate the data parameter for the RPC call
+    const data = {
+      search: `{${search}}`,
+      retrieve: `Support_Page__c(${retrieve})`,
     }
 
-    /**
-     * @desc Uses the Salesforce REST API to describe the Support_Page__c object. See the Salesforce documentation for more about 'describe'
-     * 
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
-     * @memberof SupportService
-     */
-    public async describe(refresh: boolean = false): Promise<any> {
-        const key = 'describeSupportPage';
-
-        if (!this.cache.isCached(key) || refresh) {
-            const describeObject = await this.sfService.describe('Support_Page__c');
-
-            this.cache.cache(key, describeObject);
-
-            return describeObject;
-        } else {
-            return this.cache.getCache(key);
-        }
-    }
-
-    public async search(search: string, retrieve: string, role: string, refresh: boolean = false): Promise<any[]> {
-        // Generate the data parameter for the RPC call
-        const data = {
-            search: `{${search}}`,
-            retrieve: `Support_Page__c(${retrieve})`
-        }
-
-        // If no cached result, use the shingo-sf-api to get result
-        let pages;
-        if (!this.cache.isCached(data) || refresh) {
-            pages = (await this.sfService.search(data)).searchRecords as any[] || [];
-
-            // Cache results
-            this.cache.cache(data, pages);
-
-        }
-        // else return the cached result
-        else {
-            pages = this.cache.getCache(data);
-        }
-
-        pages = pages.filter(page => page.Restricted_To__c.includes(role));
-
-        return pages;
-    }
+    return tryCache(
+      this.cache,
+      data,
+      async () => {
+        const { searchRecords: pages = [] } = await this.sfService.search<
+          Partial<Support_Page__c>
+        >(data)
+        return pages.filter(
+          page => !page.Restricted_To__c || page.Restricted_To__c.includes(role)
+        )
+      },
+      refresh
+    )
+  }
 }

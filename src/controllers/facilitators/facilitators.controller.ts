@@ -1,14 +1,14 @@
 import {
     Controller,
     Get, Post, Put, Delete,
-    HttpStatus, Request, Response, Next,
+    HttpStatus, Response,
     Param, Query, Headers, Body, Session
 } from '@nestjs/common';
-import { SalesforceService, CacheService, AuthService, FacilitatorsService, MailerService } from '../../components';
+import { FacilitatorsService, MailerService } from '../../components';
 import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
-import * as _ from 'lodash';
-import * as generator from 'generate-password';
+import _ from 'lodash';
+import generator from 'generate-password';
 
 /**
  * @desc Controller of the REST API logic for Facilitators

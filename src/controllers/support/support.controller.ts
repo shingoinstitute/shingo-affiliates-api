@@ -99,7 +99,7 @@ export class SupportController extends BaseController {
 
         try {
             const page = await this.supportService.get(id, refresh === 'true');
-            if (!page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
+            if (page.Restricted_To__c && !page.Restricted_To__c.includes(role)) return this.handleError(res, 'Error in SupportController.read(): ', { code: 'ACCESS_FORBIDDEN', message: 'You do not have permissions to read this support page!' }, HttpStatus.FORBIDDEN);
             return res.status(HttpStatus.OK).json(page);
         } catch (error) {
             return this.handleError(res, 'Error in SupportController.read(): ', error);

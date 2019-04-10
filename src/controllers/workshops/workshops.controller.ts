@@ -45,7 +45,7 @@ export class WorkshopsController extends BaseController {
         if (!session.user) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
 
         try {
-            const workshops: Workshop[] = await this.workshopsService.getAll(false, true, session.user);
+            const workshops = await this.workshopsService.getAll(false, true, session.user);
 
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
@@ -56,7 +56,7 @@ export class WorkshopsController extends BaseController {
     @Get('public')
     public async readPublic( @Response() res, @Headers('x-force-refresh') refresh = 'false') {
         try {
-            const workshops: Workshop[] = await this.workshopsService.getAll(true, refresh === 'true', null);
+            const workshops = await this.workshopsService.getAll(true, refresh === 'true', null);
 
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
@@ -100,7 +100,7 @@ export class WorkshopsController extends BaseController {
         if (!search || !retrieve) return this.handleError(res, 'Error in WorkshopsController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
 
         try {
-            const workshops: Workshop[] = await this.workshopsService.search(search, retrieve, refresh === 'true');
+            const workshops = await this.workshopsService.search(search, retrieve, refresh === 'true');
             return res.status(HttpStatus.OK).json(workshops);
         } catch (error) {
             return this.handleError(res, 'Error in WorkshopsController.search(): ', error);

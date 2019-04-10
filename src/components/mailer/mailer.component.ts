@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { createTransport, Transporter } from 'nodemailer';
 
 /**
@@ -7,7 +7,7 @@ import { createTransport, Transporter } from 'nodemailer';
  * @export
  * @class MailerService
  */
-@Component()
+@Injectable()
 export class MailerService {
 
     private transporter: Transporter;

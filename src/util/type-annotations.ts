@@ -18,13 +18,11 @@ export const RefineBaseTypeTag = Symbol('__RefineBaseType')
  * ```
  */
 export type Refined<U, T> = U & {
-  readonly [RefineTag]: T
-  readonly [RefineBaseTypeTag]: U
+  readonly RefineTag: T
+  readonly RefineBaseTypeTag: U
 }
 
-export type RefineBaseType<T, K> = T extends Refined<any, K>
-  ? T[typeof RefineBaseTypeTag]
-  : never
+export type RefineBaseType<T, K> = T extends Refined<infer U, K> ? U : never
 
 export type QueryKey = 'Query'
 export type BodyKey = 'Body'

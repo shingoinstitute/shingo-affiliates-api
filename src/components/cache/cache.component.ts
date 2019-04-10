@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as NodeCache from 'node-cache';
 import * as hash from 'object-hash';
 
@@ -8,7 +8,7 @@ import * as hash from 'object-hash';
  * @export
  * @class CacheService
  */
-@Component()
+@Injectable()
 export class CacheService {
 
     constructor() {

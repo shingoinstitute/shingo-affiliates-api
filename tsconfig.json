@@ -11,7 +11,8 @@
     "strict": true,
     "target": "es2016",
     "outDir": "build",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*.ts"],
 }

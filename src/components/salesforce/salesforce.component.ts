@@ -1,4 +1,4 @@
-import { Component } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';
@@ -26,13 +26,15 @@ const sfservices = grpc.load(path.join(__dirname, '../../../proto/sf_services.pr
  * 
  * @export
  * @class SalesforceService
+ * @deprecated Use SalesforceService instead
  */
-@Component()
-export class SalesforceService {
+@Injectable()
+export class OldSalesforceClient {
 
     private client;
 
     constructor() {
+        console.warn('DEPRECATED: OldSalesforceClient is deprecated. Use SalesforceService')
         this.client = bluebird.promisifyAll(this.getClient());
     }
 
@@ -45,7 +47,7 @@ export class SalesforceService {
      */
     private getClient() {
         const envendpoint = process.env.SF_API
-        const endpoint = envendpoint.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
+        const endpoint = envendpoint!.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
         return new sfservices.SalesforceMicroservices(endpoint, grpc.credentials.createInsecure());
     }
 

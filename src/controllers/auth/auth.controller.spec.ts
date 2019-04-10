@@ -1,7 +1,7 @@
 import { Test as NestTest } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { AuthController } from './auth.controller';
-import { AuthService, LoggerService, SalesforceService } from '../../components';
+import { AuthService, LoggerService, OldSalesforceClient } from '../../components';
 import { MockSalesforceServiceInstance, MockAuthServiceInstance, MockLoggerInstance } from '../../components/mock';
 import { MockExpressInstance, MockServiceFactory } from '../../factories';
 import { Expect, Test, AsyncTest, TestFixture, Setup, SpyOn, Any, TestCase } from 'alsatian';
@@ -30,7 +30,7 @@ export class AuthControllerFixture {
             controllers: [AuthController],
             components: [
                 { provide: AuthService, useValue: this.mockAuthService },
-                { provide: SalesforceService, useValue: this.mockSFService },
+                { provide: OldSalesforceClient, useValue: this.mockSFService },
                 { provide: LoggerService, useValue: MockServiceFactory.getMockInstance<MockLoggerInstance>(MockLoggerInstance) }
             ]
         });

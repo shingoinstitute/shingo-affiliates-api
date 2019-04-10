@@ -1,366 +1,379 @@
-import { Component, Inject } from '@nestjs/common';
-import { SalesforceService, AuthService, CacheService, SFQueryObject, SFSuccessObject } from '../';
-import { Affiliate } from './affiliate';
-import * as _ from 'lodash';
+import { Injectable } from '@nestjs/common'
+import { AuthService, CacheService } from '../'
+import { SalesforceService } from '../salesforce/new-salesforce.component'
+import { Affiliate } from './affiliate'
+import { tryCache } from '../../util'
+import { Contact, Account } from '../../sf-interfaces'
+import { SFQ } from '../../util/salesforce'
+import { SuccessResult } from 'jsforce'
+import { RecordTypeService } from '../recordtype/RecordType.component'
 
-export { Affiliate };
+export const workshopResource = (id: string) => `workshops -- ${id}`
+export const affiliateResource = (id: string) => `affiliate -- ${id}`
+
+export { Affiliate }
 
 /**
  * @desc A service to provide functions for working with Affiliates
- * 
+ *
  * @export
  * @class AffiliatesService
  */
-@Component()
+@Injectable()
 export class AffiliatesService {
+  private queryFn: <T>(x: string) => Promise<T[]>
 
-    constructor( @Inject('SalesforceService') private sfService: SalesforceService = new SalesforceService(),
-        @Inject('AuthService') private authService: AuthService = new AuthService(),
-        @Inject('CacheService') private cache: CacheService = new CacheService(),
-    ) {}
+  constructor(
+    private sfService: SalesforceService,
+    private recordTypes: RecordTypeService,
+    private authService: AuthService = new AuthService(),
+    private cache: CacheService = new CacheService()
+  ) {
+    this.queryFn = this.sfService.query.bind(this.sfService)
+  }
 
-    /**
-     * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
-     * <code>[<br>
-     *  &emsp;"Id",<br>
-     *  &emsp;"Name",<br>
-     *  &emsp;"Summary__c",<br>
-     *  &emsp;"Logo__c",<br>
-     *  &emsp;"Page_Path__c",<br>
-     *  &emsp;"Website",<br>
-     *  &emsp;"Languages__c"<br>
-     * ]</code>
-     * 
-     * @param {boolean} [isPublic=false] - Filter out private Affiliates
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<Affiliate[]>} 
-     * @memberof AffiliatesService
-     */
-    public async getAll(isPublic: boolean = false, refresh: boolean = false): Promise<Affiliate[]> {
-        let key = 'AffiliatesService.getAll';
-        const query: SFQueryObject = {
-            action: "SELECT",
-            fields: [
-                "Id",
-                "Name",
-                "Summary__c",
-                "Logo__c",
-                "Page_Path__c",
-                "Website",
-                "Languages__c"
-            ],
-            table: "Account",
-            clauses: "RecordType.DeveloperName='Licensed_Affiliate'"
-        }
+  /**
+   * @desc Get all AFfiliates (minus McKinsey if <code>isPublic</code>). Queries the following fields:<br><br>
+   * <code>[<br>
+   *  &emsp;"Id",<br>
+   *  &emsp;"Name",<br>
+   *  &emsp;"Summary__c",<br>
+   *  &emsp;"Logo__c",<br>
+   *  &emsp;"Page_Path__c",<br>
+   *  &emsp;"Website",<br>
+   *  &emsp;"Languages__c"<br>
+   * ]</code>
+   *
+   * @param {boolean} [isPublic=false] - Filter out private Affiliates
+   * @param {boolean} [refresh=false] - Force the refresh of the cache
+   * @returns {Promise<Affiliate[]>}
+   * @memberof AffiliatesService
+   */
+  getAll(isPublic: boolean = false, refresh: boolean = false) {
+    let key = 'AffiliatesService.getAll'
+    let where = "RecordType.DeveloperName='Licensed_Affiliate'"
+    if (isPublic) {
+      key += '_public'
+      where += " AND (NOT Name LIKE 'McKinsey%')"
+    }
+    const query = new SFQ('Account')
+      .select(
+        'Id',
+        'Name',
+        'Summary__c',
+        'Logo__c',
+        'Page_Path__c',
+        'Website',
+        'Languages__c'
+      )
+      .where(where)
 
-        if (isPublic) {
-            key += '_public';
-            query.clauses += " AND (NOT Name LIKE 'McKinsey%')";
-        }
+    return tryCache(
+      this.cache,
+      key,
+      async () => {
+        const affiliates = await query.query(this.queryFn)
+        if (isPublic) return affiliates
 
-        let affiliates: Affiliate[] = [];
-        if (!this.cache.isCached(key) || refresh) {
-            affiliates = (await this.sfService.query(query)).records as Affiliate[] || [];
+        const { roles } = (await this.authService.getRoles(
+          `role.name LIKE 'Course Manager -- %'`
+        )) as { roles: Array<{ name: string }> }
 
-            if (affiliates.length)
-                this.cache.cache(key, affiliates);
-        } else {
-            affiliates = this.cache.getCache(key);
-        }
+        return affiliates.filter(aff =>
+          roles.find(role => role.name === `Course Manager -- ${aff.Id}`)
+        )
+      },
+      refresh
+    )
+  }
 
-        if (isPublic) {
-            return affiliates;
-        }
+  /**
+   * @desc Get the facilitator with the id passed at the parameter :id. The following fields are returned:<br><br>
+   * <code>[<br>
+   * TODO: Add fields that are returned<br>
+   * ]</code>
+   *
+   * @param {string} id - Salesforce ID for an Account
+   * @returns {Promise<Affiliate>}
+   * @memberof AffiliatesService
+   */
+  get(id: string): Promise<Affiliate> {
+    return tryCache(this.cache, id, async () => {
+      const [affiliate] = await this.sfService.retrieve({
+        object: 'Account',
+        ids: [id],
+      })
+      return affiliate
+    })
+  }
 
-        const roles = (await this.authService.getRoles(`role.name LIKE 'Course Manager -- %'`)).roles;
+  /**
+   * @desc Uses the Salesforce REST API to describe the Account object. See the Salesforce documentation for more about 'describe'
+   *
+   * @param {boolean} [refresh=false] - Force the refresh of the cache
+   * @memberof AffiliatesService
+   */
+  describe(refresh = false) {
+    // Set the key for the cache
+    const key = 'describeAccounts'
 
-        affiliates = affiliates.filter(aff => roles.findIndex(role => role.name === `Course Manager -- ${aff.Id}`) !== -1);
+    // If no cached result, use the shingo-sf-api to get the result
+    return tryCache(
+      this.cache,
+      key,
+      () => this.sfService.describe('Account'),
+      refresh
+    )
+  }
 
-        return affiliates;
+  /**
+   * @desc Executes a SOSL query to search for text on Accounts of record type Licensed Affiliate. Example response body:<br><br>
+   * <code>[<br>
+   *      &emsp;{<br>
+   *          &emsp;&emsp;"Id": "003g000001VvwEZAAZ",<br>
+   *          &emsp;&emsp;"Name": "Test One",<br>
+   *      &emsp;},<br>
+   *      &emsp;{<br>
+   *          &emsp;&emsp;"Id": "003g000001VvwEZABA",<br>
+   *          &emsp;&emsp;"Name": "Test Two",<br>
+   *      &emsp;},<br>
+   *      &emsp;{<br>
+   *          &emsp;&emsp;"Id": "003g000001VvwEZABB",<br>
+   *          &emsp;&emsp;"Name": "Test Three",<br>
+   *      &emsp;},<br>
+   *  ]</code>
+   *
+   * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
+   * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
+   * @param {boolean} [refresh=false] - Force the refresh of the cache
+   * @memberof AffiliatesService
+   */
+  search(search: string, retrieve: string, refresh: boolean = false) {
+    if (!retrieve.includes('RecordType.DeveloperName'))
+      retrieve += ', RecordType.DeveloperName'
+    // Generate the data parameter for the RPC call
+    const data = {
+      search: `{${search}}`,
+      retrieve: `Account(${retrieve})`,
     }
 
-    /**
-     * @desc Get the facilitator with the id passed at the parameter :id. The following fields are returned:<br><br>
-     * <code>[<br>
-     * TODO: Add fields that are returned<br>
-     * ]</code>
-     * 
-     * @param {string} id - Salesforce ID for an Account
-     * @returns {Promise<Affiliate>} 
-     * @memberof AffiliatesService
-     */
-    public async get(id: string): Promise<Affiliate> {
-        if (!this.cache.isCached(id)) {
-            const affiliate = (await this.sfService.retrieve({ object: 'Account', ids: [id] }))[0];
-            return affiliate;
-        } else {
-            return this.cache.getCache(id);
-        }
+    return tryCache(
+      this.cache,
+      data,
+      async () => {
+        const { searchRecords: affiliates = [] } = await this.sfService.search<
+          Partial<Account>
+        >(data)
+        return affiliates.filter(
+          aff =>
+            aff.RecordType &&
+            aff.RecordType.DeveloperName === 'Licensed_Affiliate'
+        )
+      },
+      refresh
+    )
+  }
+
+  /**
+   * @desc Executes a SOSL query to search for Contacts that match the given AccountId, and returns a list of Contacts that can be used as Course Managers.
+   * @param {string} id - A Salesforce AccountId.
+   * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
+   * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
+   * @param {boolean} [refresh=false] - Force the refresh of the cache
+   */
+  searchCM(
+    id: string,
+    search: string,
+    retrieve: string,
+    refresh: boolean = false
+  ) {
+    if (!retrieve.includes('AccountId')) retrieve += ', AccountId'
+    const data = {
+      search: `{${search}}`,
+      retrieve: `Contact(${retrieve})`,
     }
 
-    /**
-     * @desc Uses the Salesforce REST API to describe the Account object. See the Salesforce documentation for more about 'describe'
-     * 
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<any>} 
-     * @memberof AffiliatesService
-     */
-    public async describe(refresh: boolean = false): Promise<any> {
-        // Set the key for the cache
-        const key = 'describeAccounts'
+    return tryCache(
+      this.cache,
+      data,
+      async () => {
+        const { searchRecords: cms = [] } = await this.sfService.search<
+          Partial<Contact>
+        >(data)
+        return cms.filter(cm => cm.AccountId === id)
+      },
+      refresh
+    )
+  }
 
-        // If no cached result, use the shingo-sf-api to get the result
-        if (!this.cache.isCached(key) || refresh) {
-            const describeObject = await this.sfService.describe('Account');
-
-            // Cache describe
-            this.cache.cache(key, describeObject);
-
-            return describeObject;
-        }
-        // else return the cachedResult
-        else {
-            return this.cache.getCache(key);
-        }
+  /**
+   * @desc Creates a new Account of record type 'Licensed Affiliate' in Salesforce and corresponding permissions and roles. Returns the following:<br><br>
+   * <code>{<br>
+   *      &emsp;"id": SalesforceId,<br>
+   *      &emsp;"success": boolean,<br>
+   *      &emsp;"errors": []<br>
+   *  }</code>
+   *
+   * @param {Affiliate} affiliate - Affiliate to create
+   * @memberof AffiliatesService
+   */
+  async create(affiliate: Affiliate) {
+    // Use the shingo-sf-api to create the new record
+    const data = {
+      object: 'Account',
+      records: [affiliate],
     }
 
-    /**
-     * @desc Executes a SOSL query to search for text on Accounts of record type Licensed Affiliate. Example response body:<br><br>
-     * <code>[<br>
-     *      &emsp;{<br>
-     *          &emsp;&emsp;"Id": "003g000001VvwEZAAZ",<br>
-     *          &emsp;&emsp;"Name": "Test One",<br>
-     *      &emsp;},<br>
-     *      &emsp;{<br>
-     *          &emsp;&emsp;"Id": "003g000001VvwEZABA",<br>
-     *          &emsp;&emsp;"Name": "Test Two",<br>
-     *      &emsp;},<br>
-     *      &emsp;{<br>
-     *          &emsp;&emsp;"Id": "003g000001VvwEZABB",<br>
-     *          &emsp;&emsp;"Name": "Test Three",<br>
-     *      &emsp;},<br>
-     *  ]</code>
-     * 
-     * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
-     * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     * @returns {Promise<Affiliate[]>} 
-     * @memberof AffiliatesService
-     */
-    public async search(search: string, retrieve: string, refresh: boolean = false): Promise<Affiliate[]> {
-        if (!retrieve.includes('RecordType.DeveloperName')) retrieve += ', RecordType.DeveloperName';
-        // Generate the data parameter for the RPC call
-        const data = {
-            search: `{${search}}`,
-            retrieve: `Account(${retrieve})`
-        }
+    const [result] = await this.sfService.create(data)
+    await this.map({ Id: result.id } as Affiliate)
 
-        // If no cached result, use the shingo-sf-api to get result
-        if (!this.cache.isCached(data) || refresh) {
-            let affiliates: Affiliate[] = (await this.sfService.search(data)).searchRecords as Affiliate[] || [];
-            affiliates = affiliates.filter(aff => { return aff.RecordType && aff.RecordType.DeveloperName === 'Licensed_Affiliate'; });
+    this.cache.invalidate('AffiliatesService.getAll')
 
-            // Cache results
-            this.cache.cache(data, affiliates);
+    return result
+  }
 
-            return affiliates;
-        }
-        // else return the cached result
-        else {
-            return this.cache.getCache(data);
-        }
+  /**
+   * @desc Create the corresponding permissions and roles for the Affiliate in the Shingo Auth API.
+   *
+   * @param {string} id - Affiliate's Account Id
+   * @memberof AffiliatesService
+   */
+  async map(affiliate: Affiliate) {
+    const cm = await this.authService.createRole({
+      name: `Course Manager -- ${affiliate.Id}`,
+      service: 'affiliate-portal',
+    })
+    for (const level of [0, 1, 2] as const) {
+      const workshopPerm = await this.authService.createPermission({
+        resource: `workshops -- ${affiliate.Id}`,
+        level,
+      })
+      await this.authService.grantPermissionToRole(
+        workshopPerm.resource,
+        2,
+        cm.id
+      )
+
+      const affiliatePerm = await this.authService.createPermission({
+        resource: `affiliate -- ${affiliate.Id}`,
+        level,
+      })
+      await this.authService.grantPermissionToRole(
+        affiliatePerm.resource,
+        1,
+        cm.id
+      )
     }
 
-    /**
-     * @desc Executes a SOSL query to search for Contacts that match the given AccountId, and returns a list of Contacts that can be used as Course Managers.
-     * @param {string} id - A Salesforce AccountId.
-     * @param {Header} search - Header 'x-search'. SOSL search expression (i.e. '*Test*').
-     * @param {Header} retrieve - Header 'x-retrieve'. A comma seperated list of the Account fields to retrieve (i.e. 'Id, Name')
-     * @param {boolean} [refresh=false] - Force the refresh of the cache
-     */
-    public async searchCM(id: string, search: string, retrieve: string, refresh: boolean = false): Promise<any[]> {
-        if (!retrieve.includes('AccountId')) retrieve += ', AccountId';
-        const data = {
-            search: `{${search}}`,
-            retrieve: `Contact(${retrieve})`
-        }
+    affiliate.RecordTypeId = await this.recordTypes.get('Licensed_Affiliate')
+    await this.sfService.update({ object: 'Account', records: [affiliate] })
+    this.cache.invalidate('AffiliatesService.getAll')
+  }
 
-        if (!this.cache.isCached(data) || refresh) {
-            let cms = (await this.sfService.search(data)).searchRecords || [];
-            cms = cms.filter(cm => { return cm.AccountId === id; });
-
-            this.cache.cache(data, cms);
-            return cms;
-        }
-        else {
-            return this.cache.getCache(data);
-        }
+  /**
+   * @desc Updates an Affiliate's fields: Returns the following:<br><br>
+   * <code>{<br>
+   *      &emsp;"id": SalesforceId,<br>
+   *      &emsp;"success": boolean,<br>
+   *      &emsp;"errors": []<br>
+   *  }</code>
+   *
+   * @param {Affiliate} affiliate - Affiliate's fields to update
+   * @returns {Promise<SFSuccessObject>}
+   * @memberof AffiliatesService
+   */
+  async update(affiliate: Partial<Account> & { Id: string }) {
+    // Use the shingo-sf-api to create the new record
+    const data = {
+      object: 'Account',
+      records: [affiliate],
     }
 
-    /**
-     * @desc Creates a new Account of record type 'Licensed Affiliate' in Salesforce and corresponding permissions and roles. Returns the following:<br><br>
-     * <code>{<br>
-     *      &emsp;"id": SalesforceId,<br>
-     *      &emsp;"success": boolean,<br>
-     *      &emsp;"errors": []<br>
-     *  }</code>
-     * 
-     * @param {Affiliate} affiliate - Affiliate to create
-     * @returns {Promise<any>} 
-     * @memberof AffiliatesService
-     */
-    public async create(affiliate: Affiliate): Promise<any> {
-        // Use the shingo-sf-api to create the new record
-        const data = {
-            object: 'Account',
-            records: [{ contents: JSON.stringify(affiliate) }]
-        }
+    const [result] = await this.sfService.update(data)
 
-        const result: SFSuccessObject = (await this.sfService.create(data))[0];
-        await this.map({ Id: result.id } as Affiliate);
+    this.cache.invalidate(affiliate.Id!)
+    this.cache.invalidate('AffiliatesService.getAll')
 
-        this.cache.invalidate('AffiliatesService.getAll');
+    return result
+  }
 
-        return result;
+  /**
+   * @desc Removes all permissions, roles, and user logins associated with the Affiliate. Returns the following:<br><br>
+   * <code>{<br>
+   *      &emsp;"id": SalesforceId,<br>
+   *      &emsp;"success": boolean,<br>
+   *      &emsp;"errors": []<br>
+   *  }</code>
+   *
+   * @param {string} id - Salesforce Id of the Account to "delete"
+   * @memberof AffiliatesService
+   */
+  async delete(id: string) {
+    let r: SuccessResult | undefined
+    const RecordTypeId = await this.recordTypes.get('Standard_Org')
+
+    try {
+      r = await this.update({ Id: id, RecordTypeId })
+    } catch {
+      console.error(`Unable to update record type for Affiliate with id ${id}`)
     }
 
-    /**
-     * @desc Create the corresponding permissions and roles for the Affiliate in the Shingo Auth API.
-     * 
-     * @param {string} id - Affiliate's Account Id
-     * @returns {Promise<any>} 
-     * @memberof AffiliatesService
-     */
-    public async map(affiliate: Affiliate): Promise<any> {
-        const cm = await this.authService.createRole({ name: `Course Manager -- ${affiliate.Id}`, service: 'affiliate-portal' });
-        for (const level of [0, 1, 2]) {
-            const workshopPerm = await this.authService.createPermission({ resource: `workshops -- ${affiliate.Id}`, level });
-            await this.authService.grantPermissionToRole(workshopPerm.resource, 2, cm.id);
+    if (r) {
+      await this.deletePermissions(id)
+      await this.deleteRoles(id)
+      await this.deleteFacilitators(id)
 
-            const affiliatePerm = await this.authService.createPermission({ resource: `affiliate -- ${affiliate.Id}`, level });
-            await this.authService.grantPermissionToRole(affiliatePerm.resource, 1, cm.id);
-        }
-
-        affiliate.RecordTypeId = '012A0000000zpraIAA';
-
-        await this.sfService.update({ object: 'Account', records: [{ contents: JSON.stringify(affiliate) }] });
-
-        this.cache.invalidate('AffiliatesService.getAll');
-
-        return ;
+      this.cache.invalidate(id)
+      this.cache.invalidate('AffiliatesService.getAll')
+      this.cache.invalidate('AffiliatesService.getAll_public')
     }
+  }
 
-    /**
-     * @desc Updates an Affiliate's fields: Returns the following:<br><br>
-     * <code>{<br>
-     *      &emsp;"id": SalesforceId,<br>
-     *      &emsp;"success": boolean,<br>
-     *      &emsp;"errors": []<br>
-     *  }</code>
-     * 
-     * @param {Affiliate} affiliate - Affiliate's fields to update
-     * @returns {Promise<SFSuccessObject>} 
-     * @memberof AffiliatesService
-     */
-    public async update(affiliate: Affiliate): Promise<SFSuccessObject> {
-        // Use the shingo-sf-api to create the new record
-        const data = {
-            object: 'Account',
-            records: [{ contents: JSON.stringify(affiliate) }]
-        }
-
-        const result: SFSuccessObject = (await this.sfService.update(data))[0];
-
-        this.cache.invalidate(affiliate.Id!);
-        this.cache.invalidate('AffiliatesService.getAll');
-
-        return result;
+  /**
+   * @desc Delete the associated permissions of an Affiliate from the Auth API. Namely 'workshops -- ID' and 'affiliate -- ID'
+   *
+   * @private
+   * @param {SalesforceId} id - The Affilaite's Salesforce Id
+   * @memberof AffiliatesService
+   */
+  private async deletePermissions(id: string) {
+    for (const level of [0, 1, 2] as const) {
+      await this.authService.deletePermission(`workshops -- ${id}`, level)
+      await this.authService.deletePermission(`affiliate -- ${id}`, level)
     }
+  }
 
-    /**
-     * @desc Removes all permissions, roles, and user logins associated with the Affiliate. Returns the following:<br><br>
-     * <code>{<br>
-     *      &emsp;"id": SalesforceId,<br>
-     *      &emsp;"success": boolean,<br>
-     *      &emsp;"errors": []<br>
-     *  }</code>
-     * 
-     * @param {string} id - Salesforce Id of the Account to "delete"
-     * @returns {Promise<any>} 
-     * @memberof AffiliatesService
-     */
-    public async delete(id: string): Promise<SFSuccessObject> {
-        const result: Affiliate = await this.get(id);
-        result.RecordTypeId = '012A0000000zprfIAA';
+  /**
+   * @desc Delete the Affiliate specific roles from the Auth API. Namely, 'Course Manager -- ID'
+   *
+   * @private
+   * @param {SalesforceId} id - The Affiliate's Salesforce Id
+   * @memberof AffiliatesService
+   */
+  private async deleteRoles(id: string) {
+    const cm = await this.authService.getRole(
+      `role.name='Course Manager -- ${id}'`
+    )
+    await this.authService.deleteRole(cm)
+  }
 
-        await this.deletePermissions(result.Id!);
+  /**
+   * @desc Delete the Affiliate's Facilitators logins from the Auth API.
+   *
+   * @private
+   * @param {SalseforceId} id - The Affiliate's SalesforceId
+   * @memberof AffiliatesService
+   */
+  private async deleteFacilitators(id: string) {
+    const query = new SFQ('Contact')
+      .select('Id')
+      .where(
+        `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`
+      )
 
-        await this.deleteRoles(result.Id!);
-
-        await this.deleteFacilitators(result.Id!);
-
-        const update: SFSuccessObject = await this.update(_.pick(result, ['Id', 'RecordTypeId']));
-
-
-        this.cache.invalidate(id);
-        this.cache.invalidate('AffiliatesService.getAll');
-        this.cache.invalidate('AffiliatesService.getAll_public');
-
-        return update;
-    }
-
-    /**
-     * @desc Delete the associated permissions of an Affiliate from the Auth API. Namely 'workshops -- ID' and 'affiliate -- ID'
-     * 
-     * @private
-     * @param {SalesforceId} id - The Affilaite's Salesforce Id
-     * @returns {Promise<void>}
-     * @memberof AffiliatesService
-     */
-    private async deletePermissions(id: string): Promise<void> {
-        for (const level of [0, 1, 2]) {
-            await this.authService.deletePermission(`workshops -- ${id}`, level as 0 | 1 | 2);
-            await this.authService.deletePermission(`affiliate -- ${id}`, level as 0 | 1 | 2);
-        }
-
-        return ;
-    }
-
-    /**
-     * @desc Delete the Affiliate specific roles from the Auth API. Namely, 'Course Manager -- ID'
-     * 
-     * @private
-     * @param {SalesforceId} id - The Affiliate's Salesforce Id
-     * @returns {Promise<void>} 
-     * @memberof AffiliatesService
-     */
-    private async deleteRoles(id: string): Promise<void> {
-        const cm = await this.authService.getRole(`role.name='Course Manager -- ${id}'`);
-        await this.authService.deleteRole(cm);
-
-        return ;
-    }
-
-    /**
-     * @desc Delete the Affiliate's Facilitators logins from the Auth API.
-     * 
-     * @private
-     * @param {SalseforceId} id - The Affiliate's SalesforceId
-     * @returns {Promise<void>} 
-     * @memberof AffiliatesService
-     */
-    private async deleteFacilitators(id: string): Promise<void> {
-        const query: SFQueryObject = {
-            action: "SELECT",
-            fields: ["Id"],
-            table: "Contact",
-            clauses: `Facilitator_For__c='${id}' AND RecordType.DeveloperName='Affiliate_Instructor'`
-        }
-        const facilitators = (await this.sfService.query(query)).records as any[] || [];
-        for (const facilitator of facilitators) {
-            await this.authService.deleteUser({ extId: facilitator.Id });
-        }
-
-        return ;
-    }
+    const facilitators = (await query.query(this.queryFn)) || []
+    await Promise.all(
+      facilitators.map(fac => this.authService.deleteUser({ extId: fac.Id }))
+    )
+  }
 }
