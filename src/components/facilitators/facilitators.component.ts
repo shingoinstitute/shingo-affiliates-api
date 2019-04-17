@@ -733,7 +733,7 @@ export class FacilitatorsService {
     if (user.id === 0) throw { error: 'USER_NOT_FOUND' }
 
     const currentRole = (user.roles || []).find(
-      (      role: { service: string; }) => role.service === 'affiliate-portal'
+      (role: { service: string }) => role.service === 'affiliate-portal'
     )
 
     const set = { userEmail: user.email, roleId }

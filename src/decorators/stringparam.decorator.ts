@@ -1,6 +1,10 @@
 import { createParamDecorator, BadRequestException } from '@nestjs/common'
 import { Request } from 'express'
-import { ParamOptions, ParamDecorator, parseOptions } from './ParamOptions.interface'
+import {
+  ParamOptions,
+  ParamDecorator,
+  parseOptions,
+} from './ParamOptions.interface'
 
 /**
  * Decorator for a string parameter specified by header or query string
@@ -8,15 +12,18 @@ import { ParamOptions, ParamDecorator, parseOptions } from './ParamOptions.inter
  * @returns string | undefined
  */
 // tslint:disable-next-line:variable-name
-export const StringParam = createParamDecorator((data: ParamOptions, req: Request) => {
-  const { header, query, headerKey, queryKey } = parseOptions(data, req)
-  const stringParam = header || query
+export const StringParam = createParamDecorator(
+  (data: ParamOptions, req: Request) => {
+    const { header, query, headerKey, queryKey } = parseOptions(data, req)
+    const stringParam = header || query
 
-  if (typeof stringParam !== 'string' && typeof stringParam !== 'undefined') {
-    throw new BadRequestException(
-      `Parameter ${headerKey || queryKey} with value ${stringParam} is not a valid string`
-    )
+    if (typeof stringParam !== 'string' && typeof stringParam !== 'undefined') {
+      throw new BadRequestException(
+        `Parameter ${headerKey ||
+          queryKey} with value ${stringParam} is not a valid string`
+      )
+    }
+
+    return stringParam
   }
-
-  return stringParam
-}) as ParamDecorator
+) as ParamDecorator

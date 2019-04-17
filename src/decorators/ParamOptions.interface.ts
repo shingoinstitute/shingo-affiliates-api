@@ -16,12 +16,12 @@ export type Param<T, k extends ParamOptions> = Refined<
 export type NormalizeParamOptions<T extends ParamOptions> = T extends string
   ? { query: T; header: T }
   : T extends { query: string; header: string }
-    ? T
-    : T extends { query: string }
-      ? { query: T['query']; header?: never }
-      : T extends { header: string }
-        ? { header: T['header']; query?: never }
-        : never
+  ? T
+  : T extends { query: string }
+  ? { query: T['query']; header?: never }
+  : T extends { header: string }
+  ? { header: T['header']; query?: never }
+  : never
 
 /**
  * Refinement key for Param

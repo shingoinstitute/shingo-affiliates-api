@@ -57,8 +57,8 @@ const getExtendedId = (id: string) => {
       start => id.substr(start, 5),
       reverseASCII,
       toUpperBitMap,
-      lookup,
-    ),
+      lookup
+    )
   )
 
   if (sum.some(v => typeof v === 'undefined')) {
@@ -111,7 +111,7 @@ export class SalesforceIdValidator implements PipeTransform<any, string> {
     if (!isSFID(value)) {
       throw new BadRequestException(
         `${value} is not a valid Salesforce ID.`,
-        'INVALID_SF_ID',
+        'INVALID_SF_ID'
       )
     }
     return value

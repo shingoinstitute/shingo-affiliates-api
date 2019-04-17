@@ -11,13 +11,19 @@ export const T = <A>(x: A) => <B>(f: Fn<[A], B>) => f(x)
 /** duplication */
 export const W = <A, B>(f: Fn<[A], Fn<[A], B>>) => (x: A) => f(x)(x)
 /** flip */
-export const C = <A, B, C>(f: Fn<[A], Fn<[B], C>>) => (y: B) => (x: A) => f(x)(y)
+export const C = <A, B, C>(f: Fn<[A], Fn<[B], C>>) => (y: B) => (x: A) =>
+  f(x)(y)
 /** compose */
-export const B = <C, B>(f: Fn<[B], C>) => <A>(g: Fn<[A], B>) => (x: A) => f(g(x))
+export const B = <C, B>(f: Fn<[B], C>) => <A>(g: Fn<[A], B>) => (x: A) =>
+  f(g(x))
 /** substitution */
-export const S = <A, B, C>(f: Fn<[A], Fn<[B], C>>) => (g: Fn<[A], B>) => (x: A) => f(x)(g(x))
+export const S = <A, B, C>(f: Fn<[A], Fn<[B], C>>) => (g: Fn<[A], B>) => (
+  x: A
+) => f(x)(g(x))
 /** psi */
-export const P = <A, B>(f: Fn<[A], Fn<[A], B>>) => <C>(g: Fn<[C], A>) => (x: C) => (y: C) => f(g(x))(g(y))
+export const P = <A, B>(f: Fn<[A], Fn<[A], B>>) => <C>(g: Fn<[C], A>) => (
+  x: C
+) => (y: C) => f(g(x))(g(y))
 
 import * as variadic from './variadic'
 export { variadic }
