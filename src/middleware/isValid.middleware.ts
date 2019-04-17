@@ -1,8 +1,9 @@
 import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
-import { OldSalesforceClient, AuthService } from '../components';
+import { AuthService } from '../components';
 import _ from 'lodash';
 import SalesforceService, { salesforceServiceFactory } from '../components/salesforce/new-salesforce.component'
 import { Contact } from '../sf-interfaces';
+import { parseRPCErrorMeta } from '../util';
 
 /**
  * This middleware checks if the user with given JWT is valid (JWT is correct and hasn't expired) and rebuilds the user object on session if it is missing
@@ -60,7 +61,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 })
                 .catch(error => {
                     if (error.message === 'SESSION_ALIVE') return next();
-                    if (error.metadata) error = OldSalesforceClient.parseRPCErrorMeta(error);
+                    if (error.metadata) error = parseRPCErrorMeta(error);
                     console.error('Error in is-valid.middleware.ts: %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });

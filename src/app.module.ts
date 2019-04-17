@@ -20,7 +20,6 @@ import {
   AffiliatesService,
   MailerService,
   SupportService,
-  OldSalesforceClient,
 } from './components'
 import { salesforceServiceProvider } from './components/salesforce/new-salesforce.component'
 import { MulterFactory } from './factories'
@@ -53,7 +52,6 @@ import { RecordTypeService } from './components/recordtype/RecordType.component'
     MulterFactory,
     SupportService,
     salesforceServiceProvider,
-    OldSalesforceClient,
     RecordTypeService,
   ],
 })

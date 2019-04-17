@@ -1,5 +1,5 @@
 import { Middleware, NestMiddleware } from '@nestjs/common';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 /**
  * Route Logger logs information about every route. Use this to debug any issues.

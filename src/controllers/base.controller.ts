@@ -1,5 +1,5 @@
 import { Response, HttpStatus } from '@nestjs/common';
-import { OldSalesforceClient } from '../components';
+import { parseRPCErrorMeta } from '../util';
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -20,7 +20,7 @@ export abstract class BaseController {
     * @memberof BaseController
     */
     public handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
-        if (error.metadata) error = OldSalesforceClient.parseRPCErrorMeta(error);
+        if (error.metadata) error = parseRPCErrorMeta(error);
         if (error.message) error = { message: error.message };
 
         if (typeof error.error === 'string' && error.error.match(/\{.*\}/g)) {

@@ -6,9 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupportService } from '../../components';
 import { BaseController } from '../base.controller';
-import { checkRequired } from '../../validators/objKeyValidator';
-import * as _ from 'lodash';
-import * as generator from 'generate-password';
+import _ from 'lodash';
 
 /**
  * @desc Controller of the REST API logic for Support Pages

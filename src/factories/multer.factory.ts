@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import * as multer from 'multer';
+import multer from 'multer';
 
 @Injectable()
 export class MulterFactory {

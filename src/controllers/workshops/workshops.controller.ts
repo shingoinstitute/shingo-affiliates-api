@@ -108,26 +108,6 @@ export class WorkshopsController extends BaseController {
 
     }
 
-    @Get('/host-sites')
-    searchHostSite(
-        @StringParam('search', new RequiredValidator(missingParam('search')))
-        search: ParamType<string, 'search'>,
-        @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
-        retrieve: ParamType<string[], 'retrieve'>,
-        _metadata: RouteMetadata<{
-            route: '/workshops/host-sites'
-            auth: false
-            method: 'GET'
-        }>
-    ) {
-        console.info('/workshops/host-sites', search, retrieve)
-        return [
-          { Id: 'some Id', Email: 'Some Email', Name: 'Some Name' }
-        , { Id: 'another Id', Email: 'Another Email', Name: 'Another Name' }
-        ]
-    }
-
-
     /**
      * @desc <h5>GET: /workshops/<em>:id</em></h5> Calls {@link WorkshopsService#get} to retrieve a specific workshop
      * 

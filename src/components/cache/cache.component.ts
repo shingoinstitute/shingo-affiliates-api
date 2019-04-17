@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import * as NodeCache from 'node-cache';
-import * as hash from 'object-hash';
+import NodeCache from 'node-cache';
+import hash from 'object-hash';
 
 /**
  * @desc A service that provides an in-memory cache

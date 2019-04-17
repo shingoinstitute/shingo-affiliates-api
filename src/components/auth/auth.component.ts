@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { gRPCError, User } from '../';
+import { User } from '../';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import * as bluebird from 'bluebird';
@@ -30,7 +30,8 @@ export class AuthService {
      */
     private getClient() {
         const envendpoint = process.env.AUTH_API
-        const endpoint = envendpoint!.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
+        if (!envendpoint) throw Error('Missing AUTH_API env var')
+        const endpoint = envendpoint.indexOf(':') !== -1 ? envendpoint : `${envendpoint}:80`
         return new authservices.AuthServices(endpoint, grpc.credentials.createInsecure());
     }
 

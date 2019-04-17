@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common'
 import { SFInterfaces } from '../sf-interfaces'
 import { CacheService } from '../components'
 import { Lazy } from 'fp-ts/lib/function'
-import { PromiseValue, RetType, ArrayValue } from './types'
+import { PromiseValue, RetType, ArrayValue, Omit } from './types'
 import { Request } from 'express'
 
 // fixes the broken Promise.all types (original cannot properly infer return type given non-heterogenous arrays)
@@ -16,6 +16,7 @@ declare global {
   }
 }
 
+/** used for type-safe dependency injection with nestjs */
 export class Token<T = never> {
   constructor(public name?: string) {}
 }
@@ -28,6 +29,7 @@ declare module '@nestjs/core' {
   }
 }
 
+/** infers parameters as a tuple of elements */
 export const tuple = <Ts extends any[]>(...t: Ts) => t
 /** infers parameters as a tuple of elements assignable to the type T */
 export const tuple1 = <T>() => <Ts extends T[]>(...t: Ts) => t
@@ -66,6 +68,11 @@ export const tryCache = async <T>(
   }
 }
 
+/**
+ * Fills an array with the result of a function
+ * @param arr a non-empty array
+ * @param supplier a nullary function used to fill the array
+ */
 const lazyFill = <T extends any[]>(arr: T, supplier: Lazy<T>) => {
   for (let i = 0; i < arr.length; i++) {
     arr[i] = supplier()
@@ -103,29 +110,91 @@ export const multimap = <
   return out
 }
 
+/**
+ * Gets the token from a Bearer Authorization header
+ * @param header the authorization header
+ */
 export const getBearerToken = (header: string): string | undefined => {
   const parts = header.split('Bearer ')
   return parts.length === 2 ? parts[1] : undefined
 }
 
-export const retrieveResult = <T>(r: T[]) =>
-  (r[0] as typeof r[0] | null) || null
-
+/**
+ * Gets the jwt authorization out of a request
+ *
+ * checks the authorization header primarily, and falls back to
+ * the dumb custom x-jwt header
+ * @param req an Express request object
+ */
 export const getJwt = (req: Request) =>
   (req.headers.authorization && getBearerToken(req.headers.authorization)) ||
   (req.headers['x-jwt'] as string | undefined)
 
-export const copyObj = <T>(o: T): T => {
-  if (typeof o !== 'object') return o
-  if (Array.isArray(o)) return (o.map(copyObj) as unknown) as T
+/**
+ * Recursively copies a plain object
+ *
+ * Do not use with objects with modified prototypes (classes, custom arrays, etc)
+ * @param o an object
+ * @param exclude an optional array of keys to exclude (recursively) from the copied object
+ */
+// this return type is not quite right. We would need some kind of DeepOmit,
+// but because typescript preserves optionals on objects only if its considered
+// a simple transformation (which DeepOmit is not), we would lose the optional
+// information. Plus it would be difficult to get the keys
+export function copyObj<T, K extends keyof T>(
+  o: T,
+  exclude: Array<K>
+): Omit<T, K>
+export function copyObj<T>(o: T): T
+export function copyObj<T>(o: T, exclude: Array<keyof T> = []): T {
+  // typeof null === 'object' in javascript for legacy reasons
+  // we have to explicitly check in that case
+  if (typeof o !== 'object' || o === null) return o
+  if (Array.isArray(o)) return (o.map(v => copyObj(v, exclude)) as unknown) as T
 
   const n: T = {} as T
   for (const k in o) {
-    if (o.hasOwnProperty(k)) {
+    if (o.hasOwnProperty(k) && !exclude.includes(k)) {
       const val = o[k]
       n[k] = copyObj(val)
     }
   }
 
   return n
+}
+
+/**
+ * Parses gRPC errors. Remove once Auth-Service is integrated
+ * @param error a gRPC error
+ */
+export const parseRPCErrorMeta = (error: any): object => {
+  try {
+    let err = JSON.parse(error.metadata.get('error-bin').toString())
+    return err
+  } catch (caught) {
+    if (error.metadata.get('error-bin'))
+      return error.metadata.get('error-bin').toString()
+    else return error
+  }
+}
+
+/**
+ * Removes the given keys from the object deeply
+ *
+ * @param o an object
+ * @param keys keys to remove
+ */
+export function deepClean<T extends object, K extends keyof T>(
+  o: T,
+  ...keys: K[]
+): Omit<T, K>
+export function deepClean<T extends object, K extends keyof any>(
+  o: T,
+  ...keys: K[]
+): T
+export function deepClean<T extends object, K extends keyof T>(
+  o: T,
+  ...keys: K[]
+): Omit<T, K> {
+  return copyObj(o, keys)
 }

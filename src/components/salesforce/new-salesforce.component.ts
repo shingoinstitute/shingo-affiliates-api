@@ -5,7 +5,7 @@ import {
   ErrorResult,
   RecordResult,
 } from 'jsforce'
-import { Omit, SFQueryResult } from '../../util'
+import { SFQueryResult, deepClean, copyObj } from '../../util'
 import { flatten } from 'fp-ts/lib/Array'
 import { Provider } from '@nestjs/common'
 import debug from 'debug'
@@ -132,33 +132,13 @@ const OMIT_FIELDS = [
   'RecordType',
 ]
 
-const omit = <T, K extends keyof T>(
-  o: T,
-  exclude: K[],
-  depth = 0
-): Omit<T, K> => {
-  const ret = {} as any
-
-  for (const k in o) {
-    if (!exclude.includes((k as unknown) as K)) {
-      ret[k] =
-        typeof o[k] === 'object' && o[k] != null && depth !== 0
-          ? omit(o[k] as any, exclude, depth - 1)
-          : o[k]
-    }
-  }
-
-  return ret as Omit<T, K>
-}
-
+// TODO: Remove this once the portal doesn't send unknown/invalid keys on objects
+// portal should only send the minimum object needed for a change
+// which means we won't have to worry about sending invalid data to salesforce
 export const getRecords = (
   req: { records: object[] },
   toOmit: string[] = []
-): object[] =>
-  req.records.map(record => {
-    const val = record
-    return typeof val === 'object' ? omit(val, toOmit as any) : val
-  })
+): object[] => copyObj(req.records, toOmit as any) as object[]
 
 /**
  * Authenticates a connection to salesforce and calls a function with the logged in connection
@@ -222,7 +202,10 @@ export class SalesforceService {
     const log = mklog(`QUERY:${queryString}`, `QUERY RESULT:${queryString}`)
     return this.queryRunner(async conn => {
       const res = await log(conn.query<T>(queryString))
-      return stripQueryResult(res)
+      // TODO: maybe remove this deepClean once the portal doesn't send unknown/invalid
+      // keys - the unnecessary copy and traversal will add a lot of time
+      // for large objects
+      return deepClean(stripQueryResult(res), 'attributes')
     })
   }
 
@@ -233,7 +216,7 @@ export class SalesforceService {
     )
     return this.queryRunner(async conn => {
       const res = await log(conn.sobject<T>(object).retrieve(ids))
-      return res.filter(Boolean)
+      return deepClean(res.filter(Boolean), 'attributes')
     })
   }
 
@@ -306,8 +289,10 @@ export class SalesforceService {
     const query = `FIND ${search} IN ALL FIELDS RETURNING ${retrieve}`
     const log = mklog(`SEARCH:${query}`, `SEARCH RESULT:${query}`)
     return this.queryRunner(conn =>
-      // FIXME: jsforce typings are incorrect
-      log((conn as any).search(query) as Promise<{ searchRecords: T[] }>)
+      // FIXME: jsforce typings are incorrect, submit a pull-request to definitely-typed
+      log((conn as any).search(query) as Promise<{ searchRecords: T[] }>).then(
+        v => deepClean(v, 'attributes')
+      )
     )
   }
 }

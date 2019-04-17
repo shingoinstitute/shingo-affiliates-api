@@ -1,5 +1,6 @@
 import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
-import { AuthService, OldSalesforceClient } from '../components';
+import { AuthService } from '../components';
+import { parseRPCErrorMeta } from '../util';
 
 /**
  * The auth middleware uses the Shingo Auth API to test if the user has permissions to access a given resource
@@ -53,7 +54,7 @@ export class AuthMiddleware implements NestMiddleware {
                     throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${realResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
                 .catch(error => {
-                    if (error.metadata) error = OldSalesforceClient.parseRPCErrorMeta(error);
+                    if (error.metadata) error = parseRPCErrorMeta(error);
                     console.error('Error in AuthMiddleware.resolve(): %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);
                 });

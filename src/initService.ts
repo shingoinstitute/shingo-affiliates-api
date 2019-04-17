@@ -1,5 +1,5 @@
 import { AuthService } from './components';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 const authService = new AuthService();
 
