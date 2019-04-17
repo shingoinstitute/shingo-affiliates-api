@@ -2,39 +2,38 @@ import _ from 'lodash'
 import { Injectable } from '@nestjs/common'
 import { AuthService } from './auth/auth.component'
 
+const data: {
+  facilitatorId?: number
+  affiliateId?: number
+} = {}
+
 /**
  * This class ensures affiliate portal roles exist, and provide access to the role ids
  */
 @Injectable()
 export class EnsureRoleService {
-  private _facilitatorId?: number
-  private _affiliateId?: number
-
   get facilitatorId() {
-    if (typeof this._facilitatorId === 'undefined') {
+    if (data.facilitatorId == null) {
       throw new Error(
         'EnsureRoleService was improperly initialized, facilitatorId was undefined'
       )
     }
-    return this._facilitatorId
+    return data.facilitatorId
   }
 
   get affiliateId() {
-    if (typeof this._affiliateId === 'undefined') {
+    if (data.affiliateId == null) {
       throw new Error(
         'EnsureRoleService was improperly initialized, affiliateId was undefined'
       )
     }
-    return this._affiliateId
+    return data.affiliateId
   }
 
   constructor(private authService: AuthService = new AuthService()) {}
 
   async init() {
-    if (
-      typeof this._facilitatorId !== 'undefined' &&
-      typeof this._affiliateId !== 'undefined'
-    ) {
+    if (data.facilitatorId != null && data.affiliateId != null) {
       return
     }
 
@@ -56,13 +55,13 @@ export class EnsureRoleService {
         service: 'affiliate-portal',
       })
       console.info('Created Facilitator role! %j', role)
-      this._facilitatorId = role.id
+      data.facilitatorId = role.id
     } else {
       console.info(
         'Found Facilitator role: %j',
         _.omit(facilitator, ['users', 'permissions'])
       )
-      this._facilitatorId = facilitator.id
+      data.facilitatorId = facilitator.id
     }
 
     if (!affiliateManager) {
@@ -71,13 +70,13 @@ export class EnsureRoleService {
         service: 'affiliate-portal',
       })
       console.info('Created Affiliate Manager role! %j', role)
-      this._affiliateId = role.id
+      data.affiliateId = role.id
     } else {
       console.info(
         'Found Affiliate Manager role: %j',
         _.omit(affiliateManager, ['users', 'permissions'])
       )
-      this._affiliateId = affiliateManager.id
+      data.affiliateId = affiliateManager.id
     }
   }
 }

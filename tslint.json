@@ -19,6 +19,6 @@
     "no-any": { "severity": "error" }
   },
   "linterOptions": {
-    "exclude": ["**/*.proto.ts"]
+    "exclude": ["**/*.proto.ts", "**/*.sf.ts"]
   }
 }
