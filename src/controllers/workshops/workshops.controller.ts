@@ -2,18 +2,16 @@ import {
     Controller,
     Get, Post, Put, Delete,
     HttpStatus, Request, Response,
-    Param, Headers, Body, Session, NotFoundException
+    Param, Headers, Body, Session, NotFoundException,
 } from '@nestjs/common';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 import { WorkshopsService, Workshop } from '../../components';
 import { MulterFactory } from '../../factories';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
-import { StringParam } from '../../decorators/stringparam.decorator';
-import { Param as ParamType } from '../../decorators/ParamOptions.interface'
-import { RequiredValidator } from '../../validators/required.validator';
-import { RouteMetadata, missingParam, UrlParam as UrlParamType } from '../../util';
-import { ArrayParam } from '../../decorators/arrayparam.decorator';
+import { RouteMetadata, UrlParam as UrlParamType } from '../../util';
 import { SalesforceIdValidator } from '../../validators/SalesforceId.validator';
 
 /**
@@ -41,7 +39,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Get()
-    public async readAll( @Response() res, @Session() session): Promise<Response> {
+    public async readAll( @Response() res: Res, @Session() session: any) {
         if (!session.user) return this.handleError(res, 'Error in WorkshopsController.readAll(): ', { error: "SESSION_EXPIRED" }, HttpStatus.FORBIDDEN);
 
         try {
@@ -54,7 +52,7 @@ export class WorkshopsController extends BaseController {
     }
 
     @Get('public')
-    public async readPublic( @Response() res, @Headers('x-force-refresh') refresh = 'false') {
+    public async readPublic( @Response() res: Res, @Headers('x-force-refresh') refresh = 'false') {
         try {
             const workshops = await this.workshopsService.getAll(true, refresh === 'true', null);
 
@@ -72,7 +70,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async describe( @Response() res: Res, @Headers('x-force-refresh') refresh = 'false') {
 
         try {
             const describeObject = await this.workshopsService.describe(refresh === 'true');
@@ -94,7 +92,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Get('/search')
-    public async search( @Response() res, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async search(@Response() res: Res, @Headers('x-search') search: string, @Headers('x-retrieve') retrieve: string, @Headers('x-force-refresh') refresh = 'false') {
 
         // Check for required fields
         if (!search || !retrieve) return this.handleError(res, 'Error in WorkshopsController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
@@ -139,7 +137,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Get('/:id/facilitators')
-    public async facilitators( @Response() res, @Param('id') id): Promise<Response> {
+    public async facilitators(@Response() res: Res, @Param('id') id: string) {
 
         // Check the id
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.facilitators(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
@@ -163,7 +161,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Post()
-    public async create( @Response() res, @Body() body, @Session() session): Promise<Response> {
+    public async create(@Response() res: Res, @Body() body: any, @Session() session: any) {
         // Check required parameters
         console.debug('Trying to create workshop:\n%j', body);
         let valid = checkRequired(body, ['Organizing_Affiliate__c', 'Start_Date__c', 'End_Date__c', 'Host_Site__c', 'Event_Country__c', 'Event_City__c', 'Course_Manager__c', 'facilitators']);
@@ -197,7 +195,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Put('/:id')
-    public async update( @Response() res, @Param('id') id, @Body() body, @Session() session): Promise<Response> {
+    public async update( @Response() res: Res, @Param('id') id: string, @Body() body: any, @Session() session: any) {
         // Check required parameters
         let required = checkRequired(body, ['Id', 'Organizing_Affiliate__c']);
         if (!required.valid)
@@ -228,7 +226,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Post('/:id/attendee_file')
-    public async uploadAttendeeFile( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
+    public async uploadAttendeeFile(@Request() req: Req, @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         const upload = this.multer.getUploadFunction('attendeeList');
@@ -237,7 +235,7 @@ export class WorkshopsController extends BaseController {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadAttendeeFile(): ', error);
 
             try {
-                const ext: string = req.file.originalname.split('.').pop();
+                const ext = req.file.originalname.split('.').pop();
 
                 this.workshopsService.upload(id, `attendee_list.${ext}`, [req.file.buffer.toString('base64')], req.file.mimetype);
 
@@ -257,7 +255,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Post('/:id/evaluation_files')
-    public async uploadEvaluations( @Request() req, @Response() res, @Param('id') id): Promise<Response> {
+    public async uploadEvaluations(@Request() req: Req, @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         const upload = this.multer.getUploadFunction('evaluationFiles', 'array');
@@ -266,10 +264,10 @@ export class WorkshopsController extends BaseController {
             if (error) return this.handleError(res, 'Error in WorkshopsController.uploadEvaluations(): ', error);
 
             try {
-                const files = req.files.map(file => { return file.buffer.toString('base64'); });
-                const ext: string = req.files[0].originalname.split('.').pop();
+                const files = (req as any).files.map((file: { buffer: { toString: (arg0: string) => void; }; }) => { return file.buffer.toString('base64'); });
+                const ext = (req as any).files[0].originalname.split('.').pop();
 
-                this.workshopsService.upload(id, `evaluation.${ext}`, files, req.files[0].mimetype);
+                this.workshopsService.upload(id, `evaluation.${ext}`, files, (req as any).files[0].mimetype);
 
                 return res.status(HttpStatus.ACCEPTED).json({success: true});
             } catch (error) {
@@ -287,7 +285,7 @@ export class WorkshopsController extends BaseController {
      * @memberof WorkshopsController
      */
     @Delete('/:id')
-    public async delete( @Response() res, @Param('id') id): Promise<Response> {
+    public async delete(@Response() res: Res, @Param('id') id: string) {
         // Check the id
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
@@ -300,7 +298,7 @@ export class WorkshopsController extends BaseController {
     }
 
     @Put('/:id/cancel')
-    public async cancel( @Response() res, @Param('id') id, @Body() body): Promise<Response> {
+    public async cancel(@Response() res: Res, @Param('id') id: string, @Body() body: any) {
         if (!id.match(/a[\w\d]{14,17}/)) return this.handleError(res, 'Error in WorkshopsController.cancel(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         let required = checkRequired(body, ['reason']);

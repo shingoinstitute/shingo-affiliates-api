@@ -10,20 +10,20 @@ export class RecordTypeService {
   /** simple cache for results so that we don't have to re-request */
   private map: { [DeveloperName: string]: string } = {}
 
+  private async getDeveloperName(developerName: string) {
+    const v = await this.baseQuery
+      .where(`DeveloperName = '${developerName}'`)
+      .query(this.queryFn)
+
+    if (v[0]) this.map[developerName] = v[0].Id
+    return this.map[developerName]
+  }
   /**
    * Returns the Id of a RecordType given the DeveloperName
    * @param developerName the DeveloperName field of the RecordType
    */
   async get(developerName: string) {
-    if (!this.map[developerName]) {
-      const v = await this.baseQuery
-        .where(`DeveloperName = '${developerName}'`)
-        .query(this.queryFn)
-
-      if (v[0]) this.map[developerName] = v[0].Id
-    }
-
-    return this.map[developerName]
+    return this.map[developerName] || this.getDeveloperName(developerName)
   }
 
   constructor(private sfService: SalesforceService) {

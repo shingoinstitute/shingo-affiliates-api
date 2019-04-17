@@ -15,10 +15,10 @@ const authservices = grpc.load(path.join(__dirname, '../../../proto/auth_service
 @Injectable()
 export class AuthService {
 
-    private client;
+    private client: any;
 
     constructor() {
-        this.client = bluebird.promisifyAll(this.getClient());
+        this.client = (bluebird as any).promisifyAll(this.getClient());
     }
 
     /**

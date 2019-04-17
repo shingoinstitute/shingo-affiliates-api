@@ -84,14 +84,15 @@ const instructorFields = tuple1<keyof SFInterfaces['Contact']>()(
  * @returns {string[]}
  * @memberof UserService
  */
-const getWorkshopIds = user => {
+const getWorkshopIds = (user: any) => {
   type Permission = { resource: string }
   return [
     ...new Set(
       ([...user.permissions, ...user.role.permissions] as Permission[]).reduce(
         (ids, p) => {
-          if (p.resource.includes('/workshops/'))
+          if (p.resource.includes('/workshops/')) {
             ids.push(`'${p.resource.replace('/workshops/', '')}'`)
+          }
           return ids
         },
         [] as string[]
@@ -144,7 +145,7 @@ export class WorkshopsService {
    * @param {any} [user] - The user to filter permissions for (<code>isPublic === false</code>); user needs permissions[] and roles[].permissions[]
    * @memberof WorkshopsService
    */
-  getAll(isPublic: boolean = false, refresh: boolean = false, user?) {
+  getAll(isPublic = false, refresh = false, user?: any) {
     return isPublic
       ? tryCache(
           this.cache,
@@ -160,7 +161,8 @@ export class WorkshopsService {
         )
   }
 
-  private async getPrivate(user) {
+  // FIXME: once session user is properly typed remove any
+  private async getPrivate(user: any) {
     const subSelectFields = instructorFields
       .map(v => `Instructor__r.${v}`)
       .concat('Id')
@@ -308,7 +310,7 @@ export class WorkshopsService {
    * @returns {Promise<any>}
    * @memberof WorkshopsService
    */
-  describe(refresh: boolean = false) {
+  describe(refresh = false) {
     // Set the key for the cache
     const key = 'describeWorkshops'
     return tryCache(
@@ -345,7 +347,7 @@ export class WorkshopsService {
    * @returns {Promise<Workshop[]>}
    * @memberof WorkshopsService
    */
-  search(search: string, retrieve: string, refresh: boolean = false) {
+  search(search: string, retrieve: string, refresh = false) {
     // Generate the data parameter for the RPC call
     const data = {
       search: `{${search}}`,
@@ -394,7 +396,9 @@ export class WorkshopsService {
           `user.extId IN (${ids.join()})`
         )).users
         return facilitators.map(fac => {
-          let auth = auths.find(auth => auth.extId === fac.Id)
+          const auth = auths.find(
+            (auth: { extId: string }) => auth.extId === fac.Id
+          )
           return auth ? { ...fac, id: auth.id } : fac
         })
       },
@@ -412,7 +416,7 @@ export class WorkshopsService {
     )
 
     return ids.map(id => {
-      const auth = auths.find(a => a.extId === id)
+      const auth = auths.find((a: { extId: string }) => a.extId === id)
       return [id, auth]
     }) as { [k in keyof Ids]: [Ids[k], ArrayValue<typeof auths> | undefined] }
   }
@@ -472,7 +476,7 @@ export class WorkshopsService {
    * @returns {Promise<any>}
    * @memberof WorkshopsService
    */
-  public async update(
+  async update(
     workshop: RequireKeys<
       Omit<
         Partial<Workshop__c>,
@@ -575,7 +579,7 @@ export class WorkshopsService {
    * @returns {Promise<any>}
    * @memberof WorkshopsService
    */
-  public async delete(id: string): Promise<any> {
+  async delete(id: string) {
     // Create the data parameter for the RPC call
     const data = {
       object: 'Workshop__c',
@@ -639,11 +643,11 @@ export class WorkshopsService {
   ) {
     const resource = workshopRecordResource(workshop.Id)
 
-    const roles = (await this.authService.getRoles(
+    const { roles } = await this.authService.getRoles(
       `role.name=\'Affiliate Manager\' OR role.name='Course Manager -- ${
         workshop.Organizing_Affiliate__c
       }'`
-    )).roles
+    )
 
     for (const role of roles) {
       // FIXME: bad practice to await when you don't use the return value
@@ -702,8 +706,8 @@ export class WorkshopsService {
     const users = await this.authService.getUsers(
       `user.extId IN (${instructors.join()})`
     )
-    for (const user in users) {
-      await this.authService.revokePermissionFromUser(resource, 2, user['id'])
+    for (const user of users) {
+      await this.authService.revokePermissionFromUser(resource, 2, user.id)
     }
 
     return Promise.all(

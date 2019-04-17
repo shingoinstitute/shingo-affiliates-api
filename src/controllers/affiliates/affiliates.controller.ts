@@ -3,6 +3,8 @@ import { AffiliatesService, Affiliate } from '../../components';
 import { BaseController } from '../base.controller';
 
 import { checkRequired } from '../../validators/objKeyValidator';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 
 /**
  * @desc Controller of the REST API logic for Affiliates
@@ -26,7 +28,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get()
-    public async readAll( @Response() res, @Session() session, @Query('isPublic') isPublicQ, @Headers('x-is-public') isPublicH, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async readAll( @Response() res: Res, @Session() session: any, @Query('isPublic') isPublicQ: string, @Headers('x-is-public') isPublicH: string, @Headers('x-force-refresh') refresh = 'false') {
         const isPublic = (isPublicQ === 'true' || isPublicH === 'true');
         const forceRefresh = refresh === 'true';
 
@@ -48,7 +50,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async describe( @Response() res: Res, @Headers('x-force-refresh') refresh = 'false') {
         try {
             const describeObject = await this.affService.describe(refresh === 'true');
             return res.status(HttpStatus.OK).json(describeObject);
@@ -67,7 +69,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get('/search')
-    public async search( @Response() res, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async search( @Response() res: Res, @Headers('x-search') search: string, @Headers('x-retrieve') retrieve: string, @Headers('x-force-refresh') refresh = 'false') {
         // Check for required fields
         if (!search || !retrieve) return this.handleError(res, 'Error in AffiliatesController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
 
@@ -90,7 +92,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get('/:id/coursemanagers')
-    public async searchCMS( @Response() res, @Param('id') id, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async searchCMS( @Response() res: Res, @Param('id') id: string, @Headers('x-search') search: string, @Headers('x-retrieve') retrieve: string, @Headers('x-force-refresh') refresh = 'false') {
         if (!id.match(/[\w\d]{15,17}/)) 
             return this.handleError(res, 'Error in AffiliatesController.searchCMS(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
@@ -113,7 +115,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Get(':id')
-    public async read( @Response() res, @Param('id') id): Promise<Response> {
+    public async read( @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -132,7 +134,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Post()
-    public async create( @Response() res, @Body() body): Promise<Response> {
+    public async create( @Response() res: Res, @Body() body: any) {
         const required = checkRequired(body, ['Name']);
         if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.create(): ', { error: 'MISSING_FIELDS', fields: required.missing }, HttpStatus.BAD_REQUEST);
         try {
@@ -151,7 +153,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Post(':id/map')
-    public async map( @Response() res, @Param('id') id, @Body() affiliate): Promise<Response> {
+    public async map( @Response() res: Res, @Param('id') id: string, @Body() affiliate: any) {
         if (!id.match(/[\w\d]{15,18}/) || !affiliate.Id.match(/[\w\d]{15,18}/) || id !== affiliate.Id) return this.handleError(res, 'Error in AffiliatesController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -171,7 +173,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Put(':id')
-    public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
+    public async update( @Response() res: Res, @Body() body: any, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/) || id !== body.Id) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
         let required = checkRequired(body, ['Id']);
         if (!required.valid) return this.handleError(res, 'Error in AffiliatesController.update(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
@@ -197,7 +199,7 @@ export class AffiliatesController extends BaseController {
      * @memberof AffiliatesController
      */
     @Delete(':id')
-    public async delete( @Response() res, @Param('id') id): Promise<Response> {
+    public async delete( @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in AffiliatesController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {

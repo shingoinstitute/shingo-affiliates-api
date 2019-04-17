@@ -1,4 +1,4 @@
-import { Middleware, NestMiddleware } from '@nestjs/common';
+import { Middleware, NestMiddleware, MiddlewareFunction } from '@nestjs/common';
 import _ from 'lodash';
 
 /**
@@ -17,7 +17,7 @@ export class RouteLoggerMiddleware implements NestMiddleware {
      * @returns {void}
      * @memberof RouteLoggerMiddleware
      */
-    public resolve() {
+    public resolve(): MiddlewareFunction {
         return (req, res, next) => {
             // Log route info
             let info = `${req.method} ${req.originalUrl}` + (req.session.user ? ` by ${req.session.user.Email}` : '');
@@ -34,7 +34,7 @@ export class RouteLoggerMiddleware implements NestMiddleware {
                 console.info('\tBody: %j', body);
             }
 
-            return next();
+            return next && next();
         }
     }
 }

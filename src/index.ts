@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { ApplicationModule } from './app.module';
-import { InitService } from './initService';
 import express from 'express';
 import bodyParser from 'body-parser';
 import session from 'express-session';
@@ -54,20 +53,22 @@ if (process.env.SHINGO_REDIS)
 
 server.use(session(options));
 
+const bootstrap = async () => {
+  const app = await NestFactory.create(ApplicationModule, server)
+  app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '')
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      disableErrorMessages: process.env.NODE_ENV === 'production',
+    }),
+  )
+  app
+    .listen(port)
+    .then(() => console.info(`Application is listening on port ${port}`))
+}
 // Initialize the NestJS application and start the server
-InitService.init()
-    .then(async () => {
-        const app = await NestFactory.create(ApplicationModule, server);
-        app.setGlobalPrefix(process.env.GLOBAL_PREFIX || '');
-        app.useGlobalPipes(
-            new ValidationPipe({
-                transform: true,
-                disableErrorMessages: process.env.NODE_ENV === 'production'
-            })
-        )
-        app.listen(port, () => console.info(`Application is listening on port ${port}`));
-    })
-    .catch(error => {
-        console.error('Error in lifting application!')
-        console.error(error)
-    });
+bootstrap().catch(error => {
+  console.error('Error in lifting application!')
+  console.error(error)
+  process.exit(1)
+})

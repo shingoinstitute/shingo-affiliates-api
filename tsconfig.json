@@ -5,14 +5,21 @@
     // nestjs does not distribute safe/correct types, so we are getting no-implicit-any errors
     "skipLibCheck": true,
     // disabled until new backend is deployed
-    "noImplicitAny": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "strict": true,
     "target": "es2016",
     "outDir": "build",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "plugins": [
+      {
+        "name": "typescript-tslint-plugin",
+        "ignoreDefinitionFiles": true,
+        "suppressWhileTypeErrorsPresent": true,
+        "alwaysShowRuleFailuresAsWarnings": false
+      }
+    ]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts"]
 }

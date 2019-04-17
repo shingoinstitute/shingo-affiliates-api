@@ -1,4 +1,4 @@
-import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
+import { HttpStatus, Middleware, NestMiddleware, MiddlewareFunction } from '@nestjs/common';
 import { AuthService } from '../components';
 import _ from 'lodash';
 import SalesforceService, { salesforceServiceFactory } from '../components/salesforce/new-salesforce.component'
@@ -16,7 +16,7 @@ import { parseRPCErrorMeta } from '../util';
 export class IsValidMiddleware implements NestMiddleware {
 
     private sfService: SalesforceService;
-    private authService;
+    private authService: AuthService;
 
     constructor() {
         this.sfService = salesforceServiceFactory();
@@ -29,10 +29,10 @@ export class IsValidMiddleware implements NestMiddleware {
      * @returns {void}
      * @memberof IsValidMiddleware
      */
-    public resolve() {
+    public resolve(): MiddlewareFunction {
         return (req, res, next) => {
-            if (req.path.match(/.*resetpassword.*/gi)) return next();
-            if (req.path === '/workshops' && (req.query.isPublic || req.headers['x-is-public'])) return next();
+            if (req.path.match(/.*resetpassword.*/gi)) return next && next();
+            if (req.path === '/workshops' && (req.query.isPublic || req.headers['x-is-public'])) return next && next();
             if (!req.headers['x-jwt'] && !req.session.user) return res.status(HttpStatus.BAD_REQUEST).json({ error: 'INVALID_TOKEN', header: 'x-jwt' });
 
             const adminToken = (req.session.user ? req.session.user.adminToken : '');
@@ -48,7 +48,7 @@ export class IsValidMiddleware implements NestMiddleware {
                 .then(user => {
                     if (user === undefined) throw { error: 'INVALID_TOKEN' };
                     req.session.user = _.omit(user, ['password', 'roles']);
-                    req.session.user.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
+                    req.session.user.role = user.roles.map((role: { service: string; }) => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
 
                     return this.sfService.retrieve<Contact>({ object: 'Contact', ids: [user.extId] });
                 })
@@ -57,10 +57,10 @@ export class IsValidMiddleware implements NestMiddleware {
                     req.session.user = _.merge(contact, _.omit(req.session.user, ['email']));
                     req.session.user.adminToken = adminToken;
                     req.session.affiliate = contact['AccountId'];
-                    return next();
+                    return next && next();
                 })
                 .catch(error => {
-                    if (error.message === 'SESSION_ALIVE') return next();
+                    if (error.message === 'SESSION_ALIVE') return next && next();
                     if (error.metadata) error = parseRPCErrorMeta(error);
                     console.error('Error in is-valid.middleware.ts: %j', error);
                     return res.status(HttpStatus.FORBIDDEN).json(error);

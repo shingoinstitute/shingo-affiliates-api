@@ -20,17 +20,17 @@ describe('RecordType', () => {
   })
 
   describe('get', () => {
-    it('gets the id associated with the given DeveloperName and caches the result', () => {
+    it('gets the id associated with the given DeveloperName and caches the result', async () => {
       const fn = jest
         .fn()
         .mockImplementation(() => Promise.resolve([{ Id: 'Id' }]))
       jest.spyOn(sfService, 'query').mockImplementation(fn)
 
-      expect(recordType.get('Licensed_Affiliate')).resolves.toBe('Id')
+      expect(await recordType.get('Licensed_Affiliate')).toBe('Id')
       expect(fn).toHaveBeenCalledWith(
         `SELECT Id FROM RecordType WHERE DeveloperName = 'Licensed_Affiliate'`
       )
-      expect(recordType.get('Licensed_Affiliate')).resolves.toBe('Id')
+      expect(await recordType.get('Licensed_Affiliate')).toBe('Id')
       expect(fn).toHaveBeenCalledTimes(1)
     })
   })

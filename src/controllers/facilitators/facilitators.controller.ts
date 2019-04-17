@@ -9,6 +9,8 @@ import { BaseController } from '../base.controller';
 import { checkRequired } from '../../validators/objKeyValidator';
 import _ from 'lodash';
 import generator from 'generate-password';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 
 /**
  * @desc Controller of the REST API logic for Facilitators
@@ -33,7 +35,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('')
-    public async readAll( @Response() res, @Session() session, @Headers('x-affiliate') xAffiliate = '', @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async readAll( @Response() res: Res, @Session() session: any, @Headers('x-affiliate') xAffiliate = '', @Headers('x-force-refresh') refresh = 'false') {
         let isAfMan = session.user && session.user.role.name === 'Affiliate Manager';
 
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.readAll(): ', { error: 'MISSING_FIELDS' }, HttpStatus.FORBIDDEN);
@@ -54,7 +56,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async describe( @Response() res: Res, @Headers('x-force-refresh') refresh = 'false') {
         try {
             const describeObject = await this.facilitatorsService.describe(refresh === 'true');
             return res.status(HttpStatus.OK).json(describeObject);
@@ -74,7 +76,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-is-mapped') isMapped = 'true', @Headers('x-force-refresh') refresh = 'false') {
+    public async search( @Response() res: Res, @Session() session: any, @Headers('x-search') search: string, @Headers('x-retrieve') retrieve: string, @Headers('x-is-mapped') isMapped = 'true', @Headers('x-force-refresh') refresh = 'false') {
         let isAfMan = session.user.role.name === 'Affiliate Manager';
         if (!isAfMan) isMapped = 'true';
         if (!isAfMan && !session.affiliate) return this.handleError(res, 'Error in FacilitatorsController.search(): ', { error: 'SESSION_EXPIRED' }, HttpStatus.FORBIDDEN);
@@ -98,7 +100,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/:id')
-    public async read( @Response() res, @Param('id') id): Promise<Response> {
+    public async read( @Response() res: Res, @Param('id') id: string) {
         // Check the id
         if (!id.match(/[\w\d]{15,18}/)) 
             return this.handleError(res, 'Error in FacilitatorsController.read(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
@@ -113,7 +115,7 @@ export class FacilitatorsController extends BaseController {
 
 
     @Get('/resetpassword/:email')
-    public async resetPassword( @Response() res, @Param('email') email): Promise<Response> {
+    public async resetPassword( @Response() res: Res, @Param('email') email: string) {
         try {
             const token = await this.facilitatorsService.generateReset(email);
             // TODO: Send token to user in email
@@ -143,7 +145,7 @@ export class FacilitatorsController extends BaseController {
     }
 
     @Post('/resetpassword/token')
-    public async changePassword( @Response() res, @Body() body): Promise<Response> {
+    public async changePassword( @Response() res: Res, @Body() body: any) {
         const valid = checkRequired(body, ['password', 'token']);
         if (!valid.valid) return this.handleError(res, 'Error in FacilitatorsController.changePassword(): ', { error: 'MISSING_FIELDS', fields: valid.missing }, HttpStatus.BAD_REQUEST);
 
@@ -163,7 +165,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Post()
-    public async create( @Response() res, @Body() body): Promise<Response> {
+    public async create( @Response() res: Res, @Body() body: any) {
         const required = checkRequired(body, ['AccountId', 'FirstName', 'LastName', 'Email']);
         if (!required.valid)
             return this.handleError(res, 'Error in FacilitatorsController.create(): ', { error: "MISSING_FIELDS", fields: required.missing }, HttpStatus.BAD_REQUEST);
@@ -209,7 +211,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Post('/:id')
-    public async map( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
+    public async map( @Response() res: Res, @Body() body: any, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,18}/)) return this.handleError(res, 'Error in FacilitatorsController.map(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         const required = checkRequired(body, ['AccountId', 'Email']);
@@ -232,7 +234,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Put('/:id')
-    public async update( @Response() res, @Body() body, @Param('id') id): Promise<Response> {
+    public async update( @Response() res: Res, @Body() body: any, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         if (!body.Id || body.Id !== id) return this.handleError(res, 'Error in FacilitatorsController.update(): ', { error: "MISSING_FIELDS", fields: ["Id"] }, HttpStatus.BAD_REQUEST);
@@ -260,7 +262,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Delete('/:id')
-    public async delete( @Response() res, @Param('id') id, @Query('deleteAuth') deleteAuth = 'true'): Promise<Response> {
+    public async delete( @Response() res: Res, @Param('id') id: string, @Query('deleteAuth') deleteAuth = 'true') {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.delete(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -283,7 +285,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Delete('/:id/login')
-    public async deleteLogin( @Response() res, @Param('id') id): Promise<Response> {
+    public async deleteLogin( @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.deleteLogin(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -302,7 +304,7 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Delete('/:id/unmap')
-    public async unmap( @Response() res, @Param('id') id): Promise<Response> {
+    public async unmap( @Response() res: Res, @Param('id') id: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.unmap(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
@@ -322,11 +324,11 @@ export class FacilitatorsController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Post('/:id/roles/:roleId')
-    public async changeRole( @Response() res, @Param('id') id, @Param('roleId') roleId): Promise<Response> {
+    public async changeRole( @Response() res: Res, @Param('id') id: string, @Param('roleId') roleId: string) {
         if (!id.match(/[\w\d]{15,17}/)) return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', { error: 'INVALID_SF_ID', message: `${id} is not a valid Salesforce ID.` }, HttpStatus.BAD_REQUEST);
 
         try {
-            const added = this.facilitatorsService.changeRole(id, roleId);
+            const added = this.facilitatorsService.changeRole(id, +roleId);
             return res.status(HttpStatus.OK).json({ added });
         } catch (error) {
             return this.handleError(res, 'Error in FacilitatorsController.changeRole(): ', error);

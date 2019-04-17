@@ -1,4 +1,9 @@
-import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common'
+import {
+  Module,
+  MiddlewareConsumer,
+  RequestMethod,
+  OnModuleInit,
+} from '@nestjs/common'
 import {
   WorkshopsController,
   AuthController,
@@ -25,6 +30,8 @@ import { salesforceServiceProvider } from './components/salesforce/new-salesforc
 import { MulterFactory } from './factories'
 import { SalesforceIdValidator } from './validators/SalesforceId.validator'
 import { RecordTypeService } from './components/recordtype/RecordType.component'
+import ensureRoleServiceProvider from './providers/ensureroleservice.provider'
+import { EnsureRoleService } from './components/ensurerole.component'
 
 /**
  * The NestJS application module ties together the controllers and components. It also configures any nest middleware.
@@ -53,9 +60,15 @@ import { RecordTypeService } from './components/recordtype/RecordType.component'
     SupportService,
     salesforceServiceProvider,
     RecordTypeService,
+    ensureRoleServiceProvider,
   ],
 })
-export class ApplicationModule {
+export class ApplicationModule implements OnModuleInit {
+  onModuleInit() {
+    const ensure = new EnsureRoleService()
+    return ensure.init()
+  }
+  // FIXME: auth, user injection, permissions should be done by decorators not middleware
   configure(consumer: MiddlewareConsumer) {
     if (process.env.DEBUG_ROUTES === 'true') {
       consumer

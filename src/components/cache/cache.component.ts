@@ -21,7 +21,7 @@ export class CacheService {
      * @private
      * @memberof CacheService
      */
-    private theCache;
+    private theCache: NodeCache;
 
     /**
      * @desc Helper function to hash an object to a key
@@ -43,8 +43,7 @@ export class CacheService {
      * @memberof CacheService
      */
     public getCache(obj: object | string) {
-        let key = obj;
-        if (typeof obj !== 'string') key = this.getKey(obj);
+        const key = typeof obj !== 'string' ? this.getKey(obj) : obj;
 
         return this.theCache.get(key);
     }
@@ -57,15 +56,13 @@ export class CacheService {
      * @memberof CacheService
      */
     public isCached(obj: object | string): boolean {
-        let key = obj;
-        if (typeof obj !== 'string') key = this.getKey(obj);
+        const key = typeof obj !== 'string' ? this.getKey(obj) : obj;
 
         return this.theCache.get(key) !== undefined;
     }
 
     public invalidate(obj: object | string): void {
-        let key = obj;
-        if (typeof obj !== 'string') key = this.getKey(obj);
+        const key = typeof obj !== 'string' ? this.getKey(obj) : obj;
 
         const count = this.theCache.del(key);
         if (count < 1) console.error('Did not invalidate cache for key: %j', key);
@@ -79,9 +76,8 @@ export class CacheService {
      * @memberof CacheService
      */
     public cache(obj: object | string, value: any): void {
-        let key = obj;
-        if (typeof obj !== 'string') key = this.getKey(obj);
         if (!value) return;
+        const key = typeof obj !== 'string' ? this.getKey(obj) : obj;
 
         const success = this.theCache.set(key, value);
         if (!success) console.error("Response could not be cached!");

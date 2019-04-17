@@ -1,0 +1,24 @@
+{
+  "rulesDirectory": ["tslint-plugin-prettier"],
+  "extends": ["@shingo/tslint-rules", "tslint-config-prettier"],
+  "rules": {
+    "prettier": { "severity": "warning" },
+    // requires type information
+    "no-unnecessary-type-assertion": true,
+    "await-promise": true,
+    "deprecation": true,
+    "no-unsafe-any": { "severity": "error" },
+    "no-string-literal": true,
+
+    "no-console": false,
+    "interface-over-type-literal": false,
+    "ban-comma-operator": false,
+    "curly": false,
+    "no-submodule-imports": false,
+    "prefer-conditional-expression": true,
+    "no-any": { "severity": "error" }
+  },
+  "linterOptions": {
+    "exclude": ["**/*.proto.ts"]
+  }
+}

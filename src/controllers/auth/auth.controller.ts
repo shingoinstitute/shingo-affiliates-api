@@ -6,6 +6,8 @@ import { BaseController } from '../base.controller';
 import _ from 'lodash';
 import SalesforceService from '../../components/salesforce/new-salesforce.component';
 import { Contact } from '../../sf-interfaces';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 
 /**
  * @desc Provides the controller of the Auth REST logic
@@ -29,7 +31,7 @@ export class AuthController extends BaseController {
      * @memberof AuthController
      */
     @Post('login')
-    public async login( @Request() req, @Response() res, @Body() body): Promise<Response> {
+    public async login( @Request() req: Req, @Response() res: Res, @Body() body: any) {
         if (!body.email || !body.password) return this.handleError(res, 'Error in AuthController.login(): ', { error: "MISSING_FIELDS" }, HttpStatus.BAD_REQUEST);
 
         let user;
@@ -49,20 +51,20 @@ export class AuthController extends BaseController {
         }
 
         try {
-            req.session.user = await this.getSessionUser(user);
-            req.session.affiliate = req.session.user['AccountId'];
+            (req as any).session.user = await this.getSessionUser(user);
+            (req as any).session.affiliate = (req as any).session.user['AccountId'];
             
-            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
+            return res.status(HttpStatus.OK).json(_.omit((req as any).session.user, ['permissions', 'extId', 'services', 'role.permissions']));
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.login(): ', error);
         }
     }
 
-    private async getSessionUser(user) {
+    private async getSessionUser(user: any) {
         const [contact] = await this.sfService.retrieve<Contact>({ object: 'Contact', ids: [user.extId] })
         let sessionUser = _.omit(user, ['password', 'roles']);
         sessionUser = _.merge(contact, _.omit(sessionUser, ['email']));
-        sessionUser.role = user.roles.map(role => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
+        sessionUser.role = user.roles.map((role: { service: string; }) => { if (role.service === 'affiliate-portal') return _.omit(role, ['users', 'service']) })[0];
 
         return sessionUser;
     }
@@ -75,8 +77,8 @@ export class AuthController extends BaseController {
      * @memberof AuthController
      */
     @Get('valid')
-    public async valid( @Request() req, @Response() res): Promise<Response> {
-        return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions']));
+    public async valid( @Request() req: Req, @Response() res: Res) {
+        return res.status(HttpStatus.OK).json(_.omit((req as any).session.user, ['permissions', 'extId', 'services', 'role.permissions']));
     }
 
     /**
@@ -86,13 +88,13 @@ export class AuthController extends BaseController {
      * @memberof AuthController
      */
     @Get('logout')
-    public async logout( @Request() req, @Response() res): Promise<Response> {
-        if (!req.session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
+    public async logout( @Request() req: Req, @Response() res: Res) {
+        if (!(req as any).session.user) return this.handleError(res, 'Error in AuthController.logout(): ', { error: 'NO_LOGIN_FOUND' }, HttpStatus.NOT_FOUND)
         try {
-            req.session.user.jwt = `${Math.random()}`;
-            req.session.user.email = req.session.user.Email;
-            let user = await this.authService.updateUser(_.pick(req.session.user, ['id', 'jwt']) as any);
-            req.session.user = null;
+            (req as any).session.user.jwt = `${Math.random()}`;
+            (req as any).session.user.email = (req as any).session.user.Email;
+            let user = await this.authService.updateUser(_.pick((req as any).session.user, ['id', 'jwt']) as any);
+            (req as any).session.user = null;
             return res.status(HttpStatus.OK).json({ message: "LOGOUT_SUCCESS" });
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.logout(): ', error);
@@ -100,37 +102,37 @@ export class AuthController extends BaseController {
     }
 
     @Post('/changepassword')
-    public async changePassword( @Request() req, @Response() res, @Body() body): Promise<Response> {
+    public async changePassword( @Request() req: Req, @Response() res: Res, @Body() body: any) {
         if (!body.password) return this.handleError(res, 'Error in AuthController.changePassword(): ', { error: 'MISSING_FIELDS', fields: ['password'] }, HttpStatus.BAD_REQUEST);
 
         try {
-            req.session.user.password = body.password;
+            (req as any).session.user.password = body.password;
 
-            const updated = await this.authService.updateUser(_.pick(req.session.user, ['id', 'password']) as any);
+            const updated = await this.authService.updateUser(_.pick((req as any).session.user, ['id', 'password']) as any);
 
-            req.session.user = await this.authService.getUser(`user.id=${req.session.user.id}`);
-            req.session.user = await this.getSessionUser(req.session.user);
+            (req as any).session.user = await this.authService.getUser(`user.id=${(req as any).session.user.id}`);
+            (req as any).session.user = await this.getSessionUser((req as any).session.user);
 
-            return res.status(HttpStatus.OK).json({ jwt: req.session.user.jwt });
+            return res.status(HttpStatus.OK).json({ jwt: (req as any).session.user.jwt });
         } catch (error) {
             return this.handleError(res, 'Error in AuthController.changePassword', error);
         }
     }
 
     @Post('/loginas')
-    public async loginAs(@Request() req, @Response() res, @Body() body): Promise<Response> {
+    public async loginAs(@Request() req: Req, @Response() res: Res, @Body() body: any) {
         if(!body.adminId || !body.userId) return this.handleError(res, 'Error in AuthController.loginAs(): ', { error: 'MISSING_FIELDS', fields: ['adminId', 'userId']}, HttpStatus.BAD_REQUEST);
-        if(req.session.user.id != body.adminId) return this.handleError(res, 'Error in AuthController.loginAs(): ', {error: 'UNAUTHORIZED'}, HttpStatus.FORBIDDEN);
+        if((req as any).session.user.id != body.adminId) return this.handleError(res, 'Error in AuthController.loginAs(): ', {error: 'UNAUTHORIZED'}, HttpStatus.FORBIDDEN);
         
         try {
             const user = await this.authService.loginAs({adminId: body.adminId, userId: body.userId});
-            req.session.user = await this.getSessionUser(user);
-            req.session.user.adminToken = req.headers['x-jwt'];
-            req.session.affiliate = req.session.user['AccountId'];
+            (req as any).session.user = await this.getSessionUser(user);
+            (req as any).session.user.adminToken = req.headers['x-jwt'];
+            (req as any).session.affiliate = (req as any).session.user['AccountId'];
 
             console.debug(`Admin ${body.adminId} logged in as ${body.userId}`);
 
-            return res.status(HttpStatus.OK).json(_.omit(req.session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password']));
+            return res.status(HttpStatus.OK).json(_.omit((req as any).session.user, ['permissions', 'extId', 'services', 'role.permissions', 'password']));
         } catch(error) {
             return this.handleError(res, 'Error in AuthController.loginAs', error);
         }

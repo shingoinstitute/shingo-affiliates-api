@@ -1,4 +1,4 @@
-import { HttpStatus, Middleware, NestMiddleware } from '@nestjs/common';
+import { HttpStatus, Middleware, NestMiddleware, MiddlewareFunction } from '@nestjs/common';
 import { AuthService } from '../components';
 import { parseRPCErrorMeta } from '../util';
 
@@ -12,7 +12,7 @@ import { parseRPCErrorMeta } from '../util';
 @Middleware()
 export class AuthMiddleware implements NestMiddleware {
 
-    private authService;
+    private authService: AuthService;
 
     constructor() {
         this.authService = new AuthService();
@@ -37,10 +37,10 @@ export class AuthMiddleware implements NestMiddleware {
      * @returns {void}
      * @memberof AuthMiddleware
      */
-    public resolve(level: number, resource?: string) {
+    public resolve(level: 1 | 2, resource?: string): MiddlewareFunction {
         return (req, res, next) => {
             let isAfMan = req.session.user && req.session.user.role.name === 'Affiliate Manager'; 
-            if (isAfMan) return next();
+            if (isAfMan) return next && next();
 
             const realResource = this.parseResource(
                 resource && resource.match(/^.*\s--\s$/) ? resource + req.session.affiliate
@@ -50,7 +50,7 @@ export class AuthMiddleware implements NestMiddleware {
 
             return this.authService.canAccess(realResource, level, req.headers['x-jwt'])
                 .then(result => {
-                    if (result && result.response) return next();
+                    if (result && result.response) return next && next();
                     throw { error: 'ACCESS_FORBIDDEN', message: `Insufficent permission to access ${realResource} at level ${level} by user: ${req.session.user ? req.session.user.Email : 'anonymous'}` };
                 })
                 .catch(error => {

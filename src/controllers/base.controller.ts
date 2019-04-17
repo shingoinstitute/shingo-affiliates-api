@@ -1,5 +1,7 @@
 import { Response, HttpStatus } from '@nestjs/common';
 import { parseRPCErrorMeta } from '../util';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 
 /**
  * @desc The base controller class contains methods shared between multiple routes
@@ -19,7 +21,7 @@ export abstract class BaseController {
     * @returns Response body is a JSON object with the error
     * @memberof BaseController
     */
-    public handleError( @Response() res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
+    public handleError( @Response() res: Res, message: string, error: any, errorCode: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR) {
         if (error.metadata) error = parseRPCErrorMeta(error);
         if (error.message) error = { message: error.message };
 

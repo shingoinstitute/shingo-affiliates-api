@@ -12,6 +12,7 @@ import SalesforceService from '../salesforce/new-salesforce.component'
 import { tryCache, ArrayValue, Omit } from '../../util'
 import { SFQ } from '../../util/salesforce'
 import { Contact, RecordType, Account } from '../../sf-interfaces'
+import { EnsureRoleService } from '../ensurerole.component'
 
 // TODO: Fix these types to something more accurate once we have the auth service properly typed
 type AddAuthInfo = {
@@ -45,7 +46,8 @@ export class FacilitatorsService {
     private newSfService: SalesforceService,
     private authService: AuthService,
     private cache: CacheService,
-    private recordType: RecordTypeService
+    private recordType: RecordTypeService,
+    private ensure: EnsureRoleService
   ) {
     this.queryFn = this.newSfService.query.bind(this.newSfService)
   }
@@ -70,7 +72,7 @@ export class FacilitatorsService {
    * @param {string} [affiliate] - SF Id of the affiliate to get facilitators for (or '' to get all facilitators)
    * @memberof FacilitatorsService
    */
-  getAll(refresh: boolean = false, affiliate?: string) {
+  getAll(refresh = false, affiliate?: string) {
     let where = `RecordType.DeveloperName='Affiliate_Instructor'`
     if (affiliate != '') where += ` AND Facilitator_For__c='${affiliate}'`
 
@@ -154,7 +156,7 @@ export class FacilitatorsService {
    * @param {boolean} [refresh=false] - Force the refresh of the cache
    * @memberof FacilitatorsService
    */
-  describe(refresh: boolean = false) {
+  describe(refresh = false) {
     const key = 'describeContact'
     return tryCache(
       this.cache,
@@ -261,8 +263,9 @@ export class FacilitatorsService {
                   (fac.AccountId && affiliates[fac.AccountId]) || undefined,
               }
               if (isMapped) {
-                if (f.services && f.services.includes('affiliate-portal'))
+                if (f.services && f.services.includes('affiliate-portal')) {
                   acc.push(f)
+                }
               } else if (
                 f.services == null ||
                 !f.services.includes('affiliate-portal')
@@ -364,7 +367,7 @@ export class FacilitatorsService {
    * @param {any} user - User to create
    * @memberof FacilitatorsService
    */
-  async create(user) {
+  async create(user: any) {
     // TODO: simplify this logic by having auth user be a sub object, not merged
     let contact = _.omit(user, ['Id', 'password', 'roleId', 'role'])
 
@@ -386,7 +389,7 @@ export class FacilitatorsService {
    * @param {any} user
    * @memberof FacilitatorsService
    */
-  async mapContact(id: string, user) {
+  async mapContact(id: string, user: any) {
     const data = {
       object: 'Contact',
       ids: [id],
@@ -431,9 +434,9 @@ export class FacilitatorsService {
    * @param {any} user
    * @memberof FacilitatorsService
    */
-  async createOrMapAuth(id: string, user) {
+  async createOrMapAuth(id: string, user: any) {
     // TODO: replace with an injectable service instead of modifying global on app startup
-    let roleId = global['facilitatorId']
+    let roleId = this.ensure.facilitatorId
 
     if (user.role) {
       const role = await this.authService.getRole(`name='${user.role.name}'`)
@@ -546,7 +549,7 @@ export class FacilitatorsService {
    * @param {any} user - The facilitator object to update
    * @memberof FacilitatorsService
    */
-  async update(user) {
+  async update(user: any) {
     const contact = _.omit(user, [
       'password',
       'Account',
@@ -629,7 +632,7 @@ export class FacilitatorsService {
    * @returns {Promise<boolean>}
    * @memberof FacilitatorsService
    */
-  async updateAuth(user, extId) {
+  async updateAuth(user: any, extId: string) {
     const set: { extId: string; email?: string; password?: string } = { extId }
     if (user.Email) set.email = user.Email
     if (user.password) set.password = user.password
@@ -730,7 +733,7 @@ export class FacilitatorsService {
     if (user.id === 0) throw { error: 'USER_NOT_FOUND' }
 
     const currentRole = (user.roles || []).find(
-      role => role.service === 'affiliate-portal'
+      (      role: { service: string; }) => role.service === 'affiliate-portal'
     )
 
     const set = { userEmail: user.email, roleId }

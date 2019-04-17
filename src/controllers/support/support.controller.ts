@@ -7,6 +7,8 @@ import {
 import { SupportService } from '../../components';
 import { BaseController } from '../base.controller';
 import _ from 'lodash';
+// tslint:disable-next-line:no-implicit-dependencies
+import { Response as Res, Request as Req } from 'express'
 
 /**
  * @desc Controller of the REST API logic for Support Pages
@@ -23,7 +25,7 @@ export class SupportController extends BaseController {
     }
 
     @Get()
-    public async readAll( @Response() res, @Session() session, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async readAll( @Response() res: Res, @Session() session: any, @Headers('x-force-refresh') refresh = 'false') {
         let role = 'Anonymous';
         if (session.user && session.user.role)
             role = session.user.role.name + "s";
@@ -37,7 +39,7 @@ export class SupportController extends BaseController {
     }
 
     @Get('/category/:name')
-    public async readCategory( @Response() res, @Session() session, @Param('name') catName, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async readCategory( @Response() res: Res, @Session() session: any, @Param('name') catName: string, @Headers('x-force-refresh') refresh = 'false') {
         let role = 'Anonymous';
         if (session.user && session.user.role)
             role = session.user.role.name + "s";
@@ -59,7 +61,7 @@ export class SupportController extends BaseController {
      * @memberof FacilitatorsController
      */
     @Get('/describe')
-    public async describe( @Response() res, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async describe( @Response() res: Res, @Headers('x-force-refresh') refresh = 'false') {
         try {
             const describeObject = await this.supportService.describe(refresh === 'true');
             return res.status(HttpStatus.OK).json(describeObject);
@@ -69,7 +71,7 @@ export class SupportController extends BaseController {
     }
 
     @Get('/search')
-    public async search( @Response() res, @Session() session, @Headers('x-search') search, @Headers('x-retrieve') retrieve, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async search( @Response() res: Res, @Session() session: any, @Headers('x-search') search: string, @Headers('x-retrieve') retrieve: string, @Headers('x-force-refresh') refresh = 'false') {
 
         // Check for required fields
         if (!search || !retrieve) return this.handleError(res, 'Error in SupportController.search(): ', { error: 'MISSING_PARAMETERS', params: (!search && !retrieve ? ['search', 'retrieve '] : !search ? ['search'] : ['retrieve']) }, HttpStatus.BAD_REQUEST);
@@ -90,7 +92,7 @@ export class SupportController extends BaseController {
     }
 
     @Get('/:id')
-    public async read( @Response() res, @Session() session, @Param('id') id, @Headers('x-force-refresh') refresh = 'false'): Promise<Response> {
+    public async read( @Response() res: Res, @Session() session: any, @Param('id') id: string, @Headers('x-force-refresh') refresh = 'false') {
         let role = 'Anonymous';
         if (session.user && session.user.role)
             role = session.user.role.name + "s";
