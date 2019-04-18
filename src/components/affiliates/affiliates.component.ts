@@ -195,17 +195,10 @@ export class AffiliatesService {
 
     type SearchResult = Overwrite<Partial<Contact>, Pick<Contact, 'AccountId'>>
 
-    return tryCache(
-      this.cache,
-      data,
-      async () => {
-        const cms = await this.sfService
-          .search<SearchResult>(data)
-          .then(d => d.searchRecords || [])
-        return cms.filter(cm => cm.AccountId === id)
-      },
-      refresh,
-    )
+    const cms = await this.sfService
+      .search<SearchResult>(data)
+      .then(d => d.searchRecords || [])
+    return cms.filter(cm => cm.AccountId === id)
   }
 
   /**

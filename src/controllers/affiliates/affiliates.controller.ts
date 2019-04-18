@@ -111,7 +111,7 @@ export class AffiliatesController {
     @StringParam('search', new RequiredValidator(missingParam('search')))
     search: ParamType<string, 'search'>,
     @ArrayParam('retrieve', new RequiredValidator(missingParam('retrieve')))
-    retrieve: ParamType<string[], 'retreive'>,
+    retrieve: ParamType<string[], 'retrieve'>,
     @Refresh() refresh: RefreshParam<boolean | undefined>,
     _metadata: RouteMetadata<{
       route: '/affiliates/search'

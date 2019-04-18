@@ -8,6 +8,21 @@ import {
 import { Omit } from '../util'
 import { flatten } from '../util/fp'
 import { Provider } from '@nestjs/common'
+import debug from 'debug'
+
+const logsf = debug('salesforce')
+
+const mklog = (
+  open: string,
+  close: string,
+  openArgs: any[] = [],
+  closeArgs: any[] = [],
+) => async <T>(result: Promise<T>) => {
+  logsf(open, ...openArgs)
+  const r = await result
+  logsf(close + ' - %O', ...closeArgs, r)
+  return r
+}
 
 export interface QueryRequest {
   fields: string[]
@@ -194,20 +209,20 @@ export class SalesforceService {
       queryRequest.table
     }`
     if (queryRequest.clauses) queryString += ' WHERE ' + queryRequest.clauses
+    const log = mklog(`QUERY:${queryString}`, `QUERY RESULT:${queryString}`)
     return this.queryRunner(async conn => {
-      const res = await conn.query<T>(queryString)
+      const res = await log(conn.query<T>(queryString))
       return stripQueryResult(res)
     })
   }
 
-  retrieve<T = never>(idRequest: {
-    object: string
-    ids: string[]
-  }): Promise<T[]> {
+  retrieve<T = never>({ object, ids }: IdRequest): Promise<T[]> {
+    const log = mklog(
+      `RETRIEVE:${object}@${ids.join()}`,
+      `RETRIEVE RESULT:${object}@${ids.join()}`,
+    )
     return this.queryRunner(async conn => {
-      const res = await conn
-        .sobject<T>(idRequest.object)
-        .retrieve(idRequest.ids)
+      const res = await log(conn.sobject<T>(object).retrieve(ids))
       return res.filter(Boolean)
     })
   }
@@ -219,57 +234,71 @@ export class SalesforceService {
   // typescript currently doesn't have support for that (there may be some community workarounds)
   create<T extends object = never>(recRequest: RecordsRequest<T>) {
     const records = getRecords(recRequest, OMIT_FIELDS) as T[]
+    const log = mklog(
+      `CREATE:${recRequest.object} - %O`,
+      `CREATE RESULT:${recRequest.object}`,
+      [records],
+    )
     return this.queryRunner(conn =>
-      conn
-        .sobject<T>(recRequest.object)
-        .create(records)
-        .then(handleRecordResults('Unable to create all requested records')),
+      log(conn.sobject<T>(recRequest.object).create(records)).then(
+        handleRecordResults('Unable to create all requested records'),
+      ),
     )
   }
 
-  update<T extends object = never>(recordsRequest: RecordsRequest<T>) {
-    const records = getRecords(recordsRequest, OMIT_FIELDS)
-    return this.queryRunner(conn => {
-      return conn
-        .sobject<T>(recordsRequest.object)
-        .update(records)
-        .then(handleRecordResults('Unable to update all requested records'))
-    })
+  update<T extends object = never>(recRequest: RecordsRequest<T>) {
+    const records = getRecords(recRequest, OMIT_FIELDS)
+    const log = mklog(
+      `UPDATE:${recRequest.object} - %O`,
+      `UPDATE RESULT:${recRequest.object}`,
+      [records],
+    )
+    return this.queryRunner(conn =>
+      log(conn.sobject<T>(recRequest.object).update(records)).then(
+        handleRecordResults('Unable to update all requested records'),
+      ),
+    )
   }
 
-  delete(idRequest: IdRequest) {
+  delete({ object, ids }: IdRequest) {
+    const log = mklog(
+      `DELETE:${object}@${ids.join()}`,
+      `DELETE RESULT:${object}@${ids.join()}`,
+    )
     return this.queryRunner(conn =>
-      conn
-        .sobject(idRequest.object)
-        .delete(idRequest.ids)
-        .then(handleRecordResults('Unable to delete all requested records')),
+      log(conn.sobject(object).delete(ids)).then(
+        handleRecordResults('Unable to delete all requested records'),
+      ),
     )
   }
 
   upsert<T extends object = never>(request: UpsertRequest<T>) {
     const records = getRecords(request)
+    const log = mklog(
+      `UPSERT:${request.object}@${request.extId} - %O`,
+      `UPSERT RESULT:${request.object}@${request.extId} - %O`,
+      [records],
+    )
 
     return this.queryRunner(conn =>
-      conn
-        .sobject<T>(request.object)
-        .upsert(records as T[], request.extId)
-        .then(handleRecordResults('Unable to upsert all requested records')),
+      log(
+        conn.sobject<T>(request.object).upsert(records as T[], request.extId),
+      ).then(handleRecordResults('Unable to upsert all requested records')),
     )
   }
 
   describe(object: string) {
-    return this.queryRunner(conn => conn.sobject(object).describe())
+    const log = mklog(`DESCRIBE:${object}`, `DESCRIBE RESULT:${object}`)
+    return this.queryRunner(conn => log(conn.sobject(object).describe()))
   }
 
-  search<T = unknown>(searchRequest: SearchRequest) {
-    return this.queryRunner(conn => {
+  search<T = unknown>({ search, retrieve }: SearchRequest) {
+    const query = `FIND ${search} IN ALL FIELDS RETURNING ${retrieve}`
+    const log = mklog(`SEARCH:${query}`, `SEARCH RESULT:${query}`)
+    return this.queryRunner(conn =>
       // FIXME: jsforce typings are incorrect
-      return (conn as any).search(
-        `FIND ${searchRequest.search} IN ALL FIELDS RETURNING ${
-          searchRequest.retrieve
-        }`,
-      ) as Promise<{ searchRecords: T[] }>
-    })
+      log((conn as any).search(query) as Promise<{ searchRecords: T[] }>),
+    )
   }
 }
 
